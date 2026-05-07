@@ -11,6 +11,7 @@ import { toast } from 'sonner';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import API from '@/api';
 import { Textarea } from '@/components/ui/textarea';
+import SchoolLogo from "../assets/Times_Internation_School_logo.png";
 
 export default function Profile() {
     const { user, setUser, logout } = useAuth();

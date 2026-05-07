@@ -17,7 +17,7 @@ import { toast } from "sonner";
 import { useAuth } from "@/auth/AuthContext";
 import { GoogleOAuthProvider, GoogleLogin } from '@react-oauth/google';
 import { jwtDecode } from "jwt-decode";
-import logo from "@/assets/niyati_public_school_logo.png";
+import logo from "@/assets/Times_Internation_School_logo.png";
 
 export default function SignInPage() {
   const navigate = useNavigate();
@@ -159,16 +159,16 @@ export default function SignInPage() {
                 <div className="relative z-10 h-full flex flex-col justify-between">
                   <div>
                     <div className="mb-12 flex items-center gap-3">
-                      <div className="h-24 w-24 rounded-xl bg-white/20 backdrop-blur-md flex items-center justify-center">
+                      <div className="h-32 w-32 rounded-xl flex items-center justify-center">
                         {/* <Cloud className="text-white h-6 w-6" /> */}
-                        <img src={logo} alt="Logo" />
+                        <img src={logo} alt="Logo" className="rounded-xl" />
                       </div>
                       <div className="flex flex-col">
                         <span className="text-2xl font-bold tracking-wide uppercase text-white/90">
-                          NIYATI PUBLIC SCHOOL
+                          TIMES INTERNATIONAL SCHOOL
                         </span>
-                        <span className="text-[14px] text-right text-white/90 tracking-wider font-semibold">
-                          Destiny for Excellence
+                        <span className="text-[14px] text-white/90 tracking-wider font-semibold">
+                          Commited to Excellence
                         </span>
                       </div>
                     </div>
@@ -215,7 +215,7 @@ export default function SignInPage() {
                   </div>
 
                   <div className="text-sm text-blue-200/60 mt-8">
-                    © {new Date().getFullYear()} NIYATI PUBLIC SCHOOL. All rights reserved.
+                    © {new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.
                   </div>
                 </div>
               </div>
@@ -225,15 +225,15 @@ export default function SignInPage() {
                 <div className="mx-auto w-full max-w-md">
                   <div className="mb-10 text-center lg:text-left">
                     <div className="flex items-center flex-col gap-3">
-                      <div className="h-24 w-24 rounded-xl lg:h-10 lg:hidden bg-white/20 backdrop-blur-md flex items-center justify-center">
+                      <div className="h-32 w-32 rounded-xl lg:h-20 lg:hidden flex items-center justify-center">
                         {/* <Cloud className="text-white h-6 w-6" /> */}
-                        <img src={logo} alt="Logo" />
+                        <img src={logo} alt="Logo" className="rounded-xl" />
                       </div>
-                      <span className="text-lg font-bold tracking-wide uppercase lg:hidden text-black/90 dark:text-white">
-                        NIYATI PUBLIC SCHOOL
+                      <span className="text-[1px] font-bold tracking-wide uppercase lg:hidden text-black/90 dark:text-white">
+                        TIMES INTERNATIONAL SCHOOL
                       </span>
                       <span className="text-[14px] text-right lg:hidden text-muted-foreground tracking-wider font-semibold">
-                        Destiny for Excellence
+                        Commited to Excellence
                       </span>
                     </div>
                     <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">

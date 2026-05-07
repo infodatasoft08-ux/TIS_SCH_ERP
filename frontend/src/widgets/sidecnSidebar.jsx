@@ -27,6 +27,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useThemeAnimation } from "@space-man/react-theme-animation";
+import SchoolLogo from "../assets/Times_Internation_School_logo.png";
 
 /* ---------------- Helpers ---------------- */
 const isActive = (path, location) =>
@@ -261,17 +262,17 @@ export default function AppSidebar({ user }) {
         <div className="flex flex-col items-center gap-3 overflow-hidden">
           <div className="flex w-full shrink-0 items-center justify-center rounded-lg text-primary group-data-[collapsible=icon]:mx-auto">
             {logo ? (
-              <img src={logo.image_url} alt="Logo" className=" w-32 object-contain" />
+              <img src={logo.image_url} alt="Logo" className=" w-32 object-contain rounded-xl" />
             ) : (
-              <School className="h-6 w-6" />
+              <img src={SchoolLogo} alt="Logo" className=" w-32 object-contain rounded-xl" />
             )}
           </div>
           <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
-            <span className="text-base font-bold leading-none truncate text-sidebar-foreground">
+            <span className="text-[15px] font-bold leading-none truncate text-sidebar-foreground">
               {schoolName}
             </span>
-            <span className="text-[12px] text-right text-muted-foreground tracking-wider font-semibold">
-              Destiny for Excellence
+            <span className="text-[12px] text-muted-foreground tracking-wider font-semibold">
+              Commited to Excellence
             </span>
           </div>
         </div>

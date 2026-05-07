@@ -31,7 +31,7 @@ const schoolGalleryRouter = require('./routes/schoolGalleryRoute');
 const employeeAttendanceRouter = require('./routes/employeeAttendanceRoute');
 const homeworkRouter = require('./routes/homework_routes');
 
-
+app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));

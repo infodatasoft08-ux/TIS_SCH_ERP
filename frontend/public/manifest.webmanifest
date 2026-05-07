@@ -1,50 +1,50 @@
 {
-    "name": "Niyati Public School",
-    "short_name": "Niyati Public School",
-    "description": "Niyati Public School is a top CBSE school in Danapur, Patna offering quality education, modern facilities, and holistic development for students.",
+    "name": "Times International School",
+    "short_name": "Times International School",
+    "description": "Times International School is a top CBSE school in patna, Patna offering quality education, modern facilities, and holistic development for students.",
     "start_url": "/",
     "display": "standalone",
     "background_color": "#ffffff",
     "theme_color": "#2563eb",
     "icons": [
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "48x48",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "72x72",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "96x96",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "128x128",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "192x192",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "256x256",
             "purpose": "any"
         },
         {
-            "src": "/niyati_public_school_logo.svg",
+            "src": "/Times_Internation_School_logo.svg",
             "type": "image/webp",
             "sizes": "512x512",
             "purpose": "any"

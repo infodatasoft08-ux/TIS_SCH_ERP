@@ -4,4 +4,4 @@ Disallow: /admin/
 Disallow: /dashboard/
 Disallow: /login
 
-Sitemap: https://www.niyatipublicschool.com/sitemap.xml
+Sitemap: https://www.timesinternationalschool.com/sitemap.xml

@@ -5,22 +5,17 @@ import { AnimatePresence } from 'framer-motion';
 import AnimatedLayout from './AnimatedLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
-import LandingPage from './pages/LandingPage';
 import Profile from './pages/Profile';
 import Settings from './pages/Settings';
 import { LanguageProvider } from './context/LanguageContext';
 import MainLayout from './main/pages/mainLayout';
 import AddStudents from './student/forms/pages/addStudentForm';
 import Dashboard from './main/pages/Dashboard';
-// import ClassesDataTable from './admin/datatable/pages/ClassDataTable';
-// import EventDataTable from './Announcement/DataTable/pages/EventDataTable';
-// import NoticeDataTable from './Announcement/DataTable/pages/NoticeDatatable';
 import StudentsDatable from './student/datatable/pages/studentDataTable';
 import AddClasses from './admin/forms/pages/AddClass';
 import AddSubject from './admin/forms/pages/AddSubject';
 import RoleMenuAdmin from './admin/pages/setting/MenuRoleAssign';
 import ForgotPasswordPage from './pages/ForgotPassword';
-// import { Toaster } from 'react-hot-toast';
 import { Toaster } from "sonner";
 import TeachersOperation from './teacher/DataTable/pages/teachersDataTable';
 import TeacherSubjectAssign from './teacher/DataTable/pages/teacherSubjectAssign';
@@ -72,7 +67,7 @@ export default function App() {
 
           <Routes location={location} key={location.pathname}>
             {/* Root -> show landing page */}
-            <Route index element={<LandingPage />} />
+            <Route index element={<LoginPage />} />
 
             {/* Login route */}
             <Route

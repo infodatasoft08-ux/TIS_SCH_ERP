@@ -281,8 +281,8 @@ const getOtpHtmlTemplate = (otp) => `
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1>NIYATI PUBLIC SCHOOL</h1>
-        <p>Welcome to Niyati Public School</p>
+        <h1>TIMES INTERNATIONAL SCHOOL</h1>
+        <p>Welcome to TIMES INTERNATIONAL SCHOOL</p>
       </div>
       <div class="content">
         <h2>Verify Your Identity</h2>
@@ -300,7 +300,7 @@ const getOtpHtmlTemplate = (otp) => `
         </div>
       </div>
       <div class="footer">
-        <p>&copy; ${new Date().getFullYear()} NIYATI PUBLIC SCHOOL. All rights reserved.</p>
+        <p>&copy; ${new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.</p>
         <p>Quality Education</p>
         <div class="social-links">
           <a href="#">Support</a>
@@ -316,7 +316,7 @@ const getOtpHtmlTemplate = (otp) => `
 
 async function sendViaBrevo({ to, subject, html }) {
   const payload = {
-    sender: { name: 'NIYATI PUBLIC SCHOOL', email: process.env.MY_EMAIL },
+    sender: { name: 'TIMES INTERNATIONAL SCHOOL', email: process.env.MY_EMAIL },
     to: [{ email: to }],
     subject,
     htmlContent: html
@@ -358,7 +358,7 @@ const sendOtp = async (req, res) => {
     try {
       await sendViaBrevo({
         to: email,
-        subject: 'Password Reset OTP - NIYATI PUBLIC SCHOOL',
+        subject: 'Password Reset OTP - TIMES INTERNATIONAL SCHOOL',
         html: getOtpHtmlTemplate(otp)
       });
       res.json({ success: true, message: 'OTP sent to your email' });
@@ -1181,7 +1181,7 @@ const getContactUserHtmlTemplate = (name) => `
   <div class="wrapper">
     <div class="container">
       <div class="header">
-        <h1>NIYATI PUBLIC SCHOOL</h1>
+        <h1>TIMES INTERNATIONAL SCHOOL</h1>
       </div>
       <div class="content">
         <h2>Thank You, ${name}!</h2>
@@ -1190,7 +1190,7 @@ const getContactUserHtmlTemplate = (name) => `
         <p>If you have any urgent concerns, please feel free to reach out to us at our contact number.</p>
       </div>
       <div class="footer">
-        <p>&copy; ${new Date().getFullYear()} NIYATI PUBLIC SCHOOL. All rights reserved.</p>
+        <p>&copy; ${new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.</p>
         <p>Quality Education Management Solutions</p>
       </div>
     </div>
@@ -1218,7 +1218,7 @@ const submitContactForm = async (req, res) => {
     // 2. Send Thank You Email to User
     await sendViaBrevo({
       to: email,
-      subject: 'Thank You for Contacting NIYATI PUBLIC SCHOOL',
+      subject: 'Thank You for Contacting TIMES INTERNATIONAL SCHOOL',
       html: getContactUserHtmlTemplate(firstName)
     });
 
@@ -1305,7 +1305,7 @@ const getAdmissionAdminHtmlTemplate = ({ firstName, lastName, email, phone, clas
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>NIYATI PUBLIC SCHOOL</h1>
+      <h1>TIMES INTERNATIONAL SCHOOL</h1>
     </div>
     <div class="content">
       <h2>New Admission Inquiry</h2>
@@ -1338,7 +1338,7 @@ const getAdmissionAdminHtmlTemplate = ({ firstName, lastName, email, phone, clas
       <p>Please contact the parent at the earliest convenience to discuss the admission process.</p>
     </div>
     <div class="footer">
-      <p>&copy; ${new Date().getFullYear()} NIYATI PUBLIC SCHOOL. All rights reserved.</p>
+      <p>&copy; ${new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.</p>
       <p>Quality Education Management Solutions</p>
     </div>
   </div>
@@ -1407,18 +1407,18 @@ const getAdmissionUserHtmlTemplate = (name) => `
 <body>
   <div class="wrapper">
     <div class="header">
-      <h1>NIYATI PUBLIC SCHOOL</h1>
+      <h1>TIMES INTERNATIONAL SCHOOL</h1>
     </div>
     <div class="content">
       <h2>Thank You, ${name}!</h2>
       <p>We have successfully received your admission inquiry.</p>
       <p>Our administrative team is reviewing your message and will get back to you as soon as possible.</p>
       <div class="message-box">
-        <p>We appreciate your interest in NIYATI PUBLIC SCHOOL and look forward to assisting you with the admission process.</p>
+        <p>We appreciate your interest in TIMES INTERNATIONAL SCHOOL and look forward to assisting you with the admission process.</p>
       </div>
     </div>
     <div class="footer">
-      <p>&copy; ${new Date().getFullYear()} NIYATI PUBLIC SCHOOL. All rights reserved.</p>
+      <p>&copy; ${new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.</p>
       <p>Quality Education Management Solutions</p>
     </div>
   </div>
@@ -1445,7 +1445,7 @@ const submitAdmissionForm = async (req, res) => {
     // 2. Send Thank You Email to User
     await sendViaBrevo({
       to: email,
-      subject: 'Thank You for Your Admission Inquiry - NIYATI PUBLIC SCHOOL',
+      subject: 'Thank You for Your Admission Inquiry - TIMES INTERNATIONAL SCHOOL',
       html: getAdmissionUserHtmlTemplate(firstName)
     });
 

@@ -9,7 +9,7 @@ export function AuthProvider({ children }) {
     try {
       const raw = localStorage.getItem('user');
       return raw ? JSON.parse(raw) : null;
-    } catch(e) {
+    } catch (e) {
       return null;
     }
   });
@@ -40,23 +40,6 @@ export function AuthProvider({ children }) {
     if (user) localStorage.setItem('user', JSON.stringify(user));
     else localStorage.removeItem('user');
   }, [user]);
-
-  // useEffect(() => {
-  //   if (studentData) localStorage.setItem('studentData', JSON.stringify(studentData));
-  //   else localStorage.removeItem('studentData');
-  // }, [studentData]);
-
-  // const fetchStudentData = async () => {
-  //   try {
-  //     const res = await API.get('/students/get/student_id');
-  //     const studentInfo = res.data.student || res.data; // Adjust based on your API response
-  //     setStudentData(studentInfo);
-  //     return studentInfo;
-  //   } catch (err) {
-  //     console.error('Failed to fetch student data:', err);
-  //     return null;
-  //   }
-  // };
 
   const login = async (email, password) => {
     setLoading(true);
@@ -98,7 +81,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  const forgotPassword = async (email,  currentPassword, newPassword) => {
+  const forgotPassword = async (email, currentPassword, newPassword) => {
     setLoading(true);
     try {
       const res = await API.post('/auth/forgot/password', { email, currentPassword, newPassword });

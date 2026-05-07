@@ -192,9 +192,9 @@ export default function Contact() {
                   <div>
                     <h4 className="font-semibold text-lg">Address</h4>
                     <p className="text-blue-100/80 text-sm mt-1 leading-relaxed">
-                      NIYATI PUBLIC SCHOOL<br />
-                      New Gosai Tola, Near Hanuman Mandir, Gola Road, Danapur,<br />
-                      Patna, Bihar, India
+                      TIMES INTERNATIONAL SCHOOL<br />
+                      J57H+PG6, Mohammadpur Rd, Sultanganj,<br />
+                      Muhammadpur, Patna, Bihar 800006
                     </p>
                   </div>
                 </div>
@@ -206,7 +206,7 @@ export default function Contact() {
                   <div>
                     <h4 className="font-semibold text-lg">Mobile Number</h4>
                     <p className="text-blue-100/80 text-sm mt-1">
-                      <a href="tel:9934795151" className="hover:underline">+91 99347 95151</a>
+                      <a href="tel:8700186374" className="hover:underline">+91 8700186374</a>
                     </p>
                   </div>
                 </div>
@@ -218,7 +218,7 @@ export default function Contact() {
                   <div>
                     <h4 className="font-semibold text-lg">Email</h4>
                     <p className="text-blue-100/80 text-sm mt-1">
-                      niyatipublicschool@gmail.com<br />
+                      timesschoolpatna3@gmail.com<br />
                     </p>
                   </div>
                 </div>
@@ -228,7 +228,7 @@ export default function Contact() {
               <div className="w-full h-64 md:h-80 rounded-xl overflow-hidden shadow-lg border border-white/20 mt-auto flex-shrink-0">
                 <iframe
                   title="School Location Map"
-                  src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3597.3111190740406!2d85.04944377409868!3d25.6277977774363!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39ed578364fd0a81%3A0xa1e5e966f047c44e!2sNIYATI%20PUBLIC%20SCHOOL!5e0!3m2!1sen!2sin!4v1775928678666!5m2!1sen!2sin"
+                  src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d3597.7326101722388!2d85.1795!3d25.6138!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39ed59235b05354f%3A0xe6a19a47bafd2984!2sTimes%20International%20School!5e0!3m2!1sen!2sin!4v1778173356113!5m2!1sen!2sin"
                   width="100%"
                   height="100%"
                   style={{ border: 0 }}

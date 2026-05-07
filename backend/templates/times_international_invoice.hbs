@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niyati Bill</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,700&display=swap');
+
+        :root {
+            --bill-blue: #1e3a8a;
+            --text-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Crimson Pro', serif;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 15px;
+            background: white;
+            font-size: 14px;
+            /* width: 74mm; */
+            /* height: 105mm; */
+            /*overflow: hidden;*/
+            width: 100%;
+            box-sizing: border-box;
+
+            /* A5 Width */
+            /*height: 175mm;*/
+            overflow: visible;
+        }
+
+        @page {
+            size: A6;
+            margin: 0;
+        }
+
+        .bill-border {
+            /*border: 2px solid var(--bill-blue);
+            padding: 4px;
+            height: 100%;
+            position: relative;*/
+            position: relative;
+
+            border: 2px solid var(--bill-blue);
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            /* min-height: 100%; */
+        }
+
+
+        .content-wrapper {
+            flex: 1;
+            position: relative;
+            /* z-index: 1; */
+        }
+
+        .top-label {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 16px;
+            margin-bottom: 1px;
+            color: var(--bill-blue);
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+        }
+
+        .logo-box {
+            width: 60px;
+            height: 60px;
+        }
+
+        .logo {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .school-info {
+            flex: 1;
+            text-align: center;
+            margin-right: 40px;
+        }
+
+        .school-name {
+            font-size: 20px;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--bill-blue);
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .tagline {
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 1px;
+            color: var(--bill-blue);
+            text-align: right;
+            margin-right: 35px;
+        }
+
+        .contact-info {
+            text-align: center;
+            font-size: 11px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid var(--bill-blue);
+            padding-bottom: 3px;
+            color: var(--bill-blue);
+        }
+
+        .metadata-section {
+            border: 1px solid var(--bill-blue);
+            margin-bottom: 6px;
+            padding: 5px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: baseline;
+        }
+
+        .meta-label {
+            font-weight: bold;
+            margin-right: 5px;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+
+        .meta-value {
+            border-bottom: 1px dotted var(--text-dark);
+            flex: 1;
+            min-width: 40px;
+            padding-left: 5px;
+            font-size: 11px;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid var(--bill-blue);
+            margin-bottom: 13px;
+        }
+
+        .items-table th,
+        .items-table td {
+            border: 1px solid var(--bill-blue);
+            padding: 3px 7px;
+            text-align: left;
+        }
+
+        .items-table th {
+            font-weight: bold;
+            background: transparent;
+        }
+
+        .text-right {
+            text-align: right !important;
+            font-size: 11.5px;
+        }
+
+        .text-left {
+            text-align: left !important;
+            font-size: 11.5px;
+        }
+
+        .text-center {
+            text-align: center !important;
+            font-size: 11.5px;
+        }
+
+        .items-table tr {
+            height: 5px;
+        }
+
+        .totals-row {
+            font-weight: bold;
+        }
+
+        .amount-words-section {
+            margin-bottom: 9px;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .note-section {
+            font-size: 10px;
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+
+        .note-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .signature-section {
+            text-align: right;
+            padding-right: 10px;
+        }
+
+        .sig-line {
+            border-top: 1px solid var(--text-dark);
+            width: 110px;
+            display: inline-block;
+            margin-top: 5px;
+        }
+
+        .sig-label {
+            font-weight: bold;
+            display: block;
+            font-size: 12px;
+        }
+
+        /* Watermark */
+        /*.watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-0deg);
+            opacity: 0.1;
+            width: 60%;
+            z-index: 0;
+            pointer-events: none;
+        }*/
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 60%;
+            z-index: 0;
+            opacity: 0.15;
+            pointer-events: none;
+            /* CRITICAL: Center the image properly in A5 */
+            transform: translate(-50%, -50%) rotate(-0deg);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bill-border">
+        <!-- Watermark -->
+        {{#if logoData}}
+        <img src="{{logoData}}" class="watermark" alt="Watermark">
+        {{/if}}
+        <div class="content-wrapper">
+            <div class="top-label"> DEMAND BILL</div>
+
+            <div class="header">
+                <div class="logo-box">
+                    {{#if logoData}}
+                    <img src="{{logoData}}" alt="Logo" class="logo">
+                    {{/if}}
+                </div>
+                <div class="school-info">
+                    <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
+                    <div class="tagline">Commited to Excellence</div>
+                </div>
+            </div>
+
+            <div class="contact-info">
+                <strong>ADD:-</strong> J57H+PG6, Mohammadpur Rd, Sultanganj, Muhammadpur, Patna, Bihar 800006<br>
+                <strong>MOB:-</strong> 8102657225. <strong>Email :-</strong> timesschoolpatna3@gmail.com
+            </div>
+
+            <div class="metadata-section">
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 40%;">
+                        <span class="meta-label">S.no.</span>
+                        <span class="meta-value">{{invoice.id}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 50%;">
+                        <span class="meta-label">Date:-</span>
+                        <span class="meta-value">{{invoice.date}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 100%;">
+                        <span class="meta-label">Name:-</span>
+                        <span class="meta-value">{{invoice.user_name}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 100%;">
+                        <span class="meta-label">Father name :-</span>
+                        <span class="meta-value">{{invoice.fathers_name}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 35%;">
+                        <span class="meta-label">Class :</span>
+                        <span class="meta-value">{{invoice.grade_name}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 35%;">
+                        <span class="meta-label">Roll:-</span>
+                        <span class="meta-value">{{invoice.roll_no}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 40%;">
+                        <span class="meta-label">Month :</span>
+                        <span class="meta-value">{{invoice.period}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th width="10%" class="text-center">S.no</th>
+                        <th width="65%" class="text-center">Particulars</th>
+                        <th width="25%" class="text-right">Rs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each rowItems}}
+                    <tr>
+                        <td class="text-center">{{add @index 1}}.</td>
+                        <td class="text-left">{{name}}</td>
+                        <td class="text-right">{{amount}}</td>
+                    </tr>
+                    {{/each}}
+                    {{!-- Padding rows to match the look --}}
+                    <tr class="totals-row">
+                        <td colspan="2" class="text-right">Total</td>
+                        <td class="text-right">{{invoice.amount_due}}</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="amount-words-section">
+                <span class="meta-label">Amount in words:</span>
+                <span class="meta-value" style="font-size: 10px;">{{invoice.amount_in_words}}</span>
+            </div>
+
+            <div class="note-section">
+                <span class="note-label">Note :</span> Fees will be received 1st to 10th of every month. Otherwise Rs.
+                5/-
+                will be charged as late fee per day.
+            </div>
+
+        </div>
+
+        <div class="signature-section">
+            <span class="sig-label">Signature: <span class="sig-line"></span></span>
+        </div>
+    </div>
+</body>
+
+</html>

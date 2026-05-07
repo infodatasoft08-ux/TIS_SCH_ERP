@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Niyati Payment Receipt</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,700&display=swap');
+
+        :root {
+            --bill-blue: #1e3a8a;
+            --text-dark: #0f172a;
+        }
+
+        body {
+            font-family: 'Crimson Pro', serif;
+            color: var(--text-dark);
+            margin: 0;
+            padding: 10px 15px 15px 15px;
+            background: white;
+            font-size: 14px;
+            /* width: 74mm;
+            height: 105mm; */
+            /*width: 148mm; */
+            overflow: visible;
+            width: 100%;
+            box-sizing: border-box;
+
+        }
+
+        @page {
+            size: A6;
+            margin: 0;
+        }
+
+        .bill-border {
+            border: 2px solid var(--bill-blue);
+            /*padding: 10px;*/
+            padding: 4px;
+            height: 100%;
+            position: relative;
+            margin-top: 10px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .top-label {
+            text-align: center;
+            font-weight: bold;
+            text-decoration: underline;
+            font-size: 10px;
+            /*margin-bottom: 5px;*/
+            margin-bottom: 1px;
+            color: var(--bill-blue);
+        }
+
+        .content-wrapper {
+            flex: 1;
+            position: relative;
+            /* z-index: 1; */
+        }
+
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 2px;
+        }
+
+        .logo-box {
+            width: 60px;
+            height: 60px;
+        }
+
+        .logo {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .school-info {
+            flex: 1;
+            text-align: center;
+            margin-right: 40px;
+        }
+
+        .school-name {
+            font-size: 20px;
+            font-weight: 700;
+            font-style: italic;
+            color: var(--bill-blue);
+            margin: 0;
+            line-height: 1.2;
+            text-transform: uppercase;
+        }
+
+        .tagline {
+            font-size: 12px;
+            font-style: italic;
+            margin-top: 1px;
+            color: var(--bill-blue);
+            text-align: right;
+            margin-right: 35px;
+        }
+
+        .contact-info {
+            text-align: center;
+            font-size: 11px;
+            margin-bottom: 3px;
+            border-bottom: 1px solid var(--bill-blue);
+            padding-bottom: 3px;
+            color: var(--bill-blue);
+        }
+
+        .metadata-section {
+            border: 1px solid var(--bill-blue);
+            margin-bottom: 6px;
+            padding: 5px;
+        }
+
+        .meta-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 4px;
+        }
+
+        .meta-item {
+            display: flex;
+            align-items: baseline;
+        }
+
+        .meta-label {
+            font-weight: bold;
+            margin-right: 5px;
+            white-space: nowrap;
+            font-size: 12px;
+        }
+
+        .meta-value {
+            border-bottom: 1px dotted var(--text-dark);
+            flex: 1;
+            min-width: 40px;
+            padding-left: 5px;
+            font-size: 11px;
+        }
+
+        .receipt-summary {
+            width: 96.7%;
+            border: 1px solid var(--bill-blue);
+            margin-bottom: 6px;
+            padding: 5px;
+            background: transparent;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 3px;
+            font-size: 10px;
+        }
+
+        .amount-big {
+            font-size: 14px;
+            font-weight: bold;
+            color: var(--bill-blue);
+            margin-top: 5px;
+            text-align: center;
+            border: 2px solid var(--bill-blue);
+            padding: 2px;
+            display: inline-block;
+            min-width: 130px;
+        }
+
+        .text-center {
+            text-align: center;
+            font-size: 10px;
+        }
+
+        .text-center-paid {
+            text-align: center;
+        }
+
+        .amount-words-section {
+            margin-bottom: 5px;
+            display: flex;
+            align-items: baseline;
+        }
+
+        .note-section {
+            font-size: 10px;
+            line-height: 1.3;
+            margin-bottom: 20px;
+        }
+
+        .note-label {
+            font-weight: bold;
+            margin-right: 5px;
+        }
+
+        .signature-section {
+            display: flex;
+            justify-content: space-between;
+            padding: 0 5px;
+        }
+
+        .sig-box {
+            text-align: center;
+        }
+
+        .sig-line {
+            border-top: 1px solid var(--text-dark);
+            width: 120px;
+            display: inline-block;
+            margin-top: 1px;
+        }
+
+        .sig-label {
+            font-weight: bold;
+            display: block;
+            font-size: 11px;
+        }
+
+        /* Watermark */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%) rotate(-0deg);
+            opacity: 0.15;
+            width: 60%;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="bill-border">
+        {{#if logoData}}
+        <img src="{{logoData}}" class="watermark" alt="Watermark">
+        {{/if}}
+
+        <div class="content-wrapper">
+            <div class="top-label">PAYMENT RECEIPT</div>
+
+            <div class="header">
+                {{!-- <div class="logo-box">
+                    {{#if logoData}}
+                    <img src="{{logoData}}" alt="Logo" class="logo">
+                    {{/if}}
+                </div> --}}
+                <div class="school-info">
+                    <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
+                    <div class="tagline">Commited to Excellence</div>
+                </div>
+            </div>
+
+            <div class="contact-info">
+                <strong>ADD:-</strong> J57H+PG6, Mohammadpur Rd, Sultanganj, Muhammadpur, Patna, Bihar 800006<br>
+                <strong>MOB:-</strong> 8102657225. <strong>Email :-</strong> timesschoolpatna3@gmail.com
+            </div>
+
+            <div class="metadata-section">
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 40%;">
+                        <span class="meta-label">Receipt No.</span>
+                        <span class="meta-value">{{payment.id}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 50%;">
+                        <span class="meta-label">Date:-</span>
+                        <span class="meta-value">{{payment.date}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 100%;">
+                        <span class="meta-label">Name:-</span>
+                        <span class="meta-value">{{payment.student_name}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 100%;">
+                        <span class="meta-label">Father name :-</span>
+                        <span class="meta-value">{{payment.fathers_name}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 35%;">
+                        <span class="meta-label">Class :</span>
+                        <span class="meta-value">{{payment.grade_name}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 35%;">
+                        <span class="meta-label">Roll:-</span>
+                        <span class="meta-value">{{payment.roll_no}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 30%;">
+                        <span class="meta-label">Bill Ref:</span>
+                        <span class="meta-value">INV-{{payment.invoice_id}}</span>
+                    </div>
+                </div>
+                <div class="meta-row">
+                    <div class="meta-item" style="width: 50%;">
+                        <span class="meta-label">Month:-</span>
+                        <span class="meta-value">{{payment.period}}</span>
+                    </div>
+                    <div class="meta-item" style="width: 50%;">
+                        <span class="meta-label">Academic Year:-</span>
+                        <span class="meta-value">{{payment.academic_year_name}}</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="receipt-summary">
+                <div class="summary-row">
+                    <span>Payment Method:</span>
+                    <span
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.payment_method}}</span>
+                </div>
+                <div class="summary-row">
+                    <span>Total amount for the month {{payment.period}}:</span>
+                    <span
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.total_amount}}</span>
+                </div>
+                {{#if payment.discount_amount}}
+                <div class="summary-row">
+                    <span>Discount amount:</span>
+                    <span
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.discount_amount}}</span>
+                </div>
+                {{/if}}
+
+                {{#if payment.fine_amount}}
+                {{#unless (isPreviousFine payment.fine_type)}}
+                <div class="summary-row">
+                    {{#if payment.fine_type}}
+                    <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
+                        ({{payment.fine_type}})
+                    </span>
+                    {{/if}}
+
+                    <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
+                        {{payment.fine_amount}}
+                    </span>
+                </div>
+                {{/unless}}
+                {{/if}}
+
+                <div class="summary-row">
+                    <span>Total Amount to be paid:</span>
+                    <span
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.amount_due}}</span>
+                </div>
+                {{#if payment.reference}}
+                <div class="summary-row">
+                    <span>Reference:</span>
+                    <span font-family="monospace">{{payment.reference}}</span>
+                </div>
+                {{/if}}
+                <div class="text-center">
+                    <span>Amount Paid</span>
+                </div>
+                <div class="text-center-paid">
+                    <div class="amount-big">
+
+                        ₹ {{payment.paid_amount}}
+                    </div>
+                </div>
+                <div class="summary-row">
+                    <span>Balance amount:</span>
+                    <span style="font-weight: bold; text-transform: uppercase;">{{payment.balance}}</span>
+                </div>
+            </div>
+
+            <div class="amount-words-section">
+                <span class="meta-label">Amount in words:</span>
+                <span class="meta-value" style="font-size: 10px;">{{payment.amount_in_words}}</span>
+            </div>
+
+            <div class="note-section">
+                <span class="note-label">Note :</span> This is a computer-generated receipt for the payment recorded
+                against
+                Invoice INV-{{payment.invoice_id}}.
+            </div>
+
+        </div>
+
+        <div class="signature-section">
+            <div class="sig-box">
+                <span class="sig-line"></span>
+                <span class="sig-label">Receiver's Sign</span>
+            </div>
+            <div class="sig-box">
+                <span class="sig-line"></span>
+                <span class="sig-label">Office Seal</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>
