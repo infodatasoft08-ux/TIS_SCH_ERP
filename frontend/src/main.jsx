@@ -10,8 +10,8 @@ import { SpacemanThemeProvider } from '@space-man/react-theme-animation'
 globalThis.Temporal = Temporal;
 
 createRoot(document.getElementById('root')).render(
-  <SpacemanThemeProvider basename="/niyati">
-    <BrowserRouter>
+  <SpacemanThemeProvider>
+    <BrowserRouter basename="/tis">
       <App />
     </BrowserRouter>
   </SpacemanThemeProvider>
