@@ -15,7 +15,7 @@ import BulkImportDialog from "@/pages/BulkImportDialog";
 import { exportToCSV, exportToExcel, exportToPDF } from "@/utils/exportHelper";
 import DetailsDialog from "@/components/DetailsDialog";
 import { User, Mail, Phone, Calendar, Briefcase, GraduationCap, Eye, MapPin, Shield } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator, DropdownMenuLabel } from "@/components/ui/dropdown-menu";
 
 export default function StaffOperation() {
   const [staffs, setStaffs] = useState([]);
@@ -164,6 +164,26 @@ export default function StaffOperation() {
         { header: 'Department', dataKey: 'Department' },
       ];
       exportToPDF(columns, exportData, 'Staff List', 'staff_list');
+    }
+  };
+
+  const handleServerExport = async (type) => {
+    const toastId = toast.loading("Generating premium template-compatible export...");
+    try {
+      const format = type === 'excel' ? 'xlsx' : 'csv';
+      const response = await API.get(`/admin/export/staff?format=${format}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `Staff_Bulk_Template.${format}`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("Export downloaded successfully!");
+    } catch (err) {
+      toast.error("Failed to generate server export.");
+    } finally {
+      toast.dismiss(toastId);
     }
   };
 
@@ -324,10 +344,19 @@ export default function StaffOperation() {
                   Export Data
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel className="text-xs font-bold text-gray-400">Standard Reports</DropdownMenuLabel>
                 <DropdownMenuItem onClick={() => handleExport('excel')}>Export to Excel</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('csv')}>Export to CSV</DropdownMenuItem>
                 <DropdownMenuItem onClick={() => handleExport('pdf')}>Export to PDF</DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-bold text-violet-600">Template Compatible</DropdownMenuLabel>
+                <DropdownMenuItem onClick={() => handleServerExport('excel')} className="font-semibold text-violet-700">
+                  Download Excel Template
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => handleServerExport('csv')} className="font-semibold text-violet-700">
+                  Download CSV Template
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>

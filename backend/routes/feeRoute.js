@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF } = require('../controller/feeController');
+const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF, ExportDueInvoicesCSV, ExportPaymentHistoryCSV } = require('../controller/feeController');
 
 
 // Fee Type Routes
@@ -31,6 +31,8 @@ router.post('/add/invoices/:id/add-previous-dues', auth, AddPreviousDues);
 router.post('/add/invoices/:id/add-discount', auth, AddInvoiceDiscount);
 router.post('/invoices/fines/:fineId/reverse', auth, ReverseInvoiceFine);
 router.get('/list/invoices', auth, GetInvoices);
+router.get('/export/due-invoices', auth, ExportDueInvoicesCSV);
+router.get('/export/payments', auth, ExportPaymentHistoryCSV);
 router.get('/get/invoices/:id', auth, GetInvoiceById);
 router.get('/get/invoices/:id/pdf', auth, DownloadInvoicePDF);
 router.get('/get/invoices/:id/combined-pdf', auth, DownloadCombinedPDF);

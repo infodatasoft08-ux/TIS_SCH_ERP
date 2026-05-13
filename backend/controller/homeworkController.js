@@ -1,5 +1,5 @@
 const db = require("../db");
-const { sendWhatsAppMessage } = require("../helper/whatsappHelper");
+const whatsappQueue = require("../queues/whatsappQueue");
 
 const createHomework = async (req, res) => {
     const { title, grade_id, class_id, homework_date, academic_year_id, subject_homeworks } = req.body;
@@ -105,9 +105,15 @@ const sendNotifications = async (homeworkId, title, grade_id, class_id, homework
         // Fetch students and their parents
         let sql = `
             SELECT u.name as student_name, u.phone as student_phone, 
-                   s.parent_contact, s.mother_contect
+                   s.parent_contact, s.mother_contect,
+                   c.name as class_name,
+                   g.name as grade_name,
+                   ay.name as academic_year
             FROM student_academic_records sar
             JOIN students s ON s.id = sar.student_id
+            JOIN classes c ON c.id = sar.class_id
+            JOIN grades g ON g.id = sar.grade_id
+            JOIN academic_years ay ON ay.id = sar.academic_year_id
             JOIN users u ON u.id = s.user_id
             WHERE sar.grade_id = ?
         `;
@@ -124,60 +130,76 @@ const sendNotifications = async (homeworkId, title, grade_id, class_id, homework
 
         const messageTemplate = `📚 *HOMEWORK ASSIGNMENT*
 
-        Dear Parent,
-        Homework for *${students.student_name}* has been assigned for ${new Date(homework_date).toDateString()}.
+Dear Parent,
+Homework for *{student_name}* has been assigned for ${new Date(homework_date).toDateString()}.
 
-        *Title:* ${title}
-        *Details:*
-        ${homeworkSummary}${attachmentMsg}
+*Title:* ${title}
+*Details:*
+${homeworkSummary}${attachmentMsg}
 
-        Please ensure the homework is completed.
-        - Niyati Public School`;
+Please ensure the homework is completed.
+- CMC`;
 
         for (const student of students) {
             // Collect all unique phone numbers
             const contacts = [
                 student.student_phone,
-                student.parent_contact,
-                student.mother_contect
+                student.parent_contact
             ].filter(Boolean).map(num => num.trim());
 
             const uniqueContacts = [...new Set(contacts)];
 
             for (const phone of uniqueContacts) {
-                // const personalizedMessage = messageTemplate.replace("{student_name}", student.student_name);
+                const personalizedMessage = messageTemplate.replace("{student_name}", student.student_name);
                 // await sendWhatsAppMessage(phone, personalizedMessage);
-
-                await sendWhatsAppMessage(phone, {
-
-                    template: {
-                        name: "homework_notification",
-                        language: {
-                            code: "en"
+                await whatsappQueue.add('homeworkNotification', {
+                    contact: phone,
+                    jobType: 'homeworkNotification',
+                    message: {
+                        template: {
+                            name: "student_homework_alert",
+                            language: {
+                                code: "en"
+                            },
+                            components: [
+                                {
+                                    type: "body",
+                                    parameters: [
+                                        {
+                                            type: "text",
+                                            text: student.student_name
+                                        },
+                                        {
+                                            type: "text",
+                                            text: student.class_name
+                                        },
+                                        {
+                                            type: "text",
+                                            text: homeworkSummary
+                                        },
+                                        {
+                                            type: "text",
+                                            text: new Date(homework_date).toDateString()
+                                        },
+                                        {
+                                            type: "text",
+                                            text: "TIMES INTERNATIONAL SCHOOL"
+                                        },
+                                        {
+                                            type: "text",
+                                            text: student.academic_year
+                                        },
+                                        {
+                                            type: "text",
+                                            text: attachment_url || ""
+                                        }
+                                    ]
+                                }
+                            ]
                         },
-                        components: [
-                            {
-                                type: "body",
-                                parameters: [
-                                    {
-                                        type: "text",
-                                        text: student.student_name
-                                    },
-                                    {
-                                        type: "text",
-                                        text: title
-                                    },
-                                    {
-                                        type: "text",
-                                        text: `${homeworkSummary}${attachmentMsg}`
-                                    }
-                                ]
-                            }
-                        ]
-                    },
-
-                    // Fallback normal text
-                    fallbackText: messageTemplate
+                        // Fallback normal text
+                        fallbackText: personalizedMessage
+                    }
                 });
             }
         }

@@ -51,6 +51,8 @@ import EmployeeAttendanceTaker from './admin/pages/EmployeeAttendanceTaker';
 import HomeworkPage from './homework/HomeworkPage';
 import StudentHomeworkPage from './homework/StudentHomeworkPage';
 import CreateAnouncementDatable from './components/announcements/CreateAnouncementDatable';
+import RegistrationPage from './pages/RegistrationPage';
+import RegisteredRequests from './admin/pages/RegisteredRequests';
 
 
 export default function App() {
@@ -91,6 +93,14 @@ export default function App() {
               element={
                 <AnimatedLayout>
                   <Contact />
+                </AnimatedLayout>
+              }
+            />
+            <Route
+              path="/registration"
+              element={
+                <AnimatedLayout>
+                  <RegistrationPage />
                 </AnimatedLayout>
               }
             />
@@ -190,6 +200,7 @@ export default function App() {
               <Route path="setting" element={<RoleMenuAdmin />} />
               <Route path="settings" element={<Settings />} />
               <Route path="profile" element={<Profile />} />
+              <Route path="registered" element={<RegisteredRequests />} />
             </Route>
 
             {/* fallback -> go to login or dashboard */}

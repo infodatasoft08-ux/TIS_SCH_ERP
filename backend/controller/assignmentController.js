@@ -1,6 +1,7 @@
 const express = require('express');
 const db = require('../db');
 // const { sendWhatsAppMessage } = require('../helper/whatsappHelper');
+const whatsappQueue = require('../queues/whatsappQueue');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -61,6 +62,31 @@ const AddAssignment = async (req, res) => {
         );
 
         await conn.commit();
+
+        // --- WHATSAPP INTEGRATION ---
+        try {
+            const [students] = await conn.execute(
+                `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone, c.name as class_name
+                 FROM student_academic_records sar
+                 JOIN students s ON s.id = sar.student_id
+                 JOIN users u ON u.id = s.user_id
+                 JOIN classes c ON c.id = sar.class_id
+                 WHERE sar.class_id = ? AND sar.id IN (SELECT MAX(id) FROM student_academic_records GROUP BY student_id)`,
+                [finalClassId]
+            );
+
+            for (const student of students) {
+                const contact = student.parent_contact || student.mother_contect || student.student_phone;
+                const msg = `New Assignment: ${title} has been assigned to class ${student.class_name}. Due Date: ${due_date || 'N/A'} .\nMax Marks: ${max_marks || 'N/A'}.\nDescription: ${description || 'N/A'}.`;
+                // sendWhatsAppMessage(contact, msg);
+                await whatsappQueue.add('assignmentNotification', {
+                    contact,
+                    jobType: 'assignmentNotification',
+                    message: msg
+                });
+            }
+        } catch (msgErr) { console.error('Assignment notification error:', msgErr); }
+        // ----------------------------
 
         conn.release();
 

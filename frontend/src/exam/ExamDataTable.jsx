@@ -33,10 +33,14 @@ export default function ExamDataTable() {
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
 
-    // Filter states for Student Reports tab
     const [filterGrade, setFilterGrade] = useState("all");
     const [filterAcademicYear, setFilterAcademicYear] = useState("all");
     const [filterSearch, setFilterSearch] = useState("");
+
+    // Filter states for Exams tab
+    const [filterExamsGrade, setFilterExamsGrade] = useState("all");
+    const [filterExamsAcademicYear, setFilterExamsAcademicYear] = useState("all");
+    const [filterExamsSearch, setFilterExamsSearch] = useState("");
 
     // Pagination states
     const [limit] = useState(10);
@@ -53,8 +57,13 @@ export default function ExamDataTable() {
         }
 
         try {
+            let examsUrl = `/exam/list/exams?limit=${limit}&offset=${newOffset}`;
+            if (filterExamsGrade !== "all") examsUrl += `&grade_id=${filterExamsGrade}`;
+            if (filterExamsAcademicYear !== "all") examsUrl += `&academic_year_id=${filterExamsAcademicYear}`;
+            if (filterExamsSearch) examsUrl += `&q=${encodeURIComponent(filterExamsSearch)}`;
+
             const promises = [
-                API.get(`/exam/list/exams?limit=${limit}&offset=${newOffset}`)
+                API.get(examsUrl)
             ];
 
             if (reset) {
@@ -77,11 +86,11 @@ export default function ExamDataTable() {
                 setClasses(results[2].data.classes || []);
                 setGrades(results[3].data.grades || []);
                 setSubjects(results[4].data.subjects || []);
-                
+
                 // Fix: Get academic years from academic_years or years or academicYears
                 const ayData = results[5].data.academic_years || results[5].data.years || results[5].data.academicYears || [];
                 setAcademicYears(ayData);
-                
+
                 setStudentSummaries(results[6].data.studentSummaries || []);
             }
 
@@ -108,7 +117,7 @@ export default function ExamDataTable() {
 
     useEffect(() => {
         loadExams(true);
-    }, []);
+    }, [filterExamsGrade, filterExamsAcademicYear, filterExamsSearch]);
 
     async function deleteExam(id) {
         if (!confirm("Are you sure you want to delete this exam?")) return;
@@ -183,8 +192,8 @@ export default function ExamDataTable() {
     const filteredSummaries = studentSummaries.filter(s => {
         const matchesGrade = filterGrade === "all" || s.grade_id?.toString() === filterGrade;
         const matchesYear = filterAcademicYear === "all" || s.academic_year_id?.toString() === filterAcademicYear;
-        const matchesSearch = s.name?.toLowerCase().includes(filterSearch.toLowerCase()) || 
-                              s.roll_no?.toString().includes(filterSearch);
+        const matchesSearch = s.name?.toLowerCase().includes(filterSearch.toLowerCase()) ||
+            s.roll_no?.toString().includes(filterSearch);
         return matchesGrade && matchesYear && matchesSearch;
     });
 
@@ -195,14 +204,14 @@ export default function ExamDataTable() {
 
     const generateMarksheetPDF = (student, exam) => {
         const doc = new jsPDF();
-        
+
         // Header
         doc.setFontSize(20);
         doc.setTextColor(40);
         doc.text("NIYATI PUBLIC SCHOOL", 105, 15, { align: "center" });
         doc.setFontSize(14);
         doc.text("EXAMINATION MARKSHEET", 105, 25, { align: "center" });
-        
+
         doc.setLineWidth(0.5);
         doc.line(20, 30, 190, 30);
 
@@ -211,7 +220,7 @@ export default function ExamDataTable() {
         doc.text(`Student Name: ${student.name}`, 20, 40);
         doc.text(`Roll No: ${student.roll_no || 'N/A'}`, 20, 45);
         doc.text(`Grade: ${student.grade_name || 'N/A'}`, 20, 50);
-        
+
         doc.text(`Exam: ${exam.name}`, 140, 40);
         doc.text(`Date: ${new Date(exam.date).toLocaleDateString()}`, 140, 45);
         doc.text(`Academic Year: ${student.academic_year_name || 'N/A'}`, 140, 50);
@@ -240,18 +249,18 @@ export default function ExamDataTable() {
         const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 70) + 10;
         doc.text(`Total Marks: ${totalObtained} / ${totalMax}`, 20, finalY);
         doc.text(`Percentage: ${percentage}%`, 20, finalY + 5);
-        
+
         doc.save(`${student.name}_${exam.name}_Marksheet.pdf`);
     };
 
     const generatePerformanceReportPDF = (student) => {
         const doc = new jsPDF();
-        
+
         doc.setFontSize(20);
         doc.text("NIYATI PUBLIC SCHOOL", 105, 15, { align: "center" });
         doc.setFontSize(14);
         doc.text("CONSOLIDATED PERFORMANCE REPORT", 105, 25, { align: "center" });
-        
+
         doc.setFontSize(10);
         doc.text(`Student: ${student.name}`, 20, 40);
         doc.text(`Roll No: ${student.roll_no}`, 20, 45);
@@ -261,7 +270,7 @@ export default function ExamDataTable() {
         student.exams.forEach(exam => {
             doc.setFontSize(12);
             doc.text(`Exam: ${exam.name} (${new Date(exam.date).toLocaleDateString()})`, 20, currentY);
-            
+
             const tableBody = exam.subjects.map(sub => [
                 sub.subject_name,
                 sub.max_marks,
@@ -278,7 +287,7 @@ export default function ExamDataTable() {
             });
 
             currentY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : currentY + 40) + 15;
-            
+
             if (currentY > 250) {
                 doc.addPage();
                 currentY = 20;
@@ -304,18 +313,66 @@ export default function ExamDataTable() {
 
             <div className="px-2 md:px-6 max-w-7xl mx-auto w-full">
                 <Tabs defaultValue="exams" className="w-full">
-                    <TabsList className="flex flex-col md:grid md:grid-cols-2 mb-6 md:mb-10 bg-gray-100/50 dark:bg-gray-800/70 p-1.5 rounded-2xl h-auto md:h-16 gap-1.5 shadow-inner">
-                        <TabsTrigger value="exams" className="w-full rounded-xl text-sm md:text-xl py-3 md:py-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-lg transition-all duration-300">
+                    <TabsList className="flex flex-col md:grid md:grid-cols-2 mb-6 md:mb-8 bg-gray-100/50 dark:bg-gray-800/70 p-1.5 rounded-2xl h-auto md:h-13 gap-1.5 shadow-inner">
+                        <TabsTrigger value="exams" className="w-full rounded-xl text-sm md:text-xl py-3 md:py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-lg transition-all duration-300">
                             Management & Exams
                         </TabsTrigger>
-                        <TabsTrigger value="reports" className="w-full rounded-xl text-sm md:text-xl py-3 md:py-4 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-lg transition-all duration-300">
+                        <TabsTrigger value="reports" className="w-full rounded-xl text-sm md:text-xl py-3 md:py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-lg transition-all duration-300">
                             Student Reports & Analytics
                         </TabsTrigger>
                     </TabsList>
 
                     <TabsContent value="exams" className="space-y-4">
                         <Card className="border-0 shadow-lg overflow-hidden rounded-3xl bg-white dark:bg-gray-900/40 backdrop-blur-sm">
-                            <CardContent className="p-2 md:p-8">
+                            <CardContent className="p-3 md:p-8">
+                                <div className="flex flex-col lg:flex-row gap-4 md:gap-6 mb-8">
+                                    <div className="flex-1 relative group">
+                                        <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <Search className="h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
+                                        </div>
+                                        <input
+                                            type="text"
+                                            placeholder="Search exam name..."
+                                            className="w-full pl-11 pr-4 py-3 md:py-2 border-2 border-gray-100 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 bg-gray-50/50 dark:bg-gray-950/50 text-sm md:text-base transition-all"
+                                            value={filterExamsSearch}
+                                            onChange={(e) => setFilterExamsSearch(e.target.value)}
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 lg:flex gap-2 md:gap-1">
+                                        <div className="w-full lg:w-48">
+                                            <Select value={filterExamsGrade} onValueChange={setFilterExamsGrade}>
+                                                <SelectTrigger className="bg-gray-50/50 dark:bg-gray-950/50 border-2 border-gray-100 dark:border-gray-800 rounded-2xl h-full py-3 md:py-4 shadow-none focus:ring-4 focus:ring-primary/10">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <Filter className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
+                                                        <SelectValue placeholder="Grade" className="truncate" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-2xl">
+                                                    <SelectItem value="all">All Grades</SelectItem>
+                                                    {grades.map(g => (
+                                                        <SelectItem key={g.id} value={g.id.toString()}>{g.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="w-full lg:w-56">
+                                            <Select value={filterExamsAcademicYear} onValueChange={setFilterExamsAcademicYear}>
+                                                <SelectTrigger className="bg-gray-50/50 dark:bg-gray-950/50 border-2 border-gray-100 dark:border-gray-800 rounded-2xl h-full py-3 md:py-4 shadow-none focus:ring-4 focus:ring-primary/10">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <Calendar className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
+                                                        <SelectValue placeholder="Academic Year" className="truncate" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-2xl">
+                                                    <SelectItem value="all">All Years</SelectItem>
+                                                    {academicYears.map(y => (
+                                                        <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                    </div>
+                                </div>
                                 <ExamList
                                     exams={exams}
                                     onAddMarks={openAddMarksDialog}
@@ -344,10 +401,10 @@ export default function ExamDataTable() {
                                         <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                             <Search className="h-5 w-5 text-gray-400 group-focus-within:text-primary transition-colors" />
                                         </div>
-                                        <input 
-                                            type="text" 
-                                            placeholder="Search name or roll number..." 
-                                            className="w-full pl-11 pr-4 py-3 md:py-4 border-2 border-gray-100 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 bg-gray-50/50 dark:bg-gray-950/50 text-sm md:text-base transition-all"
+                                        <input
+                                            type="text"
+                                            placeholder="Search name or roll number..."
+                                            className="w-full pl-11 pr-4 py-3 md:py-2 border-2 border-gray-100 dark:border-gray-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-primary/10 focus:border-primary/50 bg-gray-50/50 dark:bg-gray-950/50 text-sm md:text-base transition-all"
                                             value={filterSearch}
                                             onChange={(e) => setFilterSearch(e.target.value)}
                                         />
@@ -439,9 +496,9 @@ export default function ExamDataTable() {
                                                                         <div className="space-y-1">
                                                                             <p className="text-xs font-semibold px-2 py-1 border-b mb-1 text-muted-foreground">Select Exam</p>
                                                                             {student.exams.map(ex => (
-                                                                                <Button 
-                                                                                    key={ex.id} 
-                                                                                    variant="ghost" 
+                                                                                <Button
+                                                                                    key={ex.id}
+                                                                                    variant="ghost"
                                                                                     className="w-full justify-start text-xs h-8"
                                                                                     onClick={() => generateMarksheetPDF(student, ex)}
                                                                                 >
@@ -452,14 +509,14 @@ export default function ExamDataTable() {
                                                                     </PopoverContent>
                                                                 </Popover>
 
-                                                                 <Button 
-                                                                     variant="default" 
-                                                                     size="sm" 
-                                                                     onClick={() => openPerformanceReport(student)} 
-                                                                     className="gap-2 bg-indigo-600 hover:bg-indigo-700"
-                                                                 >
-                                                                     <TrendingUp className="h-3.5 w-3.5" /> Performance Report
-                                                                 </Button>
+                                                                <Button
+                                                                    variant="default"
+                                                                    size="sm"
+                                                                    onClick={() => openPerformanceReport(student)}
+                                                                    className="gap-2 bg-indigo-600 hover:bg-indigo-700"
+                                                                >
+                                                                    <TrendingUp className="h-3.5 w-3.5" /> Performance Report
+                                                                </Button>
                                                             </div>
                                                         </TableCell>
                                                     </TableRow>
@@ -500,7 +557,7 @@ export default function ExamDataTable() {
                     onSuccess={loadExams}
                 />
 
-                <StudentPerformanceReport 
+                <StudentPerformanceReport
                     open={isReportDialogOpen}
                     onOpenChange={setIsReportDialogOpen}
                     student={selectedStudent}

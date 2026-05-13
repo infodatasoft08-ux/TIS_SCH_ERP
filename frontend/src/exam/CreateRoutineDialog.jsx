@@ -93,7 +93,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                                         <label className="text-sm font-medium">Start Time</label>
                                         <Input
                                             type="time"
-                                            className="mt-1"
+                                            className="mt-1 bg-gray-900 dark:[color-scheme:dark]"
                                             value={item.start_time}
                                             onChange={(e) => handleTimeChange(item.id, 'start_time', e.target.value)}
                                         />
@@ -102,7 +102,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                                         <label className="text-sm font-medium">End Time</label>
                                         <Input
                                             type="time"
-                                            className="mt-1"
+                                            className="mt-1 bg-gray-900 dark:[color-scheme:dark]"
                                             value={item.end_time}
                                             onChange={(e) => handleTimeChange(item.id, 'end_time', e.target.value)}
                                         />

@@ -152,6 +152,37 @@ export default function PaymentHistory() {
     }));
   };
 
+  const handleExportCSV = async () => {
+    try {
+      const params = {
+        start_date: dateRange.start,
+        end_date: dateRange.end,
+        payment_method: filterMethod,
+        q: searchQuery
+      };
+      if (filterAcademicYear !== "all") params.academic_year_id = filterAcademicYear;
+      if (filterGrade !== "all") params.grade_id = filterGrade;
+      if (filterClass !== "all") params.class_id = filterClass;
+
+      const res = await API.get(`/fee/export/payments`, {
+        params,
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `payment_history_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("CSV exported successfully");
+    } catch (err) {
+      console.error("Failed to export CSV", err);
+      toast.error("No payment records found for the selected criteria");
+    }
+  };
+
   const getMethodBadge = (method) => {
     switch (method) {
       case 'cash':
@@ -206,7 +237,7 @@ export default function PaymentHistory() {
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline">
+          <Button variant="outline" onClick={handleExportCSV}>
             <Download className="h-4 w-4 mr-2" />
             Export CSV
           </Button>

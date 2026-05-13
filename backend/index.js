@@ -30,13 +30,33 @@ const bulkRouter = require('./routes/bulkRoute');
 const schoolGalleryRouter = require('./routes/schoolGalleryRoute');
 const employeeAttendanceRouter = require('./routes/employeeAttendanceRoute');
 const homeworkRouter = require('./routes/homework_routes');
+const registrationRouter = require('./routes/registrationRoute');
 
 app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
 
+const { createBullBoard } = require('@bull-board/api');
+const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
+const { ExpressAdapter } = require('@bull-board/express');
+const whatsappQueue = require('./queues/whatsappQueue');
 
+const serverAdapter = new ExpressAdapter();
+serverAdapter.setBasePath('/admin/queues');
+
+createBullBoard({
+  queues: [new BullMQAdapter(whatsappQueue)],
+  serverAdapter: serverAdapter,
+});
+
+app.use('/admin/queues', serverAdapter.getRouter());
+
+// app.post('/api/test-whatsapp-queue', async (req, res) => {
+//   const { to, message } = req.body;
+//   await whatsappQueue.add('testMessage', { to, message });
+//   res.json({ success: true, message: 'Message added to queue' });
+// });
 
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentsRoutes);
@@ -59,6 +79,7 @@ app.use('/api/bulk', bulkRouter);
 app.use('/api/school-gallery', schoolGalleryRouter);
 app.use('/api/employee-attendance', employeeAttendanceRouter);
 app.use('/api/homework', homeworkRouter);
+app.use('/api/registration', registrationRouter);
 
 
 const PORT = process.env.PORT;

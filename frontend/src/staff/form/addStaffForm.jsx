@@ -205,7 +205,7 @@ export default function AddStaffDialog({
             </p>
           </DialogHeader>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 bg-white dark:bg-gray-900/10" style={{ scrollbarWidth: "thin", scrollbarColor: "#8b5cf6 #f3f4f6", scrollBehavior: "smooth", msScrollbarArrowColor: "#8b5cf6" }}>
+        <div className="flex-1 overflow-y-auto px-6">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Debug: Show validation errors at top */}
@@ -499,27 +499,29 @@ export default function AddStaffDialog({
                               <CommandList>
                                 <CommandEmpty>No roles found.</CommandEmpty>
                                 <CommandGroup>
-                                  {roles.map((role) => (
-                                    <CommandItem
-                                      key={role.id}
-                                      value={role.id}
-                                      onSelect={() => {
-                                        field.onChange(role.id);
-                                        setOpen(false);
-                                      }}
-                                      className="cursor-pointer"
-                                    >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          field.value === role.id
-                                            ? "opacity-100"
-                                            : "opacity-0"
-                                        )}
-                                      />
-                                      <span>{role.role_name}</span>
-                                    </CommandItem>
-                                  ))}
+                                  {roles
+                                    .filter((role) => role.sub_role === "staff" || (!["student", "teacher", "admin", "super"].includes(String(role.role_name).toLowerCase()) && !role.sub_role))
+                                    .map((role) => (
+                                      <CommandItem
+                                        key={role.id}
+                                        value={role.id}
+                                        onSelect={() => {
+                                          field.onChange(role.id);
+                                          setOpen(false);
+                                        }}
+                                        className="cursor-pointer"
+                                      >
+                                        <Check
+                                          className={cn(
+                                            "mr-2 h-4 w-4",
+                                            field.value === role.id
+                                              ? "opacity-100"
+                                              : "opacity-0"
+                                          )}
+                                        />
+                                        <span>{role.role_name}</span>
+                                      </CommandItem>
+                                    ))}
                                 </CommandGroup>
                               </CommandList>
                             </Command>

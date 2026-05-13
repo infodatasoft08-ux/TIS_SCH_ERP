@@ -182,8 +182,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, onSuccess
                             {students.map(student => (
                                 <div key={student.id} className="border rounded-xl p-4 shadow-sm">
                                     <div className="font-semibold text-lg border-b pb-2 mb-4 flex justify-between">
-                                        <span>{student.name} {student.last_name || ''}</span>
-                                        <span className="text-sm text-gray-500 font-normal">Roll No: {student.roll_no || student.admission_number || 'N/A'}</span>
+                                        <span>{student.user_name} || {student.grade_name} || {student.class_name}</span>
+                                        <span className="text-sm dark:text-gray-300 text-gray-600 font-normal">Roll No: {student.roll_no || student.admission_number || 'N/A'}</span>
                                     </div>
                                     <div className="overflow-x-auto">
                                         <Table>

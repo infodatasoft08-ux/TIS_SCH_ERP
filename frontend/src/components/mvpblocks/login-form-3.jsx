@@ -385,8 +385,21 @@ export default function SignInPage() {
                     </div> */}
                   </form>
 
+                  <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
+                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 font-medium">
+                      New to the institution Or Existing Student ? Apply Here
+                    </p>
+                    <Link
+                      to="/registration"
+                      className="inline-flex items-center justify-center w-1/2 rounded-xl border-2 border-blue-600 bg-blue-50/50 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 dark:bg-gray-800 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white"
+                    >
+                      <Users className="mr-2 h-4 w-4" />
+                      Registered Here
+                    </Link>
+                  </div>
+
                   <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Don't have an account or want to get admission?{" "}
+                    Need support??{" "}
                     <Link to="/contact" className={`font-semibold text-blue-600 hover:text-blue-700 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
                       Contact Administration
                     </Link>

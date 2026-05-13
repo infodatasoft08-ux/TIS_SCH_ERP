@@ -1,7 +1,7 @@
 const express = require('express');
 const db = require('../db');
 const formatMySQLDate = require("../config/deateConverter");
-// const { sendWhatsAppMessage } = require('../helper/whatsappHelper');
+const whatsappQueue = require('../queues/whatsappQueue');
 
 const VALID_STATUSES = new Set(['present', 'absent', 'late', 'excused']);
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -74,10 +74,11 @@ const TakeAttendance = async (req, res) => {
       if (studentIds.length > 0) {
         const [details] = await conn.execute(
           `SELECT s.id as student_id, u.name as student_name, c.name as class_name, sar.roll_no, 
-                  s.parent_contact, s.mother_contect, u.phone as student_phone
+                  s.parent_contact, s.mother_contect, u.phone as student_phone, ay.name as academic_year
            FROM students s
            JOIN users u ON u.id = s.user_id
            JOIN student_academic_records sar ON sar.student_id = s.id
+           JOIN academic_years ay ON ay.id = sar.academic_year_id
            JOIN classes c ON c.id = sar.class_id
            WHERE s.id IN (${studentIds.map(() => '?').join(',')})
              AND sar.id IN (SELECT MAX(id) FROM student_academic_records GROUP BY student_id)`,
@@ -100,12 +101,13 @@ const TakeAttendance = async (req, res) => {
                 Dear Parent,\\n\
 
                 Your child ${detail.student_name}\\n\
-                (Roll: ${detail.roll_no}, Class: ${detail.class_name})\\n\
+                (Academic Year: ${detail.academic_year}, Class: ${detail.class_name})\\n\
                 was marked ABSENT on ${record.attendance_date}.\\n\"
+                Status: ${record.status}\\n\
 
                 Please contact the school if this is incorrect.
 
-                Thank you.
+                Thank you TIMES INTERNATIONAL SCHOOL.
               `;
 
             } else if (record.status === 'late') {
@@ -114,14 +116,60 @@ const TakeAttendance = async (req, res) => {
                 Dear Parent,\n\
 
                 Your child ${detail.student_name}\n\
-                (Roll: ${detail.roll_no}, Class: ${detail.class_name})\n\
+                (Academic Year: ${detail.academic_year}, Class: ${detail.class_name})\n\
                 arrived LATE on ${record.attendance_date}.\n\
+                Status: ${record.status}\n\
 
-                Thank you.
+                Thank you CMC.
               `;
             }
             if (msg && contact) {
-              await sendWhatsAppMessage(contact, msg);
+              await whatsappQueue.add('bulkAttendanceNotification', {
+                contact,
+                jobType: 'bulkAttendanceNotification',
+                message: {
+                  template: {
+                    name: "student_attendance_alert",
+                    language: {
+                      code: "en"
+                    },
+                    components: [
+                      {
+                        type: "body",
+                        parameters: [
+                          {
+                            type: "text",
+                            text: detail.student_name
+                          },
+                          {
+                            type: "text",
+                            text: record.attendance_date
+                          },
+                          {
+                            type: "text",
+                            text: record.status
+                          },
+                          {
+                            type: "text",
+                            text: `TIMES INTERNATIONAL SCHOOL`
+                          },
+                          {
+                            type: "text",
+                            text: detail.class_name
+                          },
+                          {
+                            type: "text",
+                            text: detail.academic_year
+                          }
+                        ]
+                      }
+                    ]
+                  },
+
+                  // Fallback normal text
+                  fallbackText: msg
+                }
+              });
             }
           }
         }
@@ -347,7 +395,11 @@ const UpdateSingleAttendance = async (req, res) => {
         }
 
         if (msg) {
-          await sendWhatsAppMessage(contact, msg);
+          await whatsappQueue.add('attendanceUpdateNotification', {
+            contact,
+            jobType: 'attendanceUpdateNotification',
+            message: msg
+          });
         }
       }
 

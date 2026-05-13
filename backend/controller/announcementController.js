@@ -2,7 +2,7 @@ const formatSQLDateTime = require('../config/dateTimeConvert');
 const formatMySQLDate = require('../config/deateConverter');
 const pool = require('../db');
 const { deleteFromCloudinary } = require('../helper/cloudinaryHelper');
-// const { sendWhatsAppMessage } = require('../helper/whatsappHelper');
+const whatsappQueue = require('../queues/whatsappQueue');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -67,6 +67,44 @@ const createNotice = async (req, res) => {
             [title.trim(), body || null, audience, class_id || null, publishAtISO || null, expireAtISO || null, (is_published ? 1 : 0), created_by || null, final_image_url]
         );
         const [rows] = await pool.execute('SELECT * FROM notices WHERE id = ?', [ins.insertId]);
+
+        // --- WHATSAPP INTEGRATION (NOTICE) ---
+        try {
+            if (is_published) {
+                const msg = `New Notice: ${title}\n\n${body}\n\nPublished: ${publishAtISO || 'Now'}`;
+
+                if (audience === 'all') {
+                    // All students/parents
+                    const [students] = await pool.execute(
+                        `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone 
+                         FROM student_academic_records sar
+                         JOIN students s ON s.id = sar.student_id
+                         JOIN users u ON u.id = s.user_id
+                         WHERE sar.id IN (SELECT MAX(id) FROM student_academic_records GROUP BY student_id)`
+                    );
+                    for (const student of students) {
+                        const contact = student.parent_contact || student.mother_contect || student.student_phone;
+                        if (contact) await whatsappQueue.add('noticeNotification', { contact, jobType: 'noticeNotification', message: msg });
+                    }
+                } else if (audience === 'students' || audience === 'parents') {
+                    // Specific audience - send to all students/parents
+                    const [contacts] = await pool.execute(
+                        `SELECT DISTINCT 
+                            COALESCE(s.parent_contact, s.mother_contect) as parent_contact, 
+                            u.phone as student_phone
+                         FROM student_academic_records sar
+                         JOIN students s ON s.id = sar.student_id
+                         JOIN users u ON u.id = s.user_id`
+                    );
+                    for (const contact of contacts) {
+                        const target = contact.parent_contact || contact.student_phone;
+                        if (target) await whatsappQueue.add('noticeNotification', { contact: target, jobType: 'noticeNotification', message: msg });
+                    }
+                }
+                // Other audiences (teachers, staff) can be added similarly if needed
+            }
+        } catch (msgErr) { console.error('Notice notification error:', msgErr); }
+        // -------------------------------------
 
         return res.status(201).json({ notice: rows[0] });
     } catch (err) {
@@ -297,22 +335,28 @@ const createEvents = async (req, res) => {
         const [rows] = await pool.execute('SELECT * FROM events WHERE id = ?', [ins.insertId]);
 
         // --- WHATSAPP INTEGRATION (EVENT) ---
-        // try {
-        //     if (is_public) {
-        //         // For events, usually notify all students/parents
-        //         const [students] = await pool.execute(
-        //             `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone 
-        //              FROM student_academic_records sar
-        //              JOIN students s ON s.id = sar.student_id
-        //              JOIN users u ON u.id = s.user_id
-        //              WHERE sar.id IN (SELECT MAX(id) FROM student_academic_records GROUP BY student_id)`
-        //         );
-        //         for (const student of students) {
-        //             const contact = student.parent_contact || student.mother_contect || student.student_phone;
-        //             sendWhatsAppMessage(student.parent_contact || student.student_phone, `New Event: ${title} on ${event_date}. ${description || ''}`);
-        //         }
-        //     }
-        // } catch (msgErr) { console.error('Event notification error:', msgErr); }
+        try {
+            if (is_public) {
+                // For events, usually notify all students/parents
+                const [students] = await pool.execute(
+                    `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone 
+                     FROM student_academic_records sar
+                     JOIN students s ON s.id = sar.student_id
+                     JOIN users u ON u.id = s.user_id
+                     WHERE sar.id IN (SELECT MAX(id) FROM student_academic_records GROUP BY student_id)`
+                );
+                for (const student of students) {
+                    const contact = student.parent_contact || student.mother_contect || student.student_phone;
+                    if (contact) {
+                        await whatsappQueue.add('eventNotification', {
+                            contact,
+                            jobType: 'eventNotification',
+                            message: `New Event: ${title} on ${event_date}. ${description || ''}`
+                        });
+                    }
+                }
+            }
+        } catch (msgErr) { console.error('Event notification error:', msgErr); }
         // -------------------------------------
 
         return res.status(201).json({ event: rows[0] });

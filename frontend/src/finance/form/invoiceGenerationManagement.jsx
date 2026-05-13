@@ -549,6 +549,33 @@ export default function Invoices() {
     }
   };
 
+
+  const handleExportCSV = async () => {
+    try {
+      const params = {};
+      if (filterAcademicYear !== "all") params.academic_year_id = filterAcademicYear;
+      if (filterGrade !== "all") params.grade_id = filterGrade;
+      if (filterClass !== "all") params.class_id = filterClass;
+
+      const res = await API.get(`/fee/export/due-invoices`, {
+        params,
+        responseType: "blob",
+      });
+
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const link = document.createElement("a");
+      link.href = url;
+      link.setAttribute("download", `due_invoices_${new Date().toISOString().split('T')[0]}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      toast.success("CSV exported successfully");
+    } catch (err) {
+      console.error("Failed to export CSV", err);
+      toast.error("No invoices with dues found for the selected criteria");
+    }
+  };
+
   const getStudentName = (studentId) => {
     const student = students.find(s => s.id === studentId);
     return student ? student.name : `${studentId}`;
@@ -772,6 +799,13 @@ export default function Invoices() {
           >
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
             Refresh
+          </Button>
+          <Button
+            variant="outline"
+            onClick={handleExportCSV}
+          >
+            <Download className="h-4 w-4 mr-2" />
+            Export Dues CSV
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>

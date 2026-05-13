@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { generateInvoicePDF, generatePaymentReceiptPDF, generateCombinedInvoiceReceiptPDF, generateBulkInvoicesPDF } = require('../helper/pdfHelper');
+const whatsappQueue = require('../queues/whatsappQueue');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -826,11 +827,22 @@ const CreateBulkInvoices = async (req, res) => {
           u.phone as student_phone,
           s.parent_contact,
           s.mother_contect,
-          ay.name as academic_year
+          s.fathers_name,
+          s.mothers_name,
+          ay.name as academic_year,
+          si.amount_due as total_amount,
+          si.id as invoice_id,
+          si.period_start as start_date,
+          si.period_end as end_date,
+          c.name as class_name,
+          g.name as grade_name
         FROM students s
         JOIN users u ON u.id = s.user_id
         JOIN student_academic_records sar ON sar.student_id = s.id
         JOIN academic_years ay ON ay.id = sar.academic_year_id
+        LEFT JOIN student_invoices si ON si.student_id = s.id
+        JOIN classes c ON c.id = s.class_id
+        JOIN grades g ON g.id = s.grade_id
         WHERE s.id IN (${students.map(() => '?').join(',')})
       `, students.map(s => s.id));
 
@@ -863,8 +875,7 @@ const CreateBulkInvoices = async (req, res) => {
         // All contacts
         const contacts = [
           stu.student_phone,
-          stu.parent_contact,
-          stu.mother_contect
+          stu.parent_contact
         ]
           .filter(Boolean)
           .map(num => num.trim());
@@ -875,37 +886,69 @@ const CreateBulkInvoices = async (req, res) => {
         // Send WhatsApp to all unique contacts
         for (const contact of uniqueContacts) {
           try {
-            // await sendWhatsAppMessage(contact, msg);
-            await sendWhatsAppMessage(contact, {
+            // Queue WhatsApp message instead of direct sending
+            await whatsappQueue.add('feeInvoiceNotification', {
+              contact,
+              jobType: 'feeInvoiceNotification',
+              message: {
 
-              template: {
-                name: "fee_invoice_notification",
-                language: {
-                  code: "en"
+                template: {
+                  name: "fee_invoice_notification",
+                  language: {
+                    code: "en"
+                  },
+                  components: [
+                    {
+                      type: "body",
+                      parameters: [
+                        {
+                          type: "text",
+                          text: stu.fathers_name
+                        },
+                        {
+                          type: "text",
+                          text: stu.name
+                        },
+                        {
+                          type: "text",
+                          text: stu.academic_year
+                        },
+                        {
+                          type: "text",
+                          text: stu.grade_name
+                        },
+                        {
+                          type: "text",
+                          text: `INV-${stu.invoice_id}`
+                        },
+                        {
+                          type: "text",
+                          text: stu.total_amount
+                        },
+                        {
+                          type: "text",
+                          text: stu.end_date
+                        },
+                        {
+                          type: "button",
+                          text: "View Invoice",
+                          url: invoiceLink
+                        },
+                        {
+                          type: "text",
+                          text: period
+                        },
+                        {
+                          type: "text",
+                          text: "COMMERCE MITHILESH COMMERCE",
+                        }
+                      ]
+                    }
+                  ]
                 },
-                components: [
-                  {
-                    type: "body",
-                    parameters: [
-                      {
-                        type: "text",
-                        text: stu.name
-                      },
-                      {
-                        type: "text",
-                        text: stu.academic_year
-                      },
-                      {
-                        type: "text",
-                        text: period
-                      }
-                    ]
-                  }
-                ]
-              },
 
-              // Fallback normal text
-              fallbackText: `
+                // Fallback normal text
+                fallbackText: `
                 Dear ${stu.name},\n\n
 
                 Your fee invoice for the academic year *${stu.academic_year}*\n
@@ -916,9 +959,10 @@ const CreateBulkInvoices = async (req, res) => {
 
                 Thank you.
               `
+              }
             });
           } catch (err) {
-            console.error(`WhatsApp failed for ${contact}`, err.message);
+            console.error(`WhatsApp queue add failed for ${contact}`, err.message);
           }
         }
       }
@@ -1633,12 +1677,25 @@ const AddPaymentToInvoice = async (req, res) => {
       (Number(inv.amount_due) - Number(inv.amount_paid)).toFixed(2)
     );
 
+
+    const options = { month: 'short', timeZone: 'Asia/Kolkata' };
+
+
+    const startMonth = new Date(inv.period_start).toLocaleString('en-IN', options);
+    const endMonth = new Date(inv.period_end).toLocaleString('en-IN', options);
+
+    const period = `${startMonth}-${endMonth}`;
+
+    // const paymentId = (typeof paymentResult !== 'undefined' && paymentResult) ? paymentResult.insertId : null;
+
     // --- WHATSAPP NOTIFICATION ---
     try {
       const [[student]] = await pool.execute(`
-        SELECT u.name, u.phone as student_phone, s.parent_contact, s.mother_contect
+        SELECT u.name, u.phone as student_phone, s.parent_contact, s.mother_contect, s.fathers_name,  ay.name as academic_year
         FROM students s
         JOIN users u ON u.id = s.user_id
+        JOIN student_academic_records sar ON sar.student_id = s.id
+        JOIN academic_years ay ON ay.id = sar.academic_year_id
         WHERE s.id = ?
       `, [inv.student_id]);
 
@@ -1653,50 +1710,78 @@ const AddPaymentToInvoice = async (req, res) => {
 
         // const msg = `Dear ${student.name}, payment of ₹${paid} for Invoice INV-${String(invoiceId).padStart(4, '0')} has been received. Remaining balance: ₹${finalOutstanding}. Download receipt: ${downloadLink}`;
 
-        const contacts = [student.student_phone].filter(Boolean);
+        const contacts = [student.student_phone, student.parent_contact].filter(Boolean);
         // Send to unique contacts
         const uniqueContacts = [...new Set(contacts)];
         for (const contact of uniqueContacts) {
-          // sendWhatsAppMessage(contact, msg);
-          await sendWhatsAppMessage(contact, {
+          // Queue WhatsApp message instead of direct sending
+          await whatsappQueue.add('paymentReceiptNotification', {
+            contact,
+            jobType: 'paymentReceiptNotification',
+            message: {
 
-            template: {
-              name: "fee_invoice_notification",
-              language: {
-                code: "en"
+              template: {
+                name: "school_payment_receipt",
+                language: {
+                  code: "en"
+                },
+                components: [
+                  {
+                    type: "body",
+                    parameters: [
+                      {
+                        type: "text",
+                        text: student.fathers_name
+                      },
+                      {
+                        type: "text",
+                        text: paid
+                      },
+                      {
+                        type: "text",
+                        text: student.name
+                      },
+                      {
+                        type: "text",
+                        text: `INV-${String(invoiceId).padStart(4, '0')}`
+                      },
+                      {
+                        type: "text",
+                        text: finalOutstanding
+                      },
+                      {
+                        type: "text",
+                        text: downloadLink
+                      },
+                      {
+                        type: "text",
+                        text: "CMC"
+                      },
+                      {
+                        type: "text",
+                        text: student.academic_year
+                      },
+                      {
+                        type: "text",
+                        text: period
+                      }
+                    ]
+                  }
+                ]
               },
-              components: [
-                {
-                  type: "body",
-                  parameters: [
-                    {
-                      type: "text",
-                      text: stu.name
-                    },
-                    {
-                      type: "text",
-                      text: stu.academic_year
-                    },
-                    {
-                      type: "text",
-                      text: period
-                    }
-                  ]
-                }
-              ]
-            },
 
-            // Fallback normal text
-            fallbackText: `
-            Dear ${student.name},\n\n
+              // Fallback normal text
+              fallbackText: `
+            Dear ${student.fathers_name},\n
 
-            Payment of ₹${paid} for Invoice INV-${String(invoiceId).padStart(4, '0')} has been received.\n
-            Remaining balance: ₹${finalOutstanding}.\n\n
+            Payment of ₹${paid} for Invoice INV-${String(invoiceId).padStart(4, '0')} has been received. For ${student.academic_year}\n
+            Remaining balance: ₹${finalOutstanding}.\n
 
             Download receipt:\n
             ${downloadLink}\n
             Thank you.
             `
+            }
           });
         }
       }
@@ -2324,6 +2409,143 @@ const DisableAutoGenerate = async (req, res) => {
   }
 };
 
+
+const ExportDueInvoicesCSV = async (req, res) => {
+  try {
+    const academicYearId = req.query.academic_year_id ? Number(req.query.academic_year_id) : null;
+    const gradeId = req.query.grade_id ? Number(req.query.grade_id) : null;
+    const classId = req.query.class_id ? Number(req.query.class_id) : null;
+
+    const where = ['(si.amount_due - si.amount_paid) > 0', "si.status != 'carried_forward'"];
+    const params = [];
+
+    if (academicYearId) { where.push('sar.academic_year_id = ?'); params.push(academicYearId); }
+    if (gradeId) { where.push('si.grade_id = ?'); params.push(gradeId); }
+    if (classId) { where.push('si.class_id = ?'); params.push(classId); }
+
+    let sql = `
+        SELECT 
+            u.name AS student_name,
+            st.admission_no,
+            c.name AS class_name,
+            g.name AS grade_name,
+            ay.name AS academic_year,
+            si.period_start,
+            si.period_end,
+            si.amount_due,
+            si.amount_paid,
+            (si.amount_due - si.amount_paid) AS balance,
+            si.status,
+            si.created_at
+        FROM student_invoices si
+        LEFT JOIN students st ON st.id = si.student_id
+        LEFT JOIN classes c ON c.id = si.class_id
+        LEFT JOIN grades g ON g.id = si.grade_id
+        LEFT JOIN users u ON u.id = st.id
+        LEFT JOIN student_academic_records sar ON sar.id = si.student_academic_id
+        LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+    `;
+
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    sql += ' ORDER BY g.name, c.name, u.name';
+
+    const [rows] = await pool.execute(sql, params);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No invoices with dues found for the selected criteria' });
+    }
+
+    const options = { month: 'long', timeZone: 'Asia/Kolkata' };
+
+    // Generate CSV
+    let csv = 'Student Name,Admission No,Class,Grade,Academic Year,Period,Amount Due,Amount Paid,Balance,Status,Created At\n';
+    rows.forEach(row => {
+      const createdAt = new Date(row.created_at).toLocaleDateString('en-IN');
+      const startMonth = new Date(row.period_start).toLocaleString('en-IN', options);
+      const endMonth = new Date(row.period_end).toLocaleString('en-IN', options);
+      const period = `${startMonth} - ${endMonth}`;
+      csv += `"${row.student_name}","${row.admission_no || ''}","${row.class_name}","${row.grade_name}","${row.academic_year}","${period}",${row.amount_due},${row.amount_paid},${row.balance},"${row.status}","${createdAt}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=due_invoices.csv');
+    return res.status(200).send(csv);
+
+  } catch (err) {
+    console.error('ExportDueInvoicesCSV error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+const ExportPaymentHistoryCSV = async (req, res) => {
+  try {
+    const academicYearId = req.query.academic_year_id ? Number(req.query.academic_year_id) : null;
+    const gradeId = req.query.grade_id ? Number(req.query.grade_id) : null;
+    const classId = req.query.class_id ? Number(req.query.class_id) : null;
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+    const paymentMethod = req.query.payment_method || null;
+    const studentNameSearch = req.query.q || null;
+
+    const where = [];
+    const params = [];
+
+    if (academicYearId) { where.push('sar.academic_year_id = ?'); params.push(academicYearId); }
+    if (gradeId) { where.push('si.grade_id = ?'); params.push(gradeId); }
+    if (classId) { where.push('si.class_id = ?'); params.push(classId); }
+    if (startDate) { where.push('sp.payment_date >= ?'); params.push(startDate); }
+    if (endDate) { where.push('sp.payment_date <= ?'); params.push(endDate); }
+    if (paymentMethod && paymentMethod !== 'all') { where.push('sp.payment_method = ?'); params.push(paymentMethod); }
+    if (studentNameSearch) { where.push('u.name LIKE ?'); params.push(`%${studentNameSearch}%`); }
+
+    let sql = `
+        SELECT 
+            u.name AS student_name,
+            st.admission_no,
+            c.name AS class_name,
+            g.name AS grade_name,
+            ay.name AS academic_year,
+            sp.payment_date,
+            sp.paid_amount,
+            sp.payment_method,
+            sp.reference,
+            sp.invoice_id
+        FROM student_payments sp
+        JOIN student_invoices si ON si.id = sp.invoice_id
+        LEFT JOIN students st ON st.id = si.student_id
+        LEFT JOIN classes c ON c.id = si.class_id
+        LEFT JOIN grades g ON g.id = si.grade_id
+        LEFT JOIN users u ON u.id = st.id
+        LEFT JOIN student_academic_records sar ON sar.id = si.student_academic_id
+        LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+    `;
+
+    if (where.length) sql += ' WHERE ' + where.join(' AND ');
+    sql += ' ORDER BY sp.payment_date DESC, sp.id DESC';
+
+    const [rows] = await pool.execute(sql, params);
+
+    if (rows.length === 0) {
+      return res.status(404).json({ error: 'No payment records found for the selected criteria' });
+    }
+
+    // Generate CSV
+    let csv = 'Payment Date,Student Name,Admission No,Class,Grade,Academic Year,Amount Paid,Method,Reference,Invoice ID\n';
+    rows.forEach(row => {
+      const paymentDate = new Date(row.payment_date).toLocaleDateString('en-IN');
+      csv += `"${paymentDate}","${row.student_name}","${row.admission_no || ''}","${row.class_name}","${row.grade_name}","${row.academic_year}",${row.paid_amount},"${row.payment_method}","${row.reference || ''}","INV-${row.invoice_id.toString().padStart(4, '0')}"\n`;
+    });
+
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', 'attachment; filename=payment_history.csv');
+    return res.status(200).send(csv);
+
+  } catch (err) {
+    console.error('ExportPaymentHistoryCSV error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
 module.exports = {
   createFeeType,
   GetFeeTypes,
@@ -2355,5 +2577,7 @@ module.exports = {
   computeInvoiceLinesForClass,
   DisableAutoGenerate,
   BulkDeleteInvoices,
-  DownloadBulkInvoicePDF
+  DownloadBulkInvoicePDF,
+  ExportDueInvoicesCSV,
+  ExportPaymentHistoryCSV
 };

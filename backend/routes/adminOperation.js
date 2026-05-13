@@ -11,9 +11,12 @@ const { createGrade } = require('../middleware/gradeMiddleware');
 const { createSubject } = require('../middleware/subjectMiddleware');
 const { createClassSchema, updateClassSchema } = require('../middleware/classMiddleware');
 const { UpdateAdminUser, UpdateAdminPassword, UpdateSuperAdminUser, updateSuperAdminPassword } = require('../controller/authController');
+const { getRegistrations, approveRegistration, bulkApproveRegistrations, deleteRegistration } = require('../controller/registrationController');
+const { exportStudents, exportTeachers, exportStaff } = require('../controller/exportController');
 
 // Academic Year APIs
 router.get('/get/academic-years', auth, GetAcademicYears);
+router.get('/get/open-academic-year', GetAcademicYears);
 router.post('/add/academic-years', auth, AddAcademicYear);
 router.put('/update/academic-year/:id', auth, UpdateAcademicYear);
 router.delete('/delete/academic-year/:id', auth, DeleteAcademicYear);
@@ -25,6 +28,7 @@ router.post('/add/grades', auth, vaildation(createGrade), AddGrades);
 
 // curl -X GET http://localhost:3000/api/admin/get/grades?
 router.get('/get/grades', auth, GetGrades);
+router.get('/get/open-grades', GetGrades);
 
 // curl -X PUT http://localhost:5000/api/admin/update/grades/1 -H "Content-Type: application/json" -d '{"name":"Grade 9 - Updated"}'
 router.put('/update/grades/:id', auth, vaildation(createGrade), UpdateGrades);
@@ -65,6 +69,7 @@ router.post('/add/classes', auth, vaildation(createClassSchema), AddClass);
 // http://localhost:5000/api/admin/get/classes?q=?&q=?&grade_id=2&limit=0&offset=0
 // curl -X GET http://localhost:3000/api/admin/get/classes
 router.get('/get/classes', auth, GetClass);
+router.get('/get/open-classes', GetClass);
 
 // curl -X PUT http://localhost:3000/api/admin/update/classes/3 -H "Content-Type: application/json" -d '{"name":"10-B","room":"B-201"}'
 router.put('/update/classes/:id', auth, vaildation(updateClassSchema), UpdateClass);
@@ -77,4 +82,16 @@ router.put('/update/superadmin/:superadmin_id', auth, uploadAdminImage.single("i
 
 router.put('/update/admin/:admin_id/password', auth, UpdateAdminPassword);
 router.put('/update/superadmin/:superadmin_id/password', auth, updateSuperAdminPassword);
+
+
+// Registration Approval & Management Endpoints
+router.get('/registrations', auth, getRegistrations);
+router.put('/registrations/bulk-approve', auth, bulkApproveRegistrations);
+router.put('/registrations/:id/approve', auth, approveRegistration);
+router.delete('/registrations/:id', auth, deleteRegistration);
+
+// Exports Endpoints
+router.get('/export/students', auth, exportStudents);
+router.get('/export/teachers', auth, exportTeachers);
+router.get('/export/staff', auth, exportStaff);
 module.exports = router;

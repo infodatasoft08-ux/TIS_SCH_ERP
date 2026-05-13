@@ -52,6 +52,8 @@ const AddExamGroup = async (req, res) => {
 const GetExamGroups = async (req, res) => {
     try {
         const classId = req.query.class_id ? toInt(req.query.class_id) : null;
+        const gradeId = req.query.grade_id ? toInt(req.query.grade_id) : null;
+        const academicYearId = req.query.academic_year_id ? toInt(req.query.academic_year_id) : null;
         const status = req.query.status;
         const limit = Math.min(parseInt(req.query.limit || '100', 10), 2000);
         const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
@@ -63,9 +65,21 @@ const GetExamGroups = async (req, res) => {
             whereClause.push('eg.class_id = ?');
             params.push(classId);
         }
+        if (gradeId) {
+            whereClause.push('eg.grade_id = ?');
+            params.push(gradeId);
+        }
+        if (academicYearId) {
+            whereClause.push('eg.academic_year_id = ?');
+            params.push(academicYearId);
+        }
         if (status) {
             whereClause.push('eg.status = ?');
             params.push(status);
+        }
+        if (req.query.q) {
+            whereClause.push('eg.name LIKE ?');
+            params.push(`%${req.query.q}%`);
         }
 
         let baseSql = `
@@ -345,7 +359,7 @@ const GetStudentExamHistory = async (req, res) => {
             WHERE egr.student_id = ?
             ORDER BY eg.created_at ASC
         `, [studentId]);
-        
+
         return res.json({ history: rows });
     } catch (err) {
         console.error('GET /api/exam/student/:id/history error', err);
@@ -392,7 +406,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
                     exams: {} // Group exams by id to handle multiple subjects
                 };
             }
-            
+
             if (!studentMap[row.student_id].exams[row.exam_id]) {
                 studentMap[row.student_id].exams[row.exam_id] = {
                     id: row.exam_id,
@@ -402,7 +416,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
                     subjects: []
                 };
             }
-            
+
             studentMap[row.student_id].exams[row.exam_id].subjects.push({
                 subject_name: row.subject_name,
                 marks_obtained: row.marks_obtained,

@@ -28,6 +28,7 @@ router.get('/get/menus/:menu_id/roles', authMiddleware, getRolesForMenus);
 router.get('/get/menus/tree', authMiddleware, fetchMenuTree);
 
 router.get('/get/allroles', authMiddleware, getAllRoles);
+router.get('/get/open-allroles', getAllRoles);
 
 
 

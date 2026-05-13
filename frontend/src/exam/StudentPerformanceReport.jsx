@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Loader2, Download, TrendingUp, BarChart3, PieChart as PieIcon, Calendar, BookOpen, Award, CheckCircle, XCircle } from "lucide-react";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, BarChart, Bar, Cell, PieChart, Pie, LabelList } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
@@ -13,7 +13,7 @@ import html2canvas from 'html2canvas';
 export default function StudentPerformanceReport({ open, onOpenChange, student }) {
     const [loading, setLoading] = useState(false);
     const [isExporting, setIsExporting] = useState(false);
-    
+
     // Refs for chart capture
     const barChartRef = useRef(null);
     const lineChartRef = useRef(null);
@@ -70,92 +70,125 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
         setIsExporting(true);
         const doc = new jsPDF('p', 'mm', 'a4');
         const pageWidth = doc.internal.pageSize.getWidth();
-        
+        const pageHeight = doc.internal.pageSize.getHeight();
+
         try {
             // Header
-            doc.setFillColor(79, 70, 229); 
-            doc.rect(0, 0, pageWidth, 40, 'F');
-            
-            doc.setFontSize(24);
+            doc.setFillColor(79, 70, 229);
+            doc.rect(0, 0, pageWidth, 45, 'F');
+
+            doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
-            doc.text("NIYATI PUBLIC SCHOOL", pageWidth / 2, 18, { align: "center" });
-            
+            doc.text("TIMES INTERNATIONAL SCHOOL", pageWidth / 2, 18, { align: "center" });
+
             doc.setFontSize(14);
             doc.setFont("helvetica", "normal");
-            doc.text("CONSOLIDATED PERFORMANCE REPORT", pageWidth / 2, 28, { align: "center" });
+            doc.text("STUDENT PERFORMANCE ANALYTICS REPORT", pageWidth / 2, 28, { align: "center" });
+            doc.setFontSize(10);
+            doc.text(`Academic Session: ${student.academic_year_name || 'N/A'}`, pageWidth / 2, 35, { align: "center" });
 
-            // Student Info Card
-            doc.setDrawColor(230, 230, 230);
-            doc.setFillColor(250, 250, 250);
-            doc.roundedRect(15, 45, pageWidth - 30, 30, 3, 3, 'FD');
-            
-            doc.setFontSize(10);
-            doc.setTextColor(100, 100, 100);
-            doc.text("STUDENT DETAILS", 20, 52);
-            
-            doc.setFontSize(12);
+            // Student Information Card
             doc.setTextColor(40, 40, 40);
+            doc.setFillColor(248, 250, 252);
+            doc.roundedRect(15, 52, pageWidth - 30, 25, 2, 2, 'F');
+
+            doc.setFontSize(11);
             doc.setFont("helvetica", "bold");
-            doc.text(`Name: ${student.name}`, 20, 62);
-            doc.text(`Roll No: ${student.roll_no || 'N/A'}`, 20, 68);
-            
-            doc.text(`Grade: ${student.grade_name || 'N/A'}`, pageWidth / 2, 62);
-            doc.text(`Year: ${student.academic_year_name || 'N/A'}`, pageWidth / 2, 68);
-            
-            doc.setFontSize(10);
+            doc.text(`STUDENT: ${student.name.toUpperCase()}`, 20, 60);
             doc.setFont("helvetica", "normal");
-            doc.text(`Generated: ${new Date().toLocaleString()}`, pageWidth - 20, 52, { align: 'right' });
+            doc.text(`Roll No: ${student.roll_no || 'N/A'}`, 20, 66);
+            doc.text(`Grade: ${student.grade_name || 'N/A'}`, 20, 72);
+
+            const avgScore = (barChartData.reduce((a, b) => a + b.percentage, 0) / barChartData.length).toFixed(1);
+            doc.setFont("helvetica", "bold");
+            doc.text(`Average Score: ${avgScore}%`, pageWidth - 20, 60, { align: 'right' });
+            doc.setFont("helvetica", "normal");
+            doc.text(`Exams Taken: ${exams.length}`, pageWidth - 20, 66, { align: 'right' });
+            doc.text(`Attendance: ${Math.round((presentCount / (presentCount + absentCount)) * 100)}%`, pageWidth - 20, 72, { align: 'right' });
+
+            // Capture Charts
+            const captureChart = async (ref) => {
+                if (!ref.current) return null;
+                const canvas = await html2canvas(ref.current, {
+                    scale: 3,
+                    useCORS: true,
+                    logging: false,
+                    backgroundColor: '#ffffff'
+                });
+                return canvas.toDataURL('image/png');
+            };
+
+            const barImg = await captureChart(barChartRef);
+            const lineImg = await captureChart(lineChartRef);
+            const pieImg = await captureChart(pieChartRef);
 
             let currentY = 85;
 
-            // Capture and add Charts
-            const chartConfigs = [
-                { ref: barChartRef, title: 'Exam Performance Comparison (%)' },
-                { ref: lineChartRef, title: 'Subject Performance Trends' },
-                { ref: pieChartRef, title: 'Attendance Analytics' }
-            ];
+            // Row 1: Bar Chart and Line Chart
+            const chartWidth = (pageWidth - 40) / 2;
+            const chartHeight = 55;
 
-            for (const config of chartConfigs) {
-                if (config.ref.current) {
-                    if (currentY > 220) {
-                        doc.addPage();
-                        currentY = 20;
-                    }
+            if (barImg && lineImg) {
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(79, 70, 229);
+                doc.text("Performance Comparison (%)", 20, currentY);
+                doc.text("Subject Trends", pageWidth / 2 + 5, currentY);
 
-                    const canvas = await html2canvas(config.ref.current, {
-                        scale: 2,
-                        useCORS: true,
-                        logging: false,
-                        backgroundColor: '#ffffff'
-                    });
-                    
-                    const imgData = canvas.toDataURL('image/png');
-                    
-                    doc.setFontSize(12);
-                    doc.setFont("helvetica", "bold");
-                    doc.setTextColor(79, 70, 229);
-                    doc.text(config.title, 20, currentY);
-                    
-                    const imgWidth = pageWidth - 40;
-                    const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                    
-                    doc.addImage(imgData, 'PNG', 20, currentY + 5, imgWidth, imgHeight);
-                    currentY += imgHeight + 20;
-                }
+                doc.addImage(barImg, 'PNG', 15, currentY + 3, chartWidth + 5, chartHeight);
+                doc.addImage(lineImg, 'PNG', pageWidth / 2, currentY + 3, chartWidth + 5, chartHeight);
+
+                // Values Summary below charts
+                let valueY = currentY + chartHeight + 8;
+                doc.setFontSize(7);
+                doc.setTextColor(100, 100, 100);
+                doc.setFont("helvetica", "italic");
+
+                const barVals = barChartData.map(d => `${d.name}: ${d.percentage}%`).join(' | ');
+                doc.text(barVals, 20, valueY, { maxWidth: chartWidth });
+
+                currentY += chartHeight + 20;
+            } else if (barImg || lineImg) {
+                const img = barImg || lineImg;
+                doc.addImage(img, 'PNG', 20, currentY, pageWidth - 40, 70);
+                currentY += 85;
             }
 
-            // Detailed Tables
-            exams.forEach((exam) => {
-                doc.addPage();
-                
-                doc.setFillColor(243, 244, 246);
-                doc.rect(0, 0, pageWidth, 20, 'F');
-                doc.setFontSize(14);
-                doc.setTextColor(31, 41, 55);
+            // Row 2: Pie Chart and Stats
+            if (pieImg) {
+                doc.setFontSize(10);
                 doc.setFont("helvetica", "bold");
-                doc.text(`Detailed Result: ${exam.name}`, 20, 13);
-                
+                doc.text("Attendance Analytics", 20, currentY);
+                doc.addImage(pieImg, 'PNG', 15, currentY + 3, 90, 60);
+
+                // Attendance details next to pie
+                doc.setFillColor(243, 244, 246);
+                doc.roundedRect(115, currentY + 10, 75, 45, 2, 2, 'F');
+                doc.setFontSize(10);
+                doc.setTextColor(50, 50, 50);
+                doc.text("Summary Highlights:", 120, currentY + 20);
+                doc.setFont("helvetica", "normal");
+                doc.text(`Total Present: ${presentCount}`, 120, currentY + 28);
+                doc.text(`Total Absent: ${absentCount}`, 120, currentY + 35);
+                doc.text(`Status: ${avgScore > 40 ? 'Promoted' : 'Review Needed'}`, 120, currentY + 42);
+
+                currentY += 75;
+            }
+
+            // Detailed Results Table
+            if (currentY > pageHeight - 60) {
+                doc.addPage();
+                currentY = 20;
+            }
+
+            doc.setFontSize(12);
+            doc.setFont("helvetica", "bold");
+            doc.setTextColor(79, 70, 229);
+            doc.text("DETAILED SUBJECT-WISE BREAKDOWN", 20, currentY);
+            currentY += 5;
+
+            exams.forEach((exam, index) => {
                 const tableBody = (exam.subjects || []).map(sub => [
                     sub.subject_name,
                     sub.max_marks,
@@ -165,22 +198,42 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                 ]);
 
                 autoTable(doc, {
-                    startY: 25,
-                    head: [['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status']],
+                    startY: currentY,
+                    head: [[{ content: `Exam: ${exam.name}`, colSpan: 5, styles: { halign: 'left', fillColor: [100, 100, 100], fontStyle: 'bold' } }], ['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status']],
                     body: tableBody,
                     theme: 'grid',
-                    headStyles: { fillColor: [79, 70, 229], halign: 'center' },
+                    headStyles: { fillColor: [79, 70, 229], fontSize: 9, halign: 'center' },
                     columnStyles: {
                         0: { cellWidth: 50 },
                         1: { halign: 'center' },
                         2: { halign: 'center', fontStyle: 'bold' },
                         3: { halign: 'center' },
                         4: { halign: 'center' }
-                    }
+                    },
+                    styles: { fontSize: 8 },
+                    margin: { left: 20, right: 20 },
+                    pageBreak: 'auto'
                 });
+
+                currentY = doc.lastAutoTable.finalY + 10;
+
+                if (currentY > pageHeight - 30 && index < exams.length - 1) {
+                    doc.addPage();
+                    currentY = 20;
+                }
             });
 
-            doc.save(`${student.name}_Full_Performance_Report.pdf`);
+            // Footer
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                doc.setFontSize(8);
+                doc.setTextColor(150, 150, 150);
+                doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
+                doc.text("© TIMES INTERNATIONAL SCHOOL - Professional Academic Report", 20, pageHeight - 10);
+            }
+
+            doc.save(`${student.name.replace(/\s+/g, '_')}_Performance_Report.pdf`);
         } catch (error) {
             console.error("PDF Export failed:", error);
         } finally {
@@ -206,10 +259,10 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                 <span className="flex items-center gap-1.5"><Badge variant="outline" className="rounded-md">Year: {student?.academic_year_name}</Badge></span>
                             </div>
                         </div>
-                        <Button 
-                            onClick={downloadPDF} 
+                        <Button
+                            onClick={downloadPDF}
                             disabled={isExporting}
-                            variant="default" 
+                            variant="default"
                             className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none h-12 px-6 rounded-xl transition-all hover:scale-105 active:scale-95"
                         >
                             {isExporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
@@ -271,11 +324,13 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                                                 <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
                                                 <YAxis axisLine={false} tickLine={false} domain={[0, 100]} />
-                                                <Tooltip 
+                                                <Tooltip
                                                     cursor={{ fill: '#f3f4f6' }}
                                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                                 />
-                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={40} />
+                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={40}>
+                                                    <LabelList dataKey="percentage" position="top" style={{ fontSize: '11px', fontWeight: 'bold', fill: '#1e1b4b' }} />
+                                                </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </CardContent>
@@ -290,24 +345,23 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                     </CardHeader>
                                     <CardContent className="h-[350px] p-6" ref={lineChartRef}>
                                         <ResponsiveContainer width="100%" height="100%">
-                                            <LineChart data={lineChartData}>
+                                            <BarChart data={lineChartData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
                                                 <XAxis dataKey="name" axisLine={false} tickLine={false} />
                                                 <YAxis axisLine={false} tickLine={false} />
                                                 <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
                                                 <Legend iconType="circle" />
                                                 {allSubjects.map((sub, idx) => (
-                                                    <Line 
-                                                        key={sub} 
-                                                        type="monotone" 
-                                                        dataKey={sub} 
-                                                        stroke={COLORS[idx % COLORS.length]} 
-                                                        strokeWidth={4} 
-                                                        dot={{ r: 6, strokeWidth: 2, fill: '#fff' }} 
-                                                        activeDot={{ r: 8 }}
-                                                    />
+                                                    <Bar
+                                                        key={sub}
+                                                        dataKey={sub}
+                                                        fill={COLORS[idx % COLORS.length]}
+                                                        radius={[4, 4, 0, 0]}
+                                                    >
+                                                        <LabelList dataKey={sub} position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#1e1b4b' }} offset={5} />
+                                                    </Bar>
                                                 ))}
-                                            </LineChart>
+                                            </BarChart>
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
@@ -335,7 +389,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                     ))}
                                                 </Pie>
                                                 <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                                <Legend verticalAlign="bottom" height={36}/>
+                                                <Legend verticalAlign="bottom" height={36} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </CardContent>
