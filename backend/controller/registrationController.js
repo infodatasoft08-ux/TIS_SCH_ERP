@@ -411,7 +411,6 @@ const deleteRegistration = async (req, res) => {
 };
 
 module.exports = {
-  initTable,
   registerStudent,
   registerTeacher,
   registerStaff,
