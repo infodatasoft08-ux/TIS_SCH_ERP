@@ -6,38 +6,6 @@ const formatMySQLDate = require("../config/deateConverter");
 const SALT_ROUNDS = 10;
 
 /**
- * Initialize table automatically
- */
-const initTable = async () => {
-  try {
-    const query = `
-      CREATE TABLE IF NOT EXISTS registration_requests (
-        id INT AUTO_INCREMENT PRIMARY KEY,
-        registration_type ENUM('student','teacher','staff') NOT NULL,
-        status ENUM('pending','approved','rejected') DEFAULT 'pending',
-        is_approved BOOLEAN DEFAULT FALSE,
-        approved_by INT DEFAULT NULL,
-        approved_at DATETIME DEFAULT NULL,
-        created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-        updated_at DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-        name VARCHAR(255) NOT NULL,
-        email VARCHAR(255) NOT NULL,
-        phone VARCHAR(50) DEFAULT NULL,
-        adhar_no VARCHAR(50) DEFAULT NULL,
-        data JSON DEFAULT NULL
-      ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-    `;
-    await db.query(query);
-    console.log("Initialized registration_requests table successfully.");
-  } catch (err) {
-    console.error("Error initializing registration_requests table:", err.message);
-  }
-};
-
-// Run automatically
-initTable();
-
-/**
  * Public endpoint: Register Student
  */
 const registerStudent = async (req, res) => {
@@ -328,7 +296,7 @@ const approveRegistration = async (req, res) => {
 
     } else if (record.registration_type === 'staff') {
       const { sub_role, department } = data;
-      
+
       // Smart lookup of specific sub_role ID if available
       let staffRoleId = 4;
       if (sub_role) {
