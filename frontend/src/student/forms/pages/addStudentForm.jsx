@@ -875,7 +875,7 @@ export default function AddStudentDialog({
                       name="parent_contact"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Fathers Contect *</FormLabel>
+                          <FormLabel>Fathers Contact *</FormLabel>
                           <FormControl>
                             {/* <Input
                               {...field}
@@ -903,7 +903,7 @@ export default function AddStudentDialog({
                       name="mother_contect"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Mother's Contect *</FormLabel>
+                          <FormLabel>Mother's Contact *</FormLabel>
                           <FormControl>
                             {/* <Input
                               {...field}

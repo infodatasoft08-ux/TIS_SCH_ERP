@@ -186,7 +186,8 @@ const DataTable = ({
     );
 
     const nameCol = columns.find(c =>
-      c.accessorKey?.toLowerCase().includes('name') ||
+      c.accessorKey?.toLowerCase() === 'name' ||
+      c.accessorKey?.toLowerCase() === 'full_name' ||
       c.header?.toString().toLowerCase().includes('name') ||
       c.accessorKey?.toLowerCase().includes('title') ||
       c.header?.toString().toLowerCase().includes('title')
@@ -202,6 +203,8 @@ const DataTable = ({
       let val = item[col.accessorKey] || item[col.id];
       if (typeof val === 'object' && val !== null) {
         try {
+          // If it's a React element or complex object, String() might not be what we want
+          // but for simple cases it works. 
           val = String(val);
         } catch (e) { }
       }
@@ -228,13 +231,25 @@ const DataTable = ({
     const email = getVal(emailCol);
 
     // Columns for the "Show Details" section (excluding header ones and actions)
-    const detailCols = columns.filter(c =>
-      c.id !== 'actions' &&
-      c.id !== 'select' &&
-      c.header !== 'Actions' &&
-      c !== imageCol &&
-      c !== nameCol &&
-      c !== emailCol
+    const detailCols = columns.filter(c => {
+      const isHeaderCol = c === imageCol || c === nameCol || c === emailCol ||
+        c.accessorKey?.toLowerCase().includes('name') ||
+        c.accessorKey?.toLowerCase().includes('email') ||
+        c.accessorKey?.toLowerCase().includes('avatar');
+
+      return (
+        c.id !== 'actions' &&
+        c.id !== 'select' &&
+        c.header !== 'Actions' &&
+        c.accessorKey !== 'actions' &&
+        !isHeaderCol
+      );
+    });
+
+    const actionsCol = columns.find(c =>
+      c.id === 'actions' ||
+      c.header === 'Actions' ||
+      c.accessorKey === 'actions'
     );
 
     return (
@@ -252,9 +267,9 @@ const DataTable = ({
             </div>
           )}
           <div className="text-lg font-bold text-gray-900 dark:text-gray-100 leading-tight">
-            {String(name !== '-' ? name : 'No Name')}
+            {String(name !== '-' && name !== 'null' && name !== 'undefined' ? name : (item.name || item.full_name || item.title || 'No Name'))}
           </div>
-          {email && email !== '-' && (
+          {email && email !== '-' && email !== 'null' && (
             <div className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               {String(email)}
             </div>
@@ -300,6 +315,13 @@ const DataTable = ({
           </div>
         )}
 
+        {/* Actions Section */}
+        {actionsCol && row && (
+          <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-800 flex flex-wrap justify-center gap-2">
+            {flexRender(actionsCol.cell, row.getVisibleCells().find(c => c.column.id === (actionsCol.id || actionsCol.accessorKey))?.getContext() || { row, table, column: actionsCol })}
+          </div>
+        )}
+
         {/* Toggle Button */}
         {detailCols.length > 0 && (
           <button
@@ -323,7 +345,7 @@ const DataTable = ({
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Header with Title, Search, and Actions */}
-      <div className="flex flex-col lg:flex-row justify-between items-start sm:items-center gap-4">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
           {description && (
@@ -401,7 +423,7 @@ const DataTable = ({
               <Button
                 onClick={onAddNew}
                 size="sm"
-                className="h-10 text-white hover:bg-secondary"
+                className="h-10"
               >
                 <Plus className="h-3 w-3" />
                 {addButtonText}

@@ -94,82 +94,163 @@ const TakeAttendance = async (req, res) => {
         for (const record of normalized) {
           const detail = detailsMap[record.student_id];
           if (detail && ['absent', 'late'].includes(record.status)) {
-            const contact = detail.parent_contact || detail.mother_contect || detail.student_phone;
+            // Collect both student and parent contacts
+            const contacts = [
+              detail.student_phone,
+              detail.parent_contact
+            ]
+              .filter(Boolean)
+              .map(num => String(num).trim());
+
+            // Remove duplicate numbers
+            const uniqueContacts = [...new Set(contacts)];
+
+            const attendanceDate = new Date(record.attendance_date).toLocaleDateString('en-IN');
+            const currentTime = new Date().toLocaleString('en-IN', {
+              timeZone: 'Asia/Kolkata',
+              day: '2-digit',
+              month: 'long',
+              year: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: true
+            });
             if (record.status === 'absent') {
 
-              msg = `
-                Dear Parent,\\n\
+              msg =
+                `Dear Parent, 📢 *Attendance Alert*
 
-                Your child ${detail.student_name}\\n\
-                (Academic Year: ${detail.academic_year}, Class: ${detail.class_name})\\n\
-                was marked ABSENT on ${record.attendance_date}.\\n\"
-                Status: ${record.status}\\n\
+👤 *Student:* ${detail.student_name}
+🏫 *Class:* ${detail.class_name}
+🎓 *Academic Year:* ${detail.academic_year}
 
-                Please contact the school if this is incorrect.
+❌ *Status:* ABSENT
 
-                Thank you TIMES INTERNATIONAL SCHOOL.
-              `;
+📅 *Attendance Date:* ${attendanceDate}
+⏰ *Reported At:* ${currentTime}
+
+Please contact the school if this is incorrect.
+
+Thank you,
+*TIMES INTERNATIONAL SCHOOL*`;
 
             } else if (record.status === 'late') {
 
-              msg = `
-                Dear Parent,\n\
+              msg =
+                `📢 *Attendance Alert*
 
-                Your child ${detail.student_name}\n\
-                (Academic Year: ${detail.academic_year}, Class: ${detail.class_name})\n\
-                arrived LATE on ${record.attendance_date}.\n\
-                Status: ${record.status}\n\
+👤 *Student:* ${detail.student_name}
+🏫 *Class:* ${detail.class_name}
+🎓 *Academic Year:* ${detail.academic_year}
 
-                Thank you CMC.
-              `;
+⏰ *Status:* LATE
+
+📅 *Attendance Date:* ${attendanceDate}
+⏰ *Reported At:* ${currentTime}
+
+Thank you,
+*TIMES INTERNATIONAL SCHOOL*`;
             }
-            if (msg && contact) {
-              await whatsappQueue.add('bulkAttendanceNotification', {
-                contact,
-                jobType: 'bulkAttendanceNotification',
-                message: {
-                  template: {
-                    name: "student_attendance_alert",
-                    language: {
-                      code: "en"
+            if (msg && uniqueContacts.length > 0 && record.status === 'absent') {
+              for (const contact of uniqueContacts) {
+                await whatsappQueue.add('bulkAttendanceNotification', {
+                  contact: contact,
+                  jobType: 'bulkAttendanceNotification',
+                  message: {
+                    template: {
+                      name: "student_attendance_alert",
+                      language: {
+                        code: "en"
+                      },
+                      components: [
+                        {
+                          type: "body",
+                          parameters: [
+                            {
+                              type: "text",
+                              text: detail.student_name
+                            },
+                            {
+                              type: "text",
+                              text: record.attendance_date
+                            },
+                            {
+                              type: "text",
+                              text: 'ABSENT'
+                            },
+                            {
+                              type: "text",
+                              text: `TIMES INTERNATIONAL SCHOOL`
+                            },
+                            {
+                              type: "text",
+                              text: detail.class_name
+                            },
+                            {
+                              type: "text",
+                              text: detail.academic_year
+                            }
+                          ]
+                        }
+                      ]
                     },
-                    components: [
-                      {
-                        type: "body",
-                        parameters: [
-                          {
-                            type: "text",
-                            text: detail.student_name
-                          },
-                          {
-                            type: "text",
-                            text: record.attendance_date
-                          },
-                          {
-                            type: "text",
-                            text: record.status
-                          },
-                          {
-                            type: "text",
-                            text: `TIMES INTERNATIONAL SCHOOL`
-                          },
-                          {
-                            type: "text",
-                            text: detail.class_name
-                          },
-                          {
-                            type: "text",
-                            text: detail.academic_year
-                          }
-                        ]
-                      }
-                    ]
-                  },
 
-                  // Fallback normal text
-                  fallbackText: msg
-                }
-              });
+                    // Fallback normal text
+                    fallbackText: msg
+                  }
+                });
+
+              }
+            } else if (msg && uniqueContacts.length > 0 && record.status === 'late') {
+              for (const contact of uniqueContacts) {
+                await whatsappQueue.add('bulkAttendanceNotification', {
+                  contact: contact,
+                  jobType: 'bulkAttendanceNotification',
+                  message: {
+                    template: {
+                      name: "student_attendance_alert",
+                      language: {
+                        code: "en"
+                      },
+                      components: [
+                        {
+                          type: "body",
+                          parameters: [
+                            {
+                              type: "text",
+                              text: detail.student_name
+                            },
+                            {
+                              type: "text",
+                              text: record.attendance_date
+                            },
+                            {
+                              type: "text",
+                              text: 'LATE'
+                            },
+                            {
+                              type: "text",
+                              text: `TIMES INTERNATIONAL SCHOOL`
+                            },
+                            {
+                              type: "text",
+                              text: detail.class_name
+                            },
+                            {
+                              type: "text",
+                              text: detail.academic_year
+                            }
+                          ]
+                        }
+                      ]
+                    },
+
+                    // Fallback normal text
+                    fallbackText: msg
+                  }
+                });
+
+              }
             }
           }
         }
@@ -191,15 +272,7 @@ const TakeAttendance = async (req, res) => {
 
 
 const UpdateSingleAttendance = async (req, res) => {
-  // const { student_id, class_id, status } = req.body;
   const { attendance_id, recorded_by, status } = req.body;
-
-  // Validate required fields
-  // if (!student_id || !class_id || !status) {
-  //   return res.status(400).json({ 
-  //     error: 'student_id, class_id, and status are required' 
-  //   });
-  // }
 
   if (!attendance_id || !status) {
     return res.status(400).json({ error: 'attendance_id and status required' });
@@ -213,57 +286,17 @@ const UpdateSingleAttendance = async (req, res) => {
     });
   }
 
-  // const studentId = toInt(student_id);
-  // const classId = toInt(class_id);
-  // const recorded_by = req.user?.id || null; // Get from authenticated user
-
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
-
-    // First check if attendance exists for today
-    // const [existing] = await conn.execute(
-    //   `SELECT id FROM attendance 
-    //    WHERE student_id = ? 
-    //      AND class_id = ? 
-    //      AND date = ?`,
-    //   [studentId, classId, today]
-    // );
-
-
-    // if (existing.length === 0) {
-    //   await conn.rollback();
-    //   conn.release();
-    //   return res.status(404).json({ 
-    //     error: 'Attendance not found for today. Please take attendance first.' 
-    //   });
-    // }
-
-    // Update attendance
-    // const [result] = await conn.execute(
-    //   `UPDATE attendance 
-    //    SET status = ?, 
-    //        recorded_by = ?, 
-    //        recorded_at = NOW()
-    //    WHERE student_id = ? 
-    //      AND class_id = ? 
-    //      AND date = ?`,
-    //   [normalizedStatus, recorded_by, studentId, classId, today]
-    // );
-
-    const [result] = await conn.execute(
-      `UPDATE attendance
-       SET status = ?, recorded_by = ?, recorded_at = NOW()
-       WHERE id = ?`,
-      [normalizedStatus, recorded_by || null, attendance_id]
-    );
-
 
     const [existingAttendance] = await conn.execute(
       `SELECT 
           a.*,
           u.name as student_name,
           c.name as class_name,
+          g.name as grade_name,
+          ay.name as academic_year,
           sar.roll_no,
           s.parent_contact,
           s.mother_contect,
@@ -274,6 +307,8 @@ const UpdateSingleAttendance = async (req, res) => {
       JOIN student_academic_records sar 
           ON sar.student_id = s.id
       JOIN classes c ON c.id = a.class_id
+      JOIN grades g ON g.id = sar.grade_id
+      JOIN academic_years ay ON ay.id = sar.academic_year_id
       WHERE a.id = ?`,
       [attendance_id]
     );
@@ -287,19 +322,53 @@ const UpdateSingleAttendance = async (req, res) => {
     const oldAttendance = existingAttendance[0];
     const previousStatus = oldAttendance.status;
 
+
+    const [result] = await conn.execute(
+      `UPDATE attendance
+       SET status = ?, recorded_by = ?, recorded_at = NOW()
+       WHERE id = ?`,
+      [normalizedStatus, recorded_by || null, attendance_id]
+    );
+
     await conn.commit();
 
     // -------------------------------
     // WHATSAPP UPDATE NOTIFICATION
     // -------------------------------
     try {
+      // Collect both student and parent contacts
+      const contacts = [
+        oldAttendance.student_phone,
+        oldAttendance.parent_contact
+      ]
+        .filter(Boolean)
+        .map(num => String(num).trim());
 
-      const contact =
-        oldAttendance.parent_contact ||
-        oldAttendance.mother_contect ||
-        oldAttendance.student_phone;
+      // Remove duplicate numbers
+      const uniqueContacts = [...new Set(contacts)];
 
-      if (contact && previousStatus !== normalizedStatus) {
+      const formattedDateTime = new Date(
+        oldAttendance.attendance_date
+      ).toLocaleString('en-IN', {
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      const currentDateTime = new Date().toLocaleString('en-IN', {
+        timeZone: 'Asia/Kolkata',
+        day: '2-digit',
+        month: 'long',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      });
+
+      if (uniqueContacts.length > 0 && previousStatus !== normalizedStatus) {
 
         let msg = '';
 
@@ -309,22 +378,22 @@ const UpdateSingleAttendance = async (req, res) => {
           normalizedStatus === 'present'
         ) {
 
-          msg = `
-                  Dear Parent,
+          msg =
+            `Dear Parent 📢 *Attendance Update*
 
-                  Attendance Update:
+👤 *Student:* ${oldAttendance.student_name}
+🏫 *Class:* ${oldAttendance.class_name}
+🆔 *Roll No:* ${oldAttendance.roll_no || '-'}
 
-                  ${oldAttendance.student_name}
-                  (Roll: ${oldAttendance.roll_no},
-                  Class: ${oldAttendance.class_name})
+✅ *Status Updated*
+From: *ABSENT*
+To: *PRESENT*
 
-                  was previously marked ABSENT
-                  but has now been updated to PRESENT.
+📅 *Attendance Date:* ${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}
+⏰ *Updated At:* ${currentDateTime}
 
-                  Date: ${oldAttendance.attendance_date}
-
-                  Thank you.
-                `;
+Thank you,
+*TIMES INTERNATIONAL SCHOOL*`;
 
         }
 
@@ -334,39 +403,22 @@ const UpdateSingleAttendance = async (req, res) => {
           normalizedStatus === 'present'
         ) {
 
-          msg = `
-                  Dear Parent,\\n\
+          msg =
+            `📢 *Attendance Update*
 
-                  Attendance Update:\\n\
+👤 *Student:* ${oldAttendance.student_name}
+🏫 *Class:* ${oldAttendance.class_name}
+🆔 *Roll No:* ${oldAttendance.roll_no || '-'}
 
-                  ${oldAttendance.student_name}\\n\
-                  (Roll: ${oldAttendance.roll_no},\
-                  Class: ${oldAttendance.class_name})\\n\
+⏰ *Status Updated*
+From: *LATE*
+To: *PRESENT*
 
-                  was previously marked LATE\\n\
-                  but has now been updated to PRESENT.\\n\
+📅 *Attendance Date:* ${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}
+⏰ *Updated At:* ${currentDateTime}
 
-                  Date: ${oldAttendance.attendance_date}\\n\
-
-                  Thank you.\\n\
-                `;
-
-          msg = `
-                  Dear Parent,\\n\
-
-                  Attendance Update:\\n\
-
-                  ${oldAttendance.student_name}\\n\
-                  (Roll: ${oldAttendance.roll_no},
-                  Class: ${oldAttendance.class_name})
-
-                  was previously marked LATE
-                  but has now been updated to PRESENT.
-
-                  Date: ${oldAttendance.attendance_date}
-
-                  Thank you.
-                `;
+Thank you,
+*TIMES INTERNATIONAL SCHOOL*`;
 
         }
 
@@ -376,30 +428,168 @@ const UpdateSingleAttendance = async (req, res) => {
           normalizedStatus === 'absent'
         ) {
 
-          msg = `
-                  Dear Parent,
+          msg =
+            `📢 *Attendance Update*
 
-                  Attendance Update:
+👤 *Student:* ${oldAttendance.student_name}
+🏫 *Class:* ${oldAttendance.class_name}
+🆔 *Roll No:* ${oldAttendance.roll_no || '-'}
 
-                  ${oldAttendance.student_name}
-                  (Roll: ${oldAttendance.roll_no},
-                  Class: ${oldAttendance.class_name})
+❌ *Status:* ABSENT
 
-                  has been marked ABSENT.
+📅 *Attendance Date:* ${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}
+⏰ *Updated At:* ${currentDateTime}
 
-                  Date: ${oldAttendance.attendance_date}
-
-                  Thank you.
-                `;
-
+Thank you,
+*TIMES INTERNATIONAL SCHOOL*`;
         }
 
-        if (msg) {
-          await whatsappQueue.add('attendanceUpdateNotification', {
-            contact,
-            jobType: 'attendanceUpdateNotification',
-            message: msg
-          });
+        if (msg && (previousStatus === 'absent' && normalizedStatus === 'present')) {
+          // Send to all unique contacts absent to present
+          for (const contact of uniqueContacts) {
+            await whatsappQueue.add('bulkAttendanceNotification', {
+              contact: contact,
+              jobType: 'bulkAttendanceNotification',
+              message: {
+                template: {
+                  name: "update_student_attendance_alert",
+                  language: {
+                    code: "en"
+                  },
+                  components: [
+                    {
+                      type: "body",
+                      parameters: [
+                        {
+                          type: "text",
+                          text: oldAttendance.student_name
+                        },
+                        {
+                          type: "text",
+                          text: `${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}`
+                        },
+                        {
+                          type: "text",
+                          text: 'ABSENT'
+                        },
+                        {
+                          type: "text",
+                          text: `TIMES INTERNATIONAL SCHOOL`
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.class_name
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.academic_year
+                        }
+                      ]
+                    }
+                  ]
+                },
+                fallbackText: msg
+              }
+            });
+          }
+        } else if (msg && (previousStatus === 'late' && normalizedStatus === 'present')) {
+
+          // Send to all unique contacts late to present
+          for (const contact of uniqueContacts) {
+            await whatsappQueue.add('bulkAttendanceNotification', {
+              contact: contact,
+              jobType: 'bulkAttendanceNotification',
+              message: {
+                template: {
+                  name: "update_student_attendance_alert",
+                  language: {
+                    code: "en"
+                  },
+                  components: [
+                    {
+                      type: "body",
+                      parameters: [
+                        {
+                          type: "text",
+                          text: oldAttendance.student_name
+                        },
+                        {
+                          type: "text",
+                          text: `${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}`
+                        },
+                        {
+                          type: "text",
+                          text: 'LATE'
+                        },
+                        {
+                          type: "text",
+                          text: `TIMES INTERNATIONAL SCHOOL`
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.class_name
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.academic_year
+                        }
+                      ]
+                    }
+                  ]
+                },
+                fallbackText: msg
+              }
+            });
+          }
+        } else if (msg && (previousStatus === 'present' && normalizedStatus === 'absent')) {
+
+          // Send to all unique contacts present to absent
+          for (const contact of uniqueContacts) {
+            await whatsappQueue.add('bulkAttendanceNotification', {
+              contact: contact,
+              jobType: 'bulkAttendanceNotification',
+              message: {
+                template: {
+                  name: "update_student_attendance_alert",
+                  language: {
+                    code: "en"
+                  },
+                  components: [
+                    {
+                      type: "body",
+                      parameters: [
+                        {
+                          type: "text",
+                          text: oldAttendance.student_name
+                        },
+                        {
+                          type: "text",
+                          text: `${new Date(oldAttendance.attendance_date).toLocaleDateString('en-IN')}`
+                        },
+                        {
+                          type: "text",
+                          text: 'ABSENT'
+                        },
+                        {
+                          type: "text",
+                          text: `TIMES INTERNATIONAL SCHOOL`
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.class_name
+                        },
+                        {
+                          type: "text",
+                          text: oldAttendance.academic_year
+                        }
+                      ]
+                    }
+                  ]
+                },
+                fallbackText: msg
+              }
+            });
+          }
         }
       }
 
@@ -412,14 +602,6 @@ const UpdateSingleAttendance = async (req, res) => {
     }
 
     return res.json({ success: true, message: 'Attendance updated successfully' });
-
-    // return res.json({ 
-    //   success: true, 
-    //   affectedRows: result.affectedRows, 
-    //   message: 'Attendance updated successfully',
-    //   date: today,
-    //   status: normalizedStatus
-    // });
   } catch (err) {
     await conn.rollback();
     console.error('UpdateSingleAttendance error:', err);
