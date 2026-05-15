@@ -25,6 +25,14 @@ export default function RegisteredRequests() {
   const [isLoading, setIsLoading] = useState(true);
   const [total, setTotal] = useState(0);
 
+  // Metadata for ID-to-Value mapping
+  const [metaData, setMetaData] = useState({
+    grades: [],
+    classes: [],
+    roles: [],
+    academicYears: []
+  });
+
   // Filters and Pagination
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -41,6 +49,29 @@ export default function RegisteredRequests() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [approvingId, setApprovingId] = useState(null);
   const [bulkApproving, setBulkApproving] = useState(false);
+
+  // Fetch Metadata for mappings
+  useEffect(() => {
+    const fetchMetaData = async () => {
+      try {
+        const [gRes, cRes, rRes, ayRes] = await Promise.all([
+          API.get('/admin/get/open-grades'),
+          API.get('/admin/get/open-classes'),
+          API.get('/getmenu/get/open-allroles'),
+          API.get('/admin/get/open-academic-year')
+        ]);
+        setMetaData({
+          grades: gRes.data.grades || [],
+          classes: cRes.data.classes || [],
+          roles: rRes.data.roles || [],
+          academicYears: ayRes.data.academic_years || []
+        });
+      } catch (err) {
+        console.error("Error fetching metadata for registration requests:", err);
+      }
+    };
+    fetchMetaData();
+  }, []);
 
   const fetchRequests = async (reset = false, newOffset = offset, newLimit = limit, q = search, t = typeFilter, s = statusFilter) => {
     setIsLoading(true);
@@ -141,6 +172,35 @@ export default function RegisteredRequests() {
     return rawData;
   };
 
+  const getDisplayValue = (key, val) => {
+    if (val === null || val === undefined || val === '') {
+      return <span className="text-gray-400 italic">Not Provided</span>;
+    }
+
+    const valStr = String(val);
+
+    // Mappings based on common registration field keys
+    if (key === 'grade' || key === 'grade_id') {
+      const item = metaData.grades.find(i => i.id.toString() === valStr);
+      return item ? item.name : valStr;
+    }
+    if (key === 'class' || key === 'class_id') {
+      const item = metaData.classes.find(i => i.id.toString() === valStr);
+      return item ? item.name : valStr;
+    }
+    if (key === 'department') {
+      // In staff registration, department stores the role_id
+      const item = metaData.roles.find(i => i.id.toString() === valStr);
+      return item ? item.role_name : valStr;
+    }
+    if (key === 'academic_year' || key === 'academic_year_id') {
+      const item = metaData.academicYears.find(i => i.id.toString() === valStr);
+      return item ? item.name : valStr;
+    }
+
+    return valStr;
+  };
+
   const columns = [
     {
       id: 'select',
@@ -211,8 +271,8 @@ export default function RegisteredRequests() {
         const s = row.getValue('status');
         return (
           <span className={`px-3 py-1 rounded-full text-xs font-extrabold uppercase inline-flex items-center gap-1 ${s === 'approved' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300' :
-              s === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' :
-                'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 animate-pulse'
+            s === 'rejected' ? 'bg-red-100 text-red-800 dark:bg-red-950 dark:text-red-300' :
+              'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300 animate-pulse'
             }`}>
             {s === 'approved' && <CheckCircle className="w-3 h-3" />}
             {s === 'rejected' && <XCircle className="w-3 h-3" />}
@@ -359,8 +419,8 @@ export default function RegisteredRequests() {
           <DataTable
             data={requests}
             columns={columns}
-            title="Public Registration Submissions"
-            description="Manage and filter pending student, faculty, and operational staff requests."
+            title=""
+            description=""
             isLoading={isLoading}
             pageSize={limit}
             enableSearch={true}
@@ -394,7 +454,7 @@ export default function RegisteredRequests() {
             </DialogTitle>
           </DialogHeader>
 
-          <div className="py-4 max-h-[60vh] overflow-y-auto pr-2 space-y-4">
+          <div className="py-4 max-h-[60vh] overflow-y-auto pr-2 space-y-4" style={{ scrollbarWidth: "thin", scrollbarColor: "#8b5cf6 #f3f4f6", scrollBehavior: "smooth", msScrollbarArrowColor: "#8b5cf6" }}>
             {/* Core Snapshot */}
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-2xl">
               <div>
@@ -424,7 +484,7 @@ export default function RegisteredRequests() {
                         {key.replace(/_/g, ' ')}
                       </span>
                       <span className="text-xs font-medium text-gray-800 dark:text-gray-200 block mt-0.5 whitespace-pre-wrap break-words">
-                        {val !== null && val !== undefined && val !== '' ? String(val) : <span className="text-gray-400 italic">Not Provided</span>}
+                        {getDisplayValue(key, val)}
                       </span>
                     </div>
                   );
