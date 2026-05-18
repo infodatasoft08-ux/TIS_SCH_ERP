@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Certificate of Achievement</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;700;800&family=Montserrat:wght@300;400;600&family=Great+Vibes&display=swap');
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            width: 842px;
+            height: 595px;
+            overflow: hidden;
+            background: #faf8f5;
+            font-family: 'Montserrat', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        @page {
+            size: 842px 595px;
+            margin: 0;
+        }
+
+        .certificate-container {
+            width: 842px;
+            height: 595px;
+            padding: 30px;
+            position: relative;
+            background: #ffffff;
+            border: 20px solid #ffffff;
+            box-shadow: inset 0 0 100px rgba(184, 134, 11, 0.05);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        /* Gold Border Outline */
+        .outer-border {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            right: 10px;
+            bottom: 10px;
+            border: 2px solid #b8860b;
+            pointer-events: none;
+        }
+
+        .inner-border {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            right: 16px;
+            bottom: 16px;
+            border: 1px solid #b8860b;
+            pointer-events: none;
+        }
+
+        /* Corner Decorations */
+        .corner {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            border: 4px solid #b8860b;
+            pointer-events: none;
+        }
+
+        .top-left {
+            top: 25px;
+            left: 25px;
+            border-right: none;
+            border-bottom: none;
+        }
+
+        .top-right {
+            top: 25px;
+            right: 25px;
+            border-left: none;
+            border-bottom: none;
+        }
+
+        .bottom-left {
+            bottom: 25px;
+            left: 25px;
+            border-right: none;
+            border-top: none;
+        }
+
+        .bottom-right {
+            bottom: 25px;
+            right: 25px;
+            border-left: none;
+            border-top: none;
+        }
+
+        /* Content Styles */
+        .header {
+            margin-top: 40px;
+            text-align: center;
+        }
+
+        .school-name {
+            font-family: 'Cinzel', serif;
+            font-size: 22px;
+            font-weight: 700;
+            color: #1a202c;
+            letter-spacing: 3px;
+            margin: 0;
+            text-transform: uppercase;
+        }
+
+        .school-subtitle {
+            font-size: 10px;
+            font-weight: 600;
+            color: #b8860b;
+            letter-spacing: 4px;
+            margin-top: 5px;
+            text-transform: uppercase;
+        }
+
+        .main-title {
+            font-family: 'Cinzel', serif;
+            font-size: 38px;
+            font-weight: 800;
+            color: #8b6508;
+            margin-top: 25px;
+            margin-bottom: 5px;
+            letter-spacing: 5px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.1);
+            text-transform: uppercase;
+        }
+
+        .award-line {
+            font-size: 14px;
+            font-weight: 300;
+            color: #718096;
+            letter-spacing: 2px;
+            margin-top: 15px;
+            font-style: italic;
+        }
+
+        .student-name {
+            font-family: 'Great Vibes', cursive;
+            font-size: 56px;
+            color: #1a202c;
+            margin: 15px 0 10px 0;
+            border-bottom: 2px solid #b8860b;
+            padding-bottom: 5px;
+            min-width: 400px;
+            text-align: center;
+        }
+
+        .achievement-desc {
+            font-size: 14px;
+            font-weight: 400;
+            color: #4a5568;
+            line-height: 1.8;
+            text-align: center;
+            max-width: 600px;
+            margin-top: 10px;
+        }
+
+        .highlight-text {
+            color: #b8860b;
+            font-weight: 600;
+        }
+
+        /* Footer Elements */
+        .footer-container {
+            width: 100%;
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-end;
+            margin-bottom: 40px;
+            padding: 0 50px;
+        }
+
+        .signature-block {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 180px;
+        }
+
+        .signature-line {
+            width: 100%;
+            border-top: 1px solid #a0aec0;
+            margin-top: 40px;
+            margin-bottom: 8px;
+        }
+
+        .signature-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: #718096;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
+
+        /* Gold Seal Decoration */
+        .seal-container {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .seal-bg {
+            position: absolute;
+            width: 70px;
+            height: 70px;
+            border: 2px dashed #b8860b;
+            border-radius: 50%;
+            background: radial-gradient(circle, #ffd700 0%, #b8860b 100%);
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.15);
+            animation: rotateSeal 20s linear infinite;
+        }
+
+        .seal-star {
+            position: absolute;
+            font-size: 24px;
+            color: #ffffff;
+            z-index: 2;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .ribbon-1,
+        .ribbon-2 {
+            position: absolute;
+            bottom: -30px;
+            width: 15px;
+            height: 50px;
+            background: #b8860b;
+            z-index: 0;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .ribbon-1 {
+            left: 23px;
+            transform: rotate(15deg);
+            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 80%, 0% 100%);
+        }
+
+        .ribbon-2 {
+            right: 23px;
+            transform: rotate(-15deg);
+            clip-path: polygon(0% 0%, 100% 0%, 100% 100%, 50% 80%, 0% 100%);
+        }
+    </style>
+</head>
+
+<body>
+    <div class="certificate-container">
+        <!-- Borders -->
+        <div class="outer-border"></div>
+        <div class="inner-border"></div>
+
+        <!-- Corners -->
+        <div class="corner top-left"></div>
+        <div class="corner top-right"></div>
+        <div class="corner bottom-left"></div>
+        <div class="corner bottom-right"></div>
+
+        <!-- Header -->
+        <div class="header">
+            <h2 class="school-name">Times International School</h2>
+            <div class="school-subtitle">Commited to Excellence</div>
+            <h1 class="main-title">Certificate of Achievement</h1>
+            <div class="award-line">This is proudly presented to</div>
+        </div>
+
+        <!-- Student Name -->
+        <div class="student-name">{{name}}</div>
+
+        <!-- Description -->
+        <div class="achievement-desc">
+            for achieving exceptional academic records in Class <span class="highlight-text">{{class_name}}</span>
+            during the <span class="highlight-text">{{academic_year}}</span> academic session,
+            demonstrating outstanding performance, character, and dedication to excellence.
+        </div>
+
+        <!-- Footer -->
+        <div class="footer-container">
+            <div class="signature-block">
+                <div style="font-family: 'Great Vibes', cursive; font-size: 20px; color: #b8860b;">2026-05-17</div>
+                <div class="signature-line"></div>
+                <span class="signature-label">Issue Date</span>
+            </div>
+
+            <!-- Golden Seal -->
+            <div class="seal-container">
+                <div class="ribbon-1"></div>
+                <div class="ribbon-2"></div>
+                <div class="seal-bg"></div>
+                <span class="seal-star">🏆</span>
+            </div>
+
+            <div class="signature-block">
+                <div
+                    style="font-family: 'Great Vibes', cursive; font-size: 24px; color: #1a202c; transform: rotate(-3deg);">
+                    Mithilesh Kumar</div>
+                <div class="signature-line"></div>
+                <span class="signature-label">Authorized Signature</span>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

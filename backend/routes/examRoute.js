@@ -12,7 +12,9 @@ const {
     GetExamsForStudent,
     GetStudentExamHistory,
     GetAllStudentExamSummaries,
-    GetSupervisedClassExamTrends
+    GetSupervisedClassExamTrends,
+    GenerateMarksheetPDF,
+    GenerateAdmitCardPDF
 } = require('../controller/examController');
 
 // Exam Groups
@@ -28,6 +30,8 @@ router.put('/update/routine', auth, UpdateExamRoutine);
 router.post('/insert/exam/:id/results', auth, AddExamGroupMarks); // :id is exam_group_id
 router.get('/list/exam/:id/results', auth, GetExamGroupResults); // :id is exam_group_id
 router.get('/list/all-student-summaries', auth, GetAllStudentExamSummaries);
+router.post('/generate-marksheet', auth, GenerateMarksheetPDF);
+router.post('/generate-admit-card', auth, GenerateAdmitCardPDF);
 
 // Student View
 router.get('/student/exams', auth, GetExamsForStudent);

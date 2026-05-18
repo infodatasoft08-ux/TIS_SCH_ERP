@@ -400,11 +400,33 @@ const generateBulkInvoicesPDF = async (invoices) => {
     return pdfBuffer;
 };
 
+const generateAdmitCardPDF = async (admitCardData) => {
+    // Format dates in routine
+    const formattedRoutine = (admitCardData.routine || []).map(r => ({
+        ...r,
+        exam_date: r.exam_date ? new Date(r.exam_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
+        time: r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : 'TBD'
+    }));
+
+    const admitCardCode = `AC-${admitCardData.student.roll_no || admitCardData.student.id}-${admitCardData.exam_id}-${Date.now().toString().slice(-4)}`;
+
+    return await generatePDFFromTemplate('admitCard', {
+        student: admitCardData.student,
+        exam_name: admitCardData.exam_name,
+        routine: formattedRoutine,
+        admitCardCode
+    }, {
+        format: 'A4',
+        margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+    });
+};
+
 module.exports = {
     generateInvoicePDF,
     generatePaymentReceiptPDF,
     generateCombinedInvoiceReceiptPDF,
     generateAdmissionFormPDF,
     generateTeacherDetailsPDF,
-    generateBulkInvoicesPDF
+    generateBulkInvoicesPDF,
+    generateAdmitCardPDF
 };

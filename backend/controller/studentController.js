@@ -197,7 +197,8 @@ const GetStudent = async (req, res) => {
         ar.grade_id,
         ar.class_id,
         g.name AS grade_name,
-        c.name AS class_name
+        c.name AS class_name,
+        ay.name AS academic_year
       FROM students s
       JOIN users u ON u.id = s.user_id
       JOIN student_academic_records ar ON ar.student_id = s.id
@@ -209,6 +210,7 @@ const GetStudent = async (req, res) => {
                 AND ar.id = latest.latest_id
       LEFT JOIN grades g ON g.id = ar.grade_id
       LEFT JOIN classes c ON c.id = ar.class_id
+      LEFT JOIN academic_years ay ON ay.id = ar.academic_year_id
       WHERE (u.name LIKE ? OR u.email LIKE ? OR s.admission_no LIKE ? OR ar.roll_no LIKE ? OR g.name LIKE ? OR c.name LIKE ?)
     `;
 

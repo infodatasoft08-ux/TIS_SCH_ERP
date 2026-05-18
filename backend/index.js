@@ -31,11 +31,17 @@ const schoolGalleryRouter = require('./routes/schoolGalleryRoute');
 const employeeAttendanceRouter = require('./routes/employeeAttendanceRoute');
 const homeworkRouter = require('./routes/homework_routes');
 const registrationRouter = require('./routes/registrationRoute');
+const documentRouter = require('./routes/documentRoute');
+const path = require('path');
 
 app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Serve uploads statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/assets', express.static(path.join(__dirname, 'assets')));
 
 const { createBullBoard } = require('@bull-board/api');
 const { BullMQAdapter } = require('@bull-board/api/bullMQAdapter');
@@ -80,6 +86,7 @@ app.use('/api/school-gallery', schoolGalleryRouter);
 app.use('/api/employee-attendance', employeeAttendanceRouter);
 app.use('/api/homework', homeworkRouter);
 app.use('/api/registration', registrationRouter);
+app.use('/api/documents', documentRouter);
 
 
 const PORT = process.env.PORT;

@@ -1,6 +1,7 @@
 import axios from 'axios';
+export const BASE_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5003/api';
 const API = axios.create({
-  baseURL: import.meta.env.HOSTING_BACKEND_BASE_URL || import.meta.env.VITE_API_BASE
+  baseURL: BASE_URL
 });
 
 // set auth header if token exists

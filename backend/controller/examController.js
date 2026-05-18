@@ -1,5 +1,7 @@
 const formatMySQLDate = require('../config/deateConverter');
 const db = require('../db');
+const pdfService = require('../services/pdfService');
+const { generateAdmitCardPDF } = require('../helper/pdfHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -376,7 +378,16 @@ const GetAllStudentExamSummaries = async (req, res) => {
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
                    COALESCE(ay.name, eg_ay.name) as academic_year_name,
                    eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
-                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name
+                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+                   COALESCE(
+                       (
+                           SELECT CASE WHEN si.status = 'paid' THEN 1 ELSE 0 END
+                           FROM student_invoices si
+                           WHERE si.student_id = u.id
+                           ORDER BY si.id DESC LIMIT 1
+                       ),
+                       1
+                   ) as due_cleared
             FROM exam_group_results egr
             JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
             JOIN exam_groups eg ON eg.id = egs.exam_group_id
@@ -403,6 +414,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
                     grade_name: row.grade_name,
                     academic_year_id: row.academic_year_id,
                     academic_year_name: row.academic_year_name,
+                    due_cleared: row.due_cleared === 1,
                     exams: {} // Group exams by id to handle multiple subjects
                 };
             }
@@ -443,6 +455,175 @@ const GetSupervisedClassExamTrends = async (req, res) => {
     return res.json({ trends: [] });
 }
 
+
+const GenerateMarksheetPDF = async (req, res) => {
+    const { student_id, exam_id } = req.body;
+
+    if (!student_id || !exam_id) {
+        return res.status(400).json({ error: 'student_id and exam_id are required' });
+    }
+
+    try {
+        // Fetch the specific student and exam data exactly as GetAllStudentExamSummaries does, but filtered.
+        const [rows] = await db.execute(`
+            SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+                   COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
+                   COALESCE(g.name, eg_g.name) as grade_name, 
+                   COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
+                   COALESCE(ay.name, eg_ay.name) as academic_year_name,
+                   eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
+                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name
+            FROM exam_group_results egr
+            JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+            JOIN exam_groups eg ON eg.id = egs.exam_group_id
+            JOIN students st ON st.id = egr.student_id
+            JOIN users u ON u.id = st.user_id
+            LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
+            LEFT JOIN grades g ON g.id = sar.grade_id
+            LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+            LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
+            LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
+            LEFT JOIN subjects s ON s.id = egs.subject_id
+            WHERE st.id = ? AND eg.id = ?
+        `, [student_id, exam_id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'Marksheet data not found' });
+        }
+
+        const student = {
+            id: rows[0].student_id,
+            name: rows[0].student_name,
+            roll_no: rows[0].roll_no || 'N/A',
+            grade_name: rows[0].grade_name || 'N/A',
+            academic_year_name: rows[0].academic_year_name || 'N/A'
+        };
+
+        const examDate = rows[0].start_date ? formatMySQLDate(rows[0].start_date) : 'N/A';
+        const exam = {
+            name: rows[0].exam_name,
+            formattedDate: examDate,
+            subjects: []
+        };
+
+        let totalMax = 0;
+        let totalObtained = 0;
+
+        rows.forEach(row => {
+            exam.subjects.push({
+                subject_name: row.subject_name,
+                marks_obtained: row.marks_obtained,
+                max_marks: row.max_marks,
+                grade: row.grade || '-',
+                attendance_status: row.attendance_status
+            });
+            totalMax += Number(row.max_marks || 0);
+            if (row.attendance_status !== 'Absent') {
+                totalObtained += Number(row.marks_obtained || 0);
+            }
+        });
+
+        const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+        const currentDate = new Date().toLocaleDateString();
+
+        const templateData = {
+            student,
+            exam,
+            totalMax,
+            totalObtained,
+            percentage,
+            currentDate
+        };
+
+        const templatePath = 'uploads/templates/student_marksheet.hbs';
+
+        // Render HBS to PDF buffer
+        const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
+            width: 794,
+            height: 1123
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Marksheet_${student_id}_${exam_id}.pdf`);
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('POST /api/exam/generate-marksheet error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+const GenerateAdmitCardPDF = async (req, res) => {
+    const { student_id, exam_id } = req.body;
+    if (!student_id || !exam_id) {
+        return res.status(400).json({ error: 'Student ID and Exam ID are required' });
+    }
+
+    try {
+        // 1. Fetch student info
+        const [[student]] = await db.execute(`
+            SELECT st.id, u.name, sar.roll_no, g.name AS grade_name, c.name AS class_name, st.fathers_name, ay.name AS academic_year_name, u.id AS user_id
+            FROM students st
+            JOIN users u ON u.id = st.user_id
+            LEFT JOIN student_academic_records sar ON sar.student_id = st.id
+            LEFT JOIN grades g ON g.id = sar.grade_id
+            LEFT JOIN classes c ON c.id = sar.class_id
+            LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+            WHERE st.id = ?
+            ORDER BY sar.id DESC LIMIT 1
+        `, [student_id]);
+
+        if (!student) {
+            return res.status(404).json({ error: 'Student not found' });
+        }
+
+        // 2. Double-check due cleared status on current invoice!
+        const [[invoice]] = await db.execute(`
+            SELECT status, (amount_due - amount_paid) as balance
+            FROM student_invoices
+            WHERE student_id = ?
+            ORDER BY id DESC LIMIT 1
+        `, [student.user_id]);
+
+        // If an invoice exists and the status is NOT paid, prevent printing!
+        if (invoice && invoice.status !== 'paid') {
+            return res.status(403).json({ error: 'Admit Card locked: Dues must be fully cleared on the current invoice.' });
+        }
+
+        // 3. Fetch exam group info
+        const [[examGroup]] = await db.execute(`
+            SELECT name FROM exam_groups WHERE id = ?
+        `, [exam_id]);
+
+        if (!examGroup) {
+            return res.status(404).json({ error: 'Exam not found' });
+        }
+
+        // 4. Fetch the schedule / routine for the exam group
+        const [routine] = await db.execute(`
+            SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
+            FROM exam_group_subjects egs
+            JOIN subjects s ON s.id = egs.subject_id
+            WHERE egs.exam_group_id = ?
+            ORDER BY egs.exam_date ASC, egs.start_time ASC
+        `, [exam_id]);
+
+        // 5. Generate Admit Card PDF
+        const pdfBuffer = await generateAdmitCardPDF({
+            student,
+            exam_id,
+            exam_name: examGroup.name,
+            routine
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=AdmitCard_${student.name.replace(/\s+/g, '_')}_${examGroup.name.replace(/\s+/g, '_')}.pdf`);
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('POST /api/exam/generate-admit-card error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     AddExamGroup,
     GetExamGroups,
@@ -454,5 +635,7 @@ module.exports = {
     GetExamsForStudent,
     GetStudentExamHistory,
     GetAllStudentExamSummaries,
-    GetSupervisedClassExamTrends
+    GetSupervisedClassExamTrends,
+    GenerateMarksheetPDF,
+    GenerateAdmitCardPDF
 };

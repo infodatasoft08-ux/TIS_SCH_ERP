@@ -10,7 +10,7 @@ import CreateRoutineDialog from "./CreateRoutineDialog.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Printer, TrendingUp, Filter, Calendar } from "lucide-react";
+import { Search, Printer, TrendingUp, Filter, Calendar, Download, Lock, FileText } from "lucide-react";
 import StudentPerformanceReport from "./StudentPerformanceReport.jsx";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -32,6 +32,7 @@ export default function ExamDataTable() {
     const [isRoutineDialogOpen, setIsRoutineDialogOpen] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [isGenerating, setIsGenerating] = useState(false);
 
     const [filterGrade, setFilterGrade] = useState("all");
     const [filterAcademicYear, setFilterAcademicYear] = useState("all");
@@ -251,6 +252,211 @@ export default function ExamDataTable() {
         doc.text(`Percentage: ${percentage}%`, 20, finalY + 5);
 
         doc.save(`${student.name}_${exam.name}_Marksheet.pdf`);
+    };
+
+    const isMobileApp = typeof window !== 'undefined' && window.ReactNativeWebView;
+
+    const handleMarksheetAction = async (student, exam, action) => {
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating marksheet for ${student.name}...`);
+        try {
+            const res = await API.post('/exam/generate-marksheet', {
+                student_id: student.id,
+                exam_id: exam.id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            // if (!res.data) {
+            //     toast.error("Failed to generate marksheet.");
+            //     return;
+            // }
+
+            const blob = new Blob([res.data], {
+                type: "application/pdf",
+            });
+
+            // =========================
+            // REACT NATIVE EXPO APP
+            // =========================
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action, // print or download
+                                fileName: `Marksheet_${student.name}_${exam.name}.pdf`,
+                                payload: {
+                                    base64,
+                                },
+                            })
+                        );
+
+                        toast.success(
+                            `Marksheet sent to mobile app for ${action}.`
+                        );
+                    } catch (e) {
+                        console.error(e);
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+
+                reader.readAsDataURL(blob);
+
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate marksheet.");
+                return;
+            }
+
+
+            if (res.data) {
+                // const blob = new Blob([res.data], { type: 'application/pdf' });
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                if (action === 'download') {
+
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `Marksheet_${student.name}_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                }
+            } else {
+                toast.error('Failed to generate marksheet.');
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleAdmitCardAction = async (student, exam, action) => {
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating admit card for ${student.name}...`);
+        try {
+            const res = await API.post('/exam/generate-admit-card', {
+                student_id: student.id,
+                exam_id: exam.id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            // =========================
+            // REACT NATIVE EXPO APP
+            // =========================
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action, // print or download
+                                fileName: `AdmitCard_${student.name}_${exam.name}.pdf`,
+                                payload: {
+                                    base64,
+                                },
+                            })
+                        );
+
+                        toast.success(
+                            `Admit Card sent to mobile app for ${action}.`
+                        );
+                    } catch (e) {
+                        console.error(e);
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+
+                reader.readAsDataURL(blob);
+
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate admit card.");
+                return;
+            }
+
+            if (res.data) {
+                const blob = new Blob([res.data], { type: 'application/pdf' });
+                const blobUrl = window.URL.createObjectURL(blob);
+
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `AdmitCard_${student.name}_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                }
+            } else {
+                toast.error('Failed to generate admit card.');
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
     };
 
     const generatePerformanceReportPDF = (student) => {
@@ -492,22 +698,90 @@ export default function ExamDataTable() {
                                                                             <Printer className="h-3.5 w-3.5" /> Marksheet
                                                                         </Button>
                                                                     </PopoverTrigger>
-                                                                    <PopoverContent className="w-56 p-2">
+                                                                    <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-xs font-semibold px-2 py-1 border-b mb-1 text-muted-foreground">Select Exam</p>
+                                                                            <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam Action</p>
                                                                             {student.exams.map(ex => (
-                                                                                <Button
-                                                                                    key={ex.id}
-                                                                                    variant="ghost"
-                                                                                    className="w-full justify-start text-xs h-8"
-                                                                                    onClick={() => generateMarksheetPDF(student, ex)}
-                                                                                >
-                                                                                    {ex.name}
-                                                                                </Button>
+                                                                                <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                    <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                            onClick={() => handleMarksheetAction(student, ex, 'download')}
+                                                                                            title="Download PDF"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Download className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                            onClick={() => handleMarksheetAction(student, ex, 'print')}
+                                                                                            title="Print directly"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Printer className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                </div>
                                                                             ))}
                                                                         </div>
                                                                     </PopoverContent>
                                                                 </Popover>
+
+                                                                {student.due_cleared ? (
+                                                                    <Popover>
+                                                                        <PopoverTrigger asChild>
+                                                                            <Button variant="outline" size="sm" className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
+                                                                                <FileText className="h-3.5 w-3.5" /> Admit Card
+                                                                            </Button>
+                                                                        </PopoverTrigger>
+                                                                        <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800">
+                                                                            <div className="space-y-1">
+                                                                                <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
+                                                                                {student.exams.map(ex => (
+                                                                                    <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                        <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                                onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                                title="Download Admit Card"
+                                                                                                disabled={isGenerating}
+                                                                                            >
+                                                                                                <Download className="h-4 w-4" />
+                                                                                            </Button>
+                                                                                            <Button
+                                                                                                variant="ghost"
+                                                                                                size="icon"
+                                                                                                className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                                onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                                title="Print Admit Card"
+                                                                                                disabled={isGenerating}
+                                                                                            >
+                                                                                                <Printer className="h-4 w-4" />
+                                                                                            </Button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        </PopoverContent>
+                                                                    </Popover>
+                                                                ) : (
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        size="sm"
+                                                                        className="gap-2 text-rose-500 border-rose-200 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
+                                                                        title="Admit Card locked: Student has pending fee dues."
+                                                                    >
+                                                                        <Lock className="h-3.5 w-3.5" /> Dues Pending
+                                                                    </Button>
+                                                                )}
 
                                                                 <Button
                                                                     variant="default"
