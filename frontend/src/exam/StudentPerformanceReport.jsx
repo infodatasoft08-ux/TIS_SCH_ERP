@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import html2canvas from 'html2canvas';
+const isMobileApp = typeof window !== 'undefined' && window.ReactNativeWebView;
 
 export default function StudentPerformanceReport({ open, onOpenChange, student }) {
     const [loading, setLoading] = useState(false);
@@ -230,10 +231,20 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                 doc.setFontSize(8);
                 doc.setTextColor(150, 150, 150);
                 doc.text(`Page ${i} of ${totalPages}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-                doc.text("© TIMES INTERNATIONAL SCHOOL - Professional Academic Report", 20, pageHeight - 10);
+                doc.text("© CMC - Professional Academic Report", 20, pageHeight - 10);
             }
 
-            doc.save(`${student.name.replace(/\s+/g, '_')}_Performance_Report.pdf`);
+            const fileName = `${student.name.replace(/\s+/g, '_')}_Performance_Report.pdf`;
+            if (isMobileApp) {
+                const dataUri = doc.output('datauristring');
+                const base64 = dataUri.split(',')[1];
+                window.ReactNativeWebView.postMessage(JSON.stringify({
+                    type: 'download',
+                    payload: { base64, fileName, mimeType: 'application/pdf' }
+                }));
+            } else {
+                doc.save(fileName);
+            }
         } catch (error) {
             console.error("PDF Export failed:", error);
         } finally {
@@ -243,42 +254,44 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-6xl h-[95vh] flex flex-col p-0 overflow-hidden rounded-[2rem] border-0 shadow-2xl">
-                <DialogHeader className="p-8 border-b bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-900">
-                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 w-full pr-10">
-                        <div className="space-y-1">
-                            <DialogTitle className="text-3xl font-extrabold flex items-center gap-3 tracking-tight">
-                                <div className="p-2 bg-primary/10 rounded-xl">
-                                    <TrendingUp className="text-primary h-6 w-6" />
+            <DialogContent className="w-full h-[100dvh] sm:max-w-6xl sm:h-[95vh] rounded-none sm:rounded-[2rem] p-0 flex flex-col overflow-hidden border-0 shadow-2xl">
+                <DialogHeader className="p-4 sm:p-8 border-b bg-gradient-to-r from-gray-50 to-white dark:from-gray-900/50 dark:to-gray-900 shrink-0">
+                    <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 sm:gap-6 w-full pr-8 sm:pr-10">
+                        <div className="space-y-1.5 w-full md:w-auto">
+                            <DialogTitle className="text-xl sm:text-3xl font-extrabold flex items-center gap-2 sm:gap-3 tracking-tight">
+                                <div className="p-1.5 sm:p-2 bg-primary/10 rounded-lg sm:rounded-xl shrink-0">
+                                    <TrendingUp className="text-primary h-5 w-5 sm:h-6 sm:w-6" />
                                 </div>
-                                Performance Analysis: {student?.name}
+                                <span className="truncate max-w-[200px] sm:max-w-none block text-gray-900 dark:text-gray-100" title={student?.name}>
+                                    {student?.name}
+                                </span>
                             </DialogTitle>
-                            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground font-medium">
-                                <span className="flex items-center gap-1.5"><Badge variant="outline" className="rounded-md">Roll: {student?.roll_no}</Badge></span>
-                                <span className="flex items-center gap-1.5"><Badge variant="outline" className="rounded-md">Grade: {student?.grade_name}</Badge></span>
-                                <span className="flex items-center gap-1.5"><Badge variant="outline" className="rounded-md">Year: {student?.academic_year_name}</Badge></span>
+                            <div className="flex flex-wrap items-center gap-1.5 text-xs sm:text-sm text-muted-foreground font-medium">
+                                <Badge variant="outline" className="rounded-md">Roll: {student?.roll_no || 'N/A'}</Badge>
+                                <Badge variant="outline" className="rounded-md">Grade: {student?.grade_name || 'N/A'}</Badge>
+                                <Badge variant="outline" className="rounded-md">Year: {student?.academic_year_name || 'N/A'}</Badge>
                             </div>
                         </div>
                         <Button
                             onClick={downloadPDF}
                             disabled={isExporting}
                             variant="default"
-                            className="gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none h-12 px-6 rounded-xl transition-all hover:scale-105 active:scale-95"
+                            className="w-full md:w-auto gap-2 bg-indigo-600 hover:bg-indigo-700 shadow-lg shadow-indigo-200 dark:shadow-none h-10 sm:h-12 px-4 sm:px-6 rounded-xl transition-all hover:scale-105 active:scale-95 text-xs sm:text-sm font-semibold shrink-0"
                         >
-                            {isExporting ? <Loader2 className="h-5 w-5 animate-spin" /> : <Download className="h-5 w-5" />}
+                            {isExporting ? <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" /> : <Download className="h-4 w-4 sm:h-5 sm:w-5" />}
                             {isExporting ? 'Generating PDF...' : 'Download PDF Report'}
                         </Button>
                     </div>
                 </DialogHeader>
 
-                <div className="flex-grow overflow-y-auto p-8 space-y-10 custom-scrollbar">
+                <div className="flex-grow overflow-y-auto p-4 sm:p-8 space-y-6 sm:space-y-10 custom-scrollbar min-h-0">
                     {loading ? (
                         <div className="h-96 flex flex-col items-center justify-center gap-6">
                             <Loader2 className="h-12 w-12 animate-spin text-primary" />
                             <p className="text-lg font-medium text-muted-foreground animate-pulse">Generating your personalized analytics...</p>
                         </div>
                     ) : !exams || exams.length === 0 ? (
-                        <div className="h-96 flex flex-col items-center justify-center text-center p-12 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2.5rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
+                        <div className="h-96 flex flex-col items-center justify-center text-center p-6 sm:p-12 bg-gray-50/50 dark:bg-gray-800/20 rounded-[2rem] sm:rounded-[2.5rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
                             <div className="p-6 bg-white dark:bg-gray-900 rounded-full shadow-xl mb-6">
                                 <Award className="h-16 w-16 text-gray-200" />
                             </div>
@@ -288,21 +301,21 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                     ) : (
                         <>
                             {/* Summary Cards */}
-                            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-6">
                                 {[
                                     { label: 'Exams Taken', val: exams.length, icon: Calendar, color: 'blue' },
                                     { label: 'Subjects', val: allSubjects.length, icon: BookOpen, color: 'indigo' },
                                     { label: 'Avg. Score', val: `${(barChartData.reduce((a, b) => a + b.percentage, 0) / barChartData.length).toFixed(1)}%`, icon: Award, color: 'emerald' },
                                     { label: 'Attendance', val: `${Math.round((presentCount / (presentCount + absentCount)) * 100)}%`, icon: CheckCircle, color: 'orange' }
                                 ].map((stat, i) => (
-                                    <Card key={i} className="border-0 shadow-sm bg-gray-50/50 dark:bg-gray-800/40 rounded-3xl overflow-hidden hover:shadow-md transition-shadow">
-                                        <CardContent className="p-6 flex items-center gap-5">
-                                            <div className={`p-4 rounded-2xl bg-${stat.color}-50 dark:bg-${stat.color}-900/20`}>
-                                                <stat.icon className={`h-6 w-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
+                                    <Card key={i} className="border-0 shadow-sm bg-gray-50/50 dark:bg-gray-800/40 rounded-2xl sm:rounded-3xl overflow-hidden hover:shadow-md transition-shadow">
+                                        <CardContent className="p-4 sm:p-6 flex items-center gap-3 sm:gap-5">
+                                            <div className={`p-2.5 sm:p-4 rounded-xl sm:rounded-2xl bg-${stat.color}-50 dark:bg-${stat.color}-900/20 shrink-0`}>
+                                                <stat.icon className={`h-5 w-5 sm:h-6 sm:w-6 text-${stat.color}-600 dark:text-${stat.color}-400`} />
                                             </div>
-                                            <div>
-                                                <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">{stat.label}</p>
-                                                <p className="text-2xl font-black">{stat.val}</p>
+                                            <div className="min-w-0">
+                                                <p className="text-[10px] sm:text-xs font-semibold text-muted-foreground uppercase tracking-wider truncate">{stat.label}</p>
+                                                <p className="text-lg sm:text-2xl font-black truncate">{stat.val}</p>
                                             </div>
                                         </CardContent>
                                     </Card>
@@ -310,47 +323,47 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                             </div>
 
                             {/* Charts Section */}
-                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                                <Card className="border-0 shadow-sm rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
+                            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
+                                <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                        <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
                                             <BarChart3 className="h-5 w-5 text-indigo-500" />
                                             Exam Performance (%)
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="h-[350px] p-6" ref={barChartRef}>
+                                    <CardContent className="h-[280px] sm:h-[350px] p-3 sm:p-6" ref={barChartRef}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={barChartData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                                                <YAxis axisLine={false} tickLine={false} domain={[0, 100]} />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                                                <YAxis axisLine={false} tickLine={false} domain={[0, 100]} tick={{ fontSize: 10 }} />
                                                 <Tooltip
                                                     cursor={{ fill: '#f3f4f6' }}
                                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                                 />
-                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={40}>
-                                                    <LabelList dataKey="percentage" position="top" style={{ fontSize: '11px', fontWeight: 'bold', fill: '#1e1b4b' }} />
+                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={32}>
+                                                    <LabelList dataKey="percentage" position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#1e1b4b' }} />
                                                 </Bar>
                                             </BarChart>
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
 
-                                <Card className="border-0 shadow-sm rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
+                                <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                        <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
                                             <TrendingUp className="h-5 w-5 text-emerald-500" />
                                             Subject Score Trends
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="h-[350px] p-6" ref={lineChartRef}>
+                                    <CardContent className="h-[280px] sm:h-[350px] p-3 sm:p-6" ref={lineChartRef}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <BarChart data={lineChartData}>
                                                 <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
-                                                <XAxis dataKey="name" axisLine={false} tickLine={false} />
-                                                <YAxis axisLine={false} tickLine={false} />
+                                                <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                                                <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
                                                 <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                                <Legend iconType="circle" />
+                                                <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
                                                 {allSubjects.map((sub, idx) => (
                                                     <Bar
                                                         key={sub}
@@ -358,7 +371,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                         fill={COLORS[idx % COLORS.length]}
                                                         radius={[4, 4, 0, 0]}
                                                     >
-                                                        <LabelList dataKey={sub} position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#1e1b4b' }} offset={5} />
+                                                        <LabelList dataKey={sub} position="top" style={{ fontSize: '9px', fontWeight: 'bold', fill: '#1e1b4b' }} offset={5} />
                                                     </Bar>
                                                 ))}
                                             </BarChart>
@@ -366,22 +379,22 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                     </CardContent>
                                 </Card>
 
-                                <Card className="border-0 shadow-sm rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
+                                <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
                                     <CardHeader className="pb-2">
-                                        <CardTitle className="text-lg font-bold flex items-center gap-2">
+                                        <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
                                             <PieIcon className="h-5 w-5 text-orange-500" />
                                             Attendance Overview
                                         </CardTitle>
                                     </CardHeader>
-                                    <CardContent className="h-[350px] flex items-center justify-center p-6" ref={pieChartRef}>
+                                    <CardContent className="h-[280px] sm:h-[350px] flex items-center justify-center p-3 sm:p-6" ref={pieChartRef}>
                                         <ResponsiveContainer width="100%" height="100%">
                                             <PieChart>
                                                 <Pie
                                                     data={pieChartData}
                                                     cx="50%" cy="50%"
-                                                    innerRadius={80}
-                                                    outerRadius={120}
-                                                    paddingAngle={8}
+                                                    innerRadius={60}
+                                                    outerRadius={100}
+                                                    paddingAngle={6}
                                                     dataKey="value"
                                                 >
                                                     {pieChartData.map((entry, index) => (
@@ -389,28 +402,28 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                     ))}
                                                 </Pie>
                                                 <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
-                                                <Legend verticalAlign="bottom" height={36} />
+                                                <Legend verticalAlign="bottom" height={36} wrapperStyle={{ fontSize: '11px' }} />
                                             </PieChart>
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
 
-                                <Card className="border-0 shadow-sm rounded-[2rem] bg-indigo-600 text-white overflow-hidden">
-                                    <CardContent className="p-10 h-full flex flex-col justify-center">
-                                        <h4 className="text-2xl font-bold mb-4 italic leading-tight">"Education is the passport to the future, for tomorrow belongs to those who prepare for it today."</h4>
+                                <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-indigo-600 text-white overflow-hidden">
+                                    <CardContent className="p-6 sm:p-10 h-full flex flex-col justify-center">
+                                        <h4 className="text-lg sm:text-2xl font-bold mb-4 italic leading-tight">"Education is the passport to the future, for tomorrow belongs to those who prepare for it today."</h4>
                                         <p className="text-indigo-100">— Malcolm X</p>
                                     </CardContent>
                                 </Card>
                             </div>
 
                             {/* Detailed Exam Sections */}
-                            <div className="space-y-8">
-                                <h3 className="text-2xl font-black tracking-tight border-l-4 border-primary pl-4">Detailed Subject Wise Performance</h3>
+                            <div className="space-y-6 sm:space-y-8">
+                                <h3 className="text-xl sm:text-2xl font-black tracking-tight border-l-4 border-primary pl-4">Detailed Subject Wise Performance</h3>
                                 {exams.map((exam, exIdx) => (
-                                    <Card key={exIdx} className="border-0 shadow-sm rounded-[2rem] bg-white dark:bg-gray-900/40 overflow-hidden border-t-4 border-indigo-500">
-                                        <CardHeader className="bg-gray-50/50 dark:bg-gray-800/20 px-8 py-6">
+                                    <Card key={exIdx} className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-white dark:bg-gray-900/40 overflow-hidden border-t-4 border-indigo-500">
+                                        <CardHeader className="bg-gray-50/50 dark:bg-gray-800/20 px-4 py-4 sm:px-8 sm:py-6">
                                             <div className="flex justify-between items-center">
-                                                <CardTitle className="text-xl font-bold flex items-center gap-3">
+                                                <CardTitle className="text-base sm:text-xl font-bold flex flex-wrap items-center gap-2 sm:gap-3">
                                                     <Calendar className="h-5 w-5 text-indigo-500" />
                                                     {exam.name}
                                                     <Badge variant="secondary" className="bg-indigo-50 text-indigo-700 dark:bg-indigo-900/30 dark:text-indigo-300">
@@ -419,21 +432,21 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                 </CardTitle>
                                             </div>
                                         </CardHeader>
-                                        <CardContent className="p-0">
-                                            <Table>
+                                        <CardContent className="p-0 overflow-x-auto">
+                                            <Table className="min-w-[600px] sm:min-w-full">
                                                 <TableHeader>
                                                     <TableRow className="bg-gray-50/30 dark:bg-gray-900/20 border-0 hover:bg-transparent">
-                                                        <TableHead className="pl-8 py-4 font-bold">Subject</TableHead>
+                                                        <TableHead className="pl-4 sm:pl-8 py-3 sm:py-4 font-bold">Subject</TableHead>
                                                         <TableHead className="font-bold">Max Marks</TableHead>
                                                         <TableHead className="font-bold">Marks Obtained</TableHead>
                                                         <TableHead className="font-bold">Grade</TableHead>
-                                                        <TableHead className="font-bold pr-8 text-right">Attendance</TableHead>
+                                                        <TableHead className="font-bold pr-4 sm:pr-8 text-right">Attendance</TableHead>
                                                     </TableRow>
                                                 </TableHeader>
                                                 <TableBody>
                                                     {exam.subjects.map((sub, sIdx) => (
                                                         <TableRow key={sIdx} className="border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                                                            <TableCell className="pl-8 py-5 font-semibold text-gray-700 dark:text-gray-200">{sub.subject_name}</TableCell>
+                                                            <TableCell className="pl-4 sm:pl-8 py-4 sm:py-5 font-semibold text-gray-700 dark:text-gray-200">{sub.subject_name}</TableCell>
                                                             <TableCell>{sub.max_marks}</TableCell>
                                                             <TableCell className="font-bold">
                                                                 {sub.attendance_status === 'Absent' ? (
@@ -445,7 +458,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                             <TableCell>
                                                                 <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-0">{sub.grade || 'N/A'}</Badge>
                                                             </TableCell>
-                                                            <TableCell className="pr-8 text-right">
+                                                            <TableCell className="pr-4 sm:pr-8 text-right">
                                                                 <div className="flex justify-end">
                                                                     {sub.attendance_status === 'Present' ? (
                                                                         <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0 gap-1 px-3">

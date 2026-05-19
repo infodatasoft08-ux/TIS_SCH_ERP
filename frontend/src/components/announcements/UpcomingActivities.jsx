@@ -142,89 +142,9 @@ export default function UpcomingActivities() {
     }
 
     return (
-        // <Card className="rounded-[2rem] border dark:border-gray-800 shadow-xl bg-white dark:bg-gray-900/50">
-        //     <CardHeader className="flex flex-row items-center justify-between">
-        //         <CardTitle className="text-xl font-bold">Upcoming Activities</CardTitle>
-        //         <button className="text-sm font-bold text-blue-500 hover:underline">See all</button>
-        //     </CardHeader>
-        //     <CardContent className="space-y-6">
-        //         <div className="space-y-4">
-        //             {allActivities.map((activity, idx) => (
-        //                 <div key={idx} className="flex items-center justify-between group cursor-pointer">
-        //                     <div className="flex items-center gap-4">
-        //                         <div className={cn(
-        //                             "w-12 h-12 rounded-full flex items-center justify-center font-bold text-white shadow-lg",
-        //                             activity.type === 'event' ? "bg-blue-500" : "bg-pink-500"
-        //                         )}>
-        //                             {getDay(activity.date)}
-        //                         </div>
-        //                         <div>
-        //                             <h4 className="font-bold text-sm text-gray-900 dark:text-white line-clamp-1">{activity.title}</h4>
-        //                             <p className="text-xs text-gray-500 flex items-center gap-1 mt-0.5">
-        //                                 {activity.type === 'event' ? (
-        //                                     <>
-        //                                         <CalendarIcon className="w-3 h-3" />
-        //                                         {new Date(activity.date).toLocaleDateString('en-GB')} • {activity.start_time || 'All Day'}
-        //                                     </>
-        //                                 ) : (
-        //                                     <>
-        //                                         <Megaphone className="w-3 h-3" />
-        //                                         Announcement • {new Date(activity.date).toLocaleDateString('en-GB')}
-        //                                     </>
-        //                                 )}
-        //                             </p>
-        //                         </div>
-        //                     </div>
-        //                     <ChevronRight className="w-5 h-5 text-gray-300 group-hover:text-gray-900 dark:group-hover:text-white transition-colors" />
-        //                 </div>
-        //             ))}
-
-        //             {allActivities.length === 0 && (
-        //                 <div className="text-center py-8 text-gray-500">
-        //                     <CalendarIcon className="w-12 h-12 mx-auto opacity-20 mb-2" />
-        //                     <p className="text-sm">No recent activities</p>
-        //                 </div>
-        //             )}
-        //         </div>
-
-        //         <div className="grid grid-cols-1 gap-3 pt-4 border-t dark:border-gray-800">
-        //             <Button
-        //                 className="w-full rounded-2xl h-12 font-bold gap-2 text-white bg-indigo-600 hover:bg-indigo-700"
-        //                 onClick={() => setIsEventFormOpen(true)}
-        //             >
-        //                 <Plus className="w-5 h-5" />
-        //                 Add Event
-        //             </Button>
-        //             <Button
-        //                 variant="outline"
-        //                 className="w-full rounded-2xl h-12 font-bold gap-2 border-2"
-        //                 onClick={() => setIsNoticeFormOpen(true)}
-        //             >
-        //                 <Plus className="w-5 h-5" />
-        //                 Add Notice
-        //             </Button>
-        //         </div>
-        //     </CardContent>
-
-        //     <NoticeForm
-        //         isOpen={isNoticeFormOpen}
-        //         onClose={() => {
-        //             setIsNoticeFormOpen(false);
-        //             fetchData();
-        //         }}
-        //     />
-        //     <EventForm
-        //         isOpen={isEventFormOpen}
-        //         onClose={() => {
-        //             setIsEventFormOpen(false);
-        //             fetchData();
-        //         }}
-        //     />
-        // </Card>
-
         <div className='xl:w-1/3 space-y-6'>
             {/* Compact ScheduleX Calendar */}
-            <div className="bg-card text-card-foreground p-6 rounded-xl border border-border shadow-lg">
+            <div className="bg-card text-card-foreground p-1.5 rounded-xl border border-border shadow-lg">
                 <div className="flex items-center justify-between mb-4">
                     <h3 className="text-xl font-bold flex items-center gap-2">
                         <CalendarIcon className="w-5 h-5 text-blue-500" />
@@ -277,7 +197,7 @@ export default function UpcomingActivities() {
             </div>
 
             {/* Upcoming Events */}
-            <div className="bg-card text-card-foreground p-6 rounded-xl border border-border shadow-lg">
+            <div className="bg-card text-card-foreground p-1.5 rounded-xl border border-border shadow-lg">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <CalendarIcon className="w-5 h-5 text-purple-500" />
                     Upcoming Events
@@ -319,7 +239,7 @@ export default function UpcomingActivities() {
             </div>
 
             {/* Recent Notices */}
-            <div className="bg-card text-card-foreground p-6 rounded-xl border border-border shadow-lg">
+            <div className="bg-card text-card-foreground p-1.5 rounded-xl border border-border shadow-lg">
                 <h3 className="text-xl font-bold mb-4 flex items-center gap-2">
                     <Bell className="w-5 h-5 text-amber-500" />
                     Recent Notices

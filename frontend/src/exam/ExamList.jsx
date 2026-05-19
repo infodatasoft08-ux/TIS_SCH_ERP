@@ -48,84 +48,84 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
           </TableHeader>
           <TableBody>
             {exams.map((exam) => {
-                const isOver = exam.status === 'Over';
-                const isPublished = exam.status === 'Published';
-                const academicSubjectsCount = exam.subjects?.filter(s => {
-                    const n = s.subject_name?.toLowerCase().trim();
-                    return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-                }).length || 0;
+              const isOver = exam.status === 'Over';
+              const isPublished = exam.status === 'Published';
+              const academicSubjectsCount = exam.subjects?.filter(s => {
+                const n = s.subject_name?.toLowerCase().trim();
+                return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+              }).length || 0;
 
-                return (
-                    <TableRow key={exam.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                        <TableCell className="font-medium text-gray-900 dark:text-gray-100">{exam.name}</TableCell>
-                        <TableCell>
-                            <div className="flex flex-col">
-                                <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{exam.class_name ? 'Class' : 'Grade'}</span>
-                                <span className="text-sm font-medium">{exam.class_name || exam.grade_name || "All"}</span>
-                            </div>
-                        </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
-                            {exam.start_date && exam.end_date ? `${exam.start_date} - ${exam.end_date}` : exam.start_date || exam.end_date || 'N/A'}
-                        </TableCell>
-                        <TableCell className="text-center">
-                            <Badge variant="outline" className="font-normal">{academicSubjectsCount}</Badge>
-                        </TableCell>
-                        <TableCell>
-                            <Badge variant={isOver ? "secondary" : (isPublished ? "success" : "warning")}>
-                                {exam.status}
-                            </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end" className="w-48">
-                                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        {!isOver && (
-                                            <>
-                                                <DropdownMenuItem onClick={() => onEditExam(exam)}>
-                                                    <Edit className="mr-2 h-4 w-4" /> Edit Details
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
-                                                    {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
-                                                    {isPublished ? 'Unpublish' : 'Publish'}
-                                                </DropdownMenuItem>
-                                            </>
-                                        )}
-                                        <DropdownMenuItem onClick={() => onCreateRoutine(exam)}>
-                                            <CalendarClock className="mr-2 h-4 w-4" /> Schedule/Routine
-                                        </DropdownMenuItem>
-                                        {!isOver ? (
-                                            <DropdownMenuItem onClick={() => onAddMarks(exam)} className="text-blue-600 font-medium">
-                                                <CheckCircle className="mr-2 h-4 w-4" /> Add Marks
-                                            </DropdownMenuItem>
-                                        ) : (
-                                            <>
-                                                <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
-                                                    {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                                                    {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onClick={() => window.print()}>
-                                                    <Printer className="mr-2 h-4 w-4" /> Print Marksheet
-                                                </DropdownMenuItem>
-                                            </>
-                                        )}
-                                        {!isOver && (
-                                            <DropdownMenuItem onClick={() => deleteExam(exam.id)} className="text-red-600">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </TableCell>
-                    </TableRow>
-                );
+              return (
+                <TableRow key={exam.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
+                  <TableCell className="font-medium text-gray-900 dark:text-gray-100">{exam.name}</TableCell>
+                  <TableCell>
+                    <div className="flex flex-col">
+                      <span className="text-xs text-muted-foreground uppercase tracking-wider font-semibold">{exam.class_name ? 'Class' : 'Grade'}</span>
+                      <span className="text-sm font-medium">{exam.class_name || exam.grade_name || "All"}</span>
+                    </div>
+                  </TableCell>
+                  <TableCell className="text-xs text-muted-foreground">
+                    {exam.start_date && exam.end_date ? `${exam.start_date} - ${exam.end_date}` : exam.start_date || exam.end_date || 'N/A'}
+                  </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant="outline" className="font-normal">{academicSubjectsCount}</Badge>
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={isOver ? "secondary" : (isPublished ? "success" : "warning")}>
+                      {exam.status}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex justify-end gap-1">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-48">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuSeparator />
+                          {!isOver && (
+                            <>
+                              <DropdownMenuItem onClick={() => onEditExam(exam)}>
+                                <Edit className="mr-2 h-4 w-4" /> Edit Details
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
+                                {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
+                                {isPublished ? 'Unpublish' : 'Publish'}
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          <DropdownMenuItem onClick={() => onCreateRoutine(exam)}>
+                            <CalendarClock className="mr-2 h-4 w-4" /> Schedule/Routine
+                          </DropdownMenuItem>
+                          {!isOver ? (
+                            <DropdownMenuItem onClick={() => onAddMarks(exam)} className="text-blue-600 font-medium">
+                              <CheckCircle className="mr-2 h-4 w-4" /> Add Marks
+                            </DropdownMenuItem>
+                          ) : (
+                            <>
+                              <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
+                                {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                                {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
+                              </DropdownMenuItem>
+                              <DropdownMenuItem onClick={() => window.print()}>
+                                <Printer className="mr-2 h-4 w-4" /> Print Marksheet
+                              </DropdownMenuItem>
+                            </>
+                          )}
+                          {!isOver && (
+                            <DropdownMenuItem onClick={() => deleteExam(exam.id)} className="text-red-600">
+                              <Trash2 className="mr-2 h-4 w-4" /> Delete
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              );
             })}
           </TableBody>
         </Table>
@@ -154,8 +154,8 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                 </div>
                 <div className="flex items-center text-xs text-muted-foreground mt-1 font-medium justify-between">
                   <div className="flex items-center">
-                      <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
-                      {exam.start_date && exam.end_date ? `${exam.start_date} to ${exam.end_date}` : exam.start_date ? `Starts: ${exam.start_date}` : exam.end_date ? `Ends: ${exam.end_date}` : 'No Dates'}
+                    <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
+                    {exam.start_date && exam.end_date ? `${exam.start_date} to ${exam.end_date}` : exam.start_date ? `Starts: ${exam.start_date}` : exam.end_date ? `Ends: ${exam.end_date}` : 'No Dates'}
                   </div>
                 </div>
               </CardHeader>
@@ -168,8 +168,8 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                 <div className="flex items-center text-gray-600 dark:text-gray-300">
                   <BookOpen className="mr-2.5 h-4 w-4 text-purple-500" />
                   <span className="font-semibold text-gray-700 dark:text-gray-200 mr-1.5">Subjects:</span> {exam.subjects?.filter(s => {
-                      const n = s.subject_name?.toLowerCase().trim();
-                      return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                    const n = s.subject_name?.toLowerCase().trim();
+                    return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
                   }).length || 0}
                 </div>
                 <div className="text-xs text-gray-500 dark:text-gray-400 mt-3 bg-gray-100/50 dark:bg-gray-800/50 p-2.5 rounded-md border border-gray-100 dark:border-gray-800">
@@ -177,85 +177,85 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                 </div>
               </CardContent>
 
-              <CardFooter className="pt-4 flex flex-col gap-2">
-                  <div className="flex w-full gap-2">
-                      {!isOver && (
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              className="flex-1 text-xs border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200"
-                              onClick={() => onEditExam(exam)}
-                          >
-                              <Edit className="mr-1.5 h-3.5 w-3.5 text-gray-500" />
-                              Edit
-                          </Button>
-                      )}
-                      
-                      {!isOver && (
-                        <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 text-xs border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200"
-                            onClick={() => onTogglePublish(exam)}
-                        >
-                            {isPublished ? <Lock className="mr-1.5 h-3.5 w-3.5 text-orange-500" /> : <Globe className="mr-1.5 h-3.5 w-3.5 text-green-500" />}
-                            {isPublished ? 'Unpublish' : 'Publish'}
-                        </Button>
-                      )}
+              <CardFooter className="pt-4 flex flex-col gap-2 w-full">
+                <div className="flex flex-col gap-2 w-full">
+                  {!isOver && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200 justify-start"
+                      onClick={() => onEditExam(exam)}
+                    >
+                      <Edit className="mr-2 h-3.5 w-3.5 text-gray-500" />
+                      Edit Details
+                    </Button>
+                  )}
 
-                      {!isOver && (
-                          <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-10 px-0 text-xs border-gray-200 dark:border-gray-700 hover:bg-red-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200"
-                              onClick={() => deleteExam(exam.id)}
-                          >
-                              <Trash2 className="h-3.5 w-3.5 text-red-500" />
-                          </Button>
-                      )}
-                  </div>
+                  {!isOver && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200 justify-start"
+                      onClick={() => onTogglePublish(exam)}
+                    >
+                      {isPublished ? <Lock className="mr-2 h-3.5 w-3.5 text-orange-500" /> : <Globe className="mr-2 h-3.5 w-3.5 text-green-500" />}
+                      {isPublished ? 'Unpublish Exam' : 'Publish Exam'}
+                    </Button>
+                  )}
 
-                   <div className="flex w-full gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full text-xs border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:bg-transparent dark:hover:bg-gray-800 dark:text-gray-200 justify-start"
+                    onClick={() => onCreateRoutine(exam)}
+                  >
+                    <CalendarClock className="mr-2 h-3.5 w-3.5 text-indigo-500" />
+                    Routine / Schedule
+                  </Button>
+
+                  {!isOver ? (
+                    <Button
+                      size="sm"
+                      className="w-full text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 border-0 justify-start"
+                      onClick={() => onAddMarks(exam)}
+                    >
+                      <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                      Add Marks
+                    </Button>
+                  ) : (
+                    <>
                       <Button
-                          variant="secondary"
-                          size="sm"
-                          className="flex-1 text-xs"
-                          onClick={() => onCreateRoutine(exam)}
+                        size="sm"
+                        className={`w-full text-xs justify-start ${exam.is_results_published ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+                        onClick={() => onToggleResultsPublish(exam)}
                       >
-                          <CalendarClock className="mr-1.5 h-3.5 w-3.5" />
-                          Routine
+                        {exam.is_results_published ? <Lock className="mr-2 h-3.5 w-3.5" /> : <CheckCircle className="mr-2 h-3.5 w-3.5" />}
+                        {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
                       </Button>
-                      {!isOver ? (
-                          <Button
-                              size="sm"
-                              className="flex-1 text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 border-0"
-                              onClick={() => onAddMarks(exam)}
-                          >
-                              <CheckCircle className="mr-1.5 h-3.5 w-3.5" />
-                              Add Marks
-                          </Button>
-                      ) : (
-                          <div className="flex flex-1 gap-2">
-                              <Button
-                                  size="sm"
-                                  className={`flex-1 text-xs ${exam.is_results_published ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
-                                  onClick={() => onToggleResultsPublish(exam)}
-                              >
-                                  {exam.is_results_published ? <Lock className="mr-1.5 h-3.5 w-3.5" /> : <CheckCircle className="mr-1.5 h-3.5 w-3.5" />}
-                                  {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
-                              </Button>
-                              <Button
-                                  size="sm"
-                                  variant="default"
-                                  className="flex-1 text-xs bg-emerald-600 hover:bg-emerald-700"
-                                  onClick={() => window.print()}
-                              >
-                                  <Printer className="mr-1.5 h-3.5 w-3.5" />
-                                  Print
-                              </Button>
-                          </div>
-                      )}
-                  </div>
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 justify-start"
+                        onClick={() => window.print()}
+                      >
+                        <Printer className="mr-2 h-3.5 w-3.5" />
+                        Print Marksheet
+                      </Button>
+                    </>
+                  )}
+
+                  {!isOver && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="w-full text-xs border-red-200 dark:border-red-900/50 hover:bg-red-50 text-red-600 dark:hover:bg-red-950/20 justify-start"
+                      onClick={() => deleteExam(exam.id)}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5 text-red-500" />
+                      Delete Exam
+                    </Button>
+                  )}
+                </div>
               </CardFooter>
             </Card>
           );

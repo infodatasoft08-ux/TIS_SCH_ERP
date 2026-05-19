@@ -165,7 +165,7 @@ const CheckExams = () => {
                                             <Printer className="mr-2 h-4 w-4" /> Print Marksheet
                                         </Button>
                                     )} */}
-                                    {exam.status === 'Over' && selectedExam.is_results_published === true && (
+                                    {exam.status === 'Over' && exam.is_results_published === true && (
                                         <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => window.print()}>
                                             <Printer className="mr-2 h-4 w-4" /> Print Marksheet
                                         </Button>
@@ -178,8 +178,8 @@ const CheckExams = () => {
             )}
 
             <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-                <DialogContent className="sm:max-w-3xl max-h-[80vh] overflow-y-auto">
-                    <DialogHeader>
+                <DialogContent className="w-full h-full max-w-none sm:max-w-3xl sm:h-auto  sm:max-h-[85vh] rounded-none sm:rounded-xl m-0 p-4 sm:p-6 overflow-hidden flex flex-col left-0 top-0 translate-x-0 translate-y-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%]">
+                    <DialogHeader className="pb-4 border-b flex-shrink-0">
                         <DialogTitle className="text-2xl">{selectedExam?.name} - Details</DialogTitle>
                         <DialogDescription>
                             {selectedExam?.note}
@@ -187,7 +187,7 @@ const CheckExams = () => {
                     </DialogHeader>
 
                     {selectedExam && (
-                        <div className="py-4 space-y-6">
+                        <div className="py-4 space-y-6 flex-grow overflow-y-auto min-h-0 pr-1">
                             <h3 className="text-lg font-semibold border-b pb-2">Routine & Marks</h3>
 
                             {selectedExam.subjects?.filter(s => {
@@ -196,59 +196,112 @@ const CheckExams = () => {
                             }).length === 0 ? (
                                 <p className="text-gray-500">No subjects found for this exam.</p>
                             ) : (
-                                <div className="overflow-x-auto">
-                                    <table className="w-full border-collapse">
-                                        <thead>
-                                            <tr className="bg-muted/50 text-left text-sm text-muted-foreground">
-                                                <th className="p-3 font-medium">Subject</th>
-                                                <th className="p-3 font-medium">Date</th>
-                                                <th className="p-3 font-medium">Time</th>
-                                                <th className="p-3 font-medium text-center">Max Marks</th>
-                                                <th className="p-3 font-medium text-center">Marks Obtained</th>
-                                                <th className="p-3 font-medium text-center">Grade</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="text-sm">
-                                            {selectedExam.subjects?.filter(s => {
-                                                const n = s.subject_name?.toLowerCase().trim();
-                                                return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-                                            }).map((sub, idx) => (
-                                                <tr key={idx} className="border-b">
-                                                    <td className="p-3 font-medium">{sub.subject_name}</td>
-                                                    <td className="p-3">
-                                                        {sub.exam_date ? format(new Date(sub.exam_date), 'dd MMM yyyy') : 'N/A'}
-                                                    </td>
-                                                    <td className="p-3">
-                                                        {sub.start_time ? `${sub.start_time} - ${sub.end_time}` : 'N/A'}
-                                                    </td>
-                                                    <td className="p-3 text-center">{sub.max_marks}</td>
-                                                    <td className="p-3 text-center font-bold">
-                                                        {selectedExam.is_results_published ? (
-                                                            sub.attendance_status === 'Absent' ? <span className="text-red-500">Absent</span> :
-                                                                sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'
-                                                        ) : (
-                                                            <span className="text-muted-foreground text-xs font-normal italic">Pending Publication</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="p-3 text-center">
-                                                        <Badge variant="outline" className={cn(
-                                                            sub.result_grade === 'F' || sub.result_grade === 'AB' ? 'bg-red-50 text-red-600 border-red-200' :
-                                                                sub.result_grade ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-50 text-gray-500'
-                                                        )}>
-                                                            {selectedExam.is_results_published ? (sub.result_grade || 'N/A') : 'N/A'}
-                                                        </Badge>
-                                                    </td>
+                                <>
+                                    {/* Desktop View Table */}
+                                    <div className="hidden md:block overflow-x-auto border rounded-lg">
+                                        <table className="w-full border-collapse">
+                                            <thead>
+                                                <tr className="bg-muted/50 text-left text-sm text-muted-foreground">
+                                                    <th className="p-3 font-medium">Subject</th>
+                                                    <th className="p-3 font-medium">Date</th>
+                                                    <th className="p-3 font-medium">Time</th>
+                                                    <th className="p-3 font-medium text-center">Max Marks</th>
+                                                    <th className="p-3 font-medium text-center">Marks Obtained</th>
+                                                    <th className="p-3 font-medium text-center">Grade</th>
                                                 </tr>
-                                            ))}
-                                        </tbody>
-                                    </table>
-                                </div>
+                                            </thead>
+                                            <tbody className="text-sm">
+                                                {selectedExam.subjects?.filter(s => {
+                                                    const n = s.subject_name?.toLowerCase().trim();
+                                                    return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                                                }).map((sub, idx) => (
+                                                    <tr key={idx} className="border-b">
+                                                        <td className="p-3 font-medium">{sub.subject_name}</td>
+                                                        <td className="p-3">
+                                                            {sub.exam_date ? format(new Date(sub.exam_date), 'dd MMM yyyy') : 'N/A'}
+                                                        </td>
+                                                        <td className="p-3">
+                                                            {sub.start_time ? `${sub.start_time} - ${sub.end_time}` : 'N/A'}
+                                                        </td>
+                                                        <td className="p-3 text-center">{sub.max_marks}</td>
+                                                        <td className="p-3 text-center font-bold">
+                                                            {selectedExam.is_results_published ? (
+                                                                sub.attendance_status === 'Absent' ? <span className="text-red-500">Absent</span> :
+                                                                    sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs font-normal italic">Pending Publication</span>
+                                                            )}
+                                                        </td>
+                                                        <td className="p-3 text-center">
+                                                            <Badge variant="outline" className={cn(
+                                                                sub.result_grade === 'F' || sub.result_grade === 'AB' ? 'bg-red-50 text-red-600 border-red-200' :
+                                                                    sub.result_grade ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-50 text-gray-500'
+                                                            )}>
+                                                                {selectedExam.is_results_published ? (sub.result_grade || 'N/A') : 'N/A'}
+                                                            </Badge>
+                                                        </td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+
+                                    {/* Mobile View Cards */}
+                                    <div className="md:hidden space-y-4">
+                                        {selectedExam.subjects?.filter(s => {
+                                            const n = s.subject_name?.toLowerCase().trim();
+                                            return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                                        }).map((sub, idx) => (
+                                            <Card key={idx} className="border border-muted p-4 space-y-3 shadow-xs hover:shadow-sm transition-shadow">
+                                                <div className="flex justify-between items-start">
+                                                    <div className="font-semibold text-base text-foreground">{sub.subject_name}</div>
+                                                    <Badge variant="outline" className={cn(
+                                                        sub.result_grade === 'F' || sub.result_grade === 'AB' ? 'bg-red-50 text-red-600 border-red-200' :
+                                                            sub.result_grade ? 'bg-green-50 text-green-600 border-green-200' : 'bg-gray-50 text-gray-500'
+                                                    )}>
+                                                        {selectedExam.is_results_published ? (sub.result_grade || 'N/A') : 'N/A'}
+                                                    </Badge>
+                                                </div>
+
+                                                <div className="grid grid-cols-2 gap-3 text-sm pt-1">
+                                                    <div>
+                                                        <span className="text-muted-foreground block text-xs">Date</span>
+                                                        <span className="font-medium text-foreground">
+                                                            {sub.exam_date ? format(new Date(sub.exam_date), 'dd MMM yyyy') : 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-muted-foreground block text-xs">Time</span>
+                                                        <span className="font-medium text-foreground">
+                                                            {sub.start_time ? `${sub.start_time} - ${sub.end_time}` : 'N/A'}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-muted-foreground block text-xs">Max Marks</span>
+                                                        <span className="font-medium text-foreground">{sub.max_marks}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-muted-foreground block text-xs">Marks Obtained</span>
+                                                        <span className="font-semibold text-foreground">
+                                                            {selectedExam.is_results_published ? (
+                                                                sub.attendance_status === 'Absent' ? <span className="text-red-500">Absent</span> :
+                                                                    sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'
+                                                            ) : (
+                                                                <span className="text-muted-foreground text-xs font-normal italic">Pending</span>
+                                                            )}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            </Card>
+                                        ))}
+                                    </div>
+                                </>
                             )}
                         </div>
                     )}
 
-                    <DialogFooter>
-                        {selectedExam?.status === 'Over' && selectedExam.is_results_published === true && (
+                    <DialogFooter className="pt-4 border-t flex-shrink-0">
+                        {selectedExam?.status === 'Over' && selectedExam?.is_results_published === true && (
                             <Button onClick={() => window.print()} className="bg-green-600 hover:bg-green-700">
                                 <Printer className="mr-2 h-4 w-4" /> Print Marksheet
                             </Button>

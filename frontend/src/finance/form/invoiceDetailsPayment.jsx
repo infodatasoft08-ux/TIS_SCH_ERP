@@ -661,15 +661,15 @@ export default function InvoiceDetails() {
                 This invoice has been carried forward to a newer invoice of the next month.
               </div>
             )}
-            <div className="flex items-center gap-2">
+            <div className="flex items-center justify-between">
               <div className="text-sm font-medium">Status:</div>
               <div>{getStatusBadge(invoice.status)}</div>
             </div>
-            <div className="text-sm">
+            <div className="text-sm   ">
               <div className="font-medium">Created:</div>
               <div>{formatDate(invoice.created_at)}</div>
             </div>
-            <div className="text-sm">
+            <div className="text-sm  flex items-center justify-between">
               <div className="font-medium">Duration:</div>
               <div>{invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'}</div>
             </div>

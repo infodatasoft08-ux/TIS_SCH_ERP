@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import API from "@/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import ExamList from "./ExamList.jsx";
 import AddExamMarksDialog from "./AddExamMarksDialog.jsx";
@@ -201,57 +201,6 @@ export default function ExamDataTable() {
     const openPerformanceReport = (student) => {
         setSelectedStudent(student);
         setIsReportDialogOpen(true);
-    };
-
-    const generateMarksheetPDF = (student, exam) => {
-        const doc = new jsPDF();
-
-        // Header
-        doc.setFontSize(20);
-        doc.setTextColor(40);
-        doc.text("NIYATI PUBLIC SCHOOL", 105, 15, { align: "center" });
-        doc.setFontSize(14);
-        doc.text("EXAMINATION MARKSHEET", 105, 25, { align: "center" });
-
-        doc.setLineWidth(0.5);
-        doc.line(20, 30, 190, 30);
-
-        // Student Info
-        doc.setFontSize(10);
-        doc.text(`Student Name: ${student.name}`, 20, 40);
-        doc.text(`Roll No: ${student.roll_no || 'N/A'}`, 20, 45);
-        doc.text(`Grade: ${student.grade_name || 'N/A'}`, 20, 50);
-
-        doc.text(`Exam: ${exam.name}`, 140, 40);
-        doc.text(`Date: ${new Date(exam.date).toLocaleDateString()}`, 140, 45);
-        doc.text(`Academic Year: ${student.academic_year_name || 'N/A'}`, 140, 50);
-
-        // Table
-        const tableBody = exam.subjects.map(sub => [
-            sub.subject_name,
-            sub.max_marks,
-            sub.attendance_status === 'Absent' ? 'AB' : sub.marks_obtained,
-            sub.grade || '-'
-        ]);
-
-        autoTable(doc, {
-            startY: 60,
-            head: [['Subject', 'Max Marks', 'Marks Obtained', 'Grade']],
-            body: tableBody,
-            theme: 'grid',
-            headStyles: { fillStyle: [79, 70, 229] },
-        });
-
-        // Summary
-        const totalMax = exam.subjects.reduce((acc, sub) => acc + (sub.max_marks || 0), 0);
-        const totalObtained = exam.subjects.reduce((acc, sub) => acc + (sub.marks_obtained || 0), 0);
-        const percentage = ((totalObtained / totalMax) * 100).toFixed(2);
-
-        const finalY = (doc.lastAutoTable ? doc.lastAutoTable.finalY : 70) + 10;
-        doc.text(`Total Marks: ${totalObtained} / ${totalMax}`, 20, finalY);
-        doc.text(`Percentage: ${percentage}%`, 20, finalY + 5);
-
-        doc.save(`${student.name}_${exam.name}_Marksheet.pdf`);
     };
 
     const isMobileApp = typeof window !== 'undefined' && window.ReactNativeWebView;
@@ -651,7 +600,8 @@ export default function ExamDataTable() {
                                     </div>
                                 </div>
 
-                                <div className="overflow-x-auto rounded-xl border">
+                                {/* Web View: Desktop Table */}
+                                <div className="hidden md:block overflow-x-auto rounded-xl border">
                                     <Table>
                                         <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50">
                                             <TableRow>
@@ -698,7 +648,7 @@ export default function ExamDataTable() {
                                                                             <Printer className="h-3.5 w-3.5" /> Marksheet
                                                                         </Button>
                                                                     </PopoverTrigger>
-                                                                    <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800">
+                                                                    <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                         <div className="space-y-1">
                                                                             <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam Action</p>
                                                                             {student.exams.map(ex => (
@@ -739,7 +689,7 @@ export default function ExamDataTable() {
                                                                                 <FileText className="h-3.5 w-3.5" /> Admit Card
                                                                             </Button>
                                                                         </PopoverTrigger>
-                                                                        <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800">
+                                                                        <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                             <div className="space-y-1">
                                                                                 <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
                                                                                 {student.exams.map(ex => (
@@ -798,6 +748,159 @@ export default function ExamDataTable() {
                                             )}
                                         </TableBody>
                                     </Table>
+                                </div>
+
+                                {/* Mobile View: List of Cards */}
+                                <div className="block md:hidden space-y-4">
+                                    {isLoading ? (
+                                        <div className="text-center py-12 text-muted-foreground bg-gray-50/50 dark:bg-gray-950/20 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                                            Loading summaries...
+                                        </div>
+                                    ) : filteredSummaries.length === 0 ? (
+                                        <div className="text-center py-12 text-muted-foreground bg-gray-50/50 dark:bg-gray-950/20 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
+                                            No students found matching filters.
+                                        </div>
+                                    ) : (
+                                        filteredSummaries.map((student) => (
+                                            <Card key={student.id} className="group hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden bg-white dark:bg-gray-950/10 relative">
+                                                <CardHeader className="p-5 pb-3 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100/70 dark:border-gray-800">
+                                                    <div>
+                                                        <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
+                                                            {student.name}
+                                                        </CardTitle>
+                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                                                            <span>Roll No: {student.roll_no || 'N/A'}</span>
+                                                            <span className="text-gray-300 dark:text-gray-700">•</span>
+                                                            <span>Grade: {student.grade_name || 'N/A'}</span>
+                                                        </div>
+                                                    </div>
+                                                </CardHeader>
+                                                <CardContent className="p-5 space-y-3 pb-4">
+                                                    <div>
+                                                        <span className="text-[11px] font-bold text-gray-400 dark:text-gray-500 uppercase tracking-widest block mb-2">Exams Taken</span>
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {student.exams.length > 0 ? (
+                                                                student.exams.map(ex => (
+                                                                    <Badge key={ex.id} variant="secondary" className="text-[10px] py-0 px-2 font-normal rounded-md">
+                                                                        {ex.name} ({new Date(ex.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })})
+                                                                    </Badge>
+                                                                ))
+                                                            ) : (
+                                                                <span className="text-xs text-muted-foreground">No exams recorded</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                </CardContent>
+                                                <CardFooter className="p-5 pt-0 flex flex-col gap-2">
+                                                    <div className="flex flex-col gap-2 w-full pt-3 border-t border-gray-100 dark:border-gray-850">
+                                                        <Popover>
+                                                            <PopoverTrigger asChild>
+                                                                <Button variant="outline" size="sm" className="w-full text-xs justify-start gap-2 border-gray-250 dark:border-gray-700">
+                                                                    <Printer className="h-3.5 w-3.5 text-gray-500" />
+                                                                    Print Marksheet
+                                                                </Button>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
+                                                                <div className="space-y-1">
+                                                                    <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam Action</p>
+                                                                    {student.exams.map(ex => (
+                                                                        <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                            <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                            <div className="flex items-center gap-1">
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                    onClick={() => handleMarksheetAction(student, ex, 'download')}
+                                                                                    title="Download PDF"
+                                                                                    disabled={isGenerating}
+                                                                                >
+                                                                                    <Download className="h-4 w-4" />
+                                                                                </Button>
+                                                                                <Button
+                                                                                    variant="ghost"
+                                                                                    size="icon"
+                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                    onClick={() => handleMarksheetAction(student, ex, 'print')}
+                                                                                    title="Print directly"
+                                                                                    disabled={isGenerating}
+                                                                                >
+                                                                                    <Printer className="h-4 w-4" />
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            </PopoverContent>
+                                                        </Popover>
+
+                                                        {student.due_cleared ? (
+                                                            <Popover>
+                                                                <PopoverTrigger asChild>
+                                                                    <Button variant="outline" size="sm" className="w-full text-xs justify-start gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
+                                                                        <FileText className="h-3.5 w-3.5" />
+                                                                        Download Admit Card
+                                                                    </Button>
+                                                                </PopoverTrigger>
+                                                                <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
+                                                                    <div className="space-y-1">
+                                                                        <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
+                                                                        {student.exams.map(ex => (
+                                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                                <div className="flex items-center gap-1">
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                        onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                        title="Download Admit Card"
+                                                                                        disabled={isGenerating}
+                                                                                    >
+                                                                                        <Download className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                    <Button
+                                                                                        variant="ghost"
+                                                                                        size="icon"
+                                                                                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                        onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                        title="Print Admit Card"
+                                                                                        disabled={isGenerating}
+                                                                                    >
+                                                                                        <Printer className="h-4 w-4" />
+                                                                                    </Button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ))}
+                                                                    </div>
+                                                                </PopoverContent>
+                                                            </Popover>
+                                                        ) : (
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                className="w-full text-xs justify-start gap-2 text-rose-500 border-rose-250 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-450 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
+                                                                title="Admit Card locked: Student has pending fee dues."
+                                                            >
+                                                                <Lock className="h-3.5 w-3.5 text-rose-500" />
+                                                                Dues Pending (Admit Card Locked)
+                                                            </Button>
+                                                        )}
+
+                                                        <Button
+                                                            variant="default"
+                                                            size="sm"
+                                                            onClick={() => openPerformanceReport(student)}
+                                                            className="w-full text-xs justify-start gap-2 bg-indigo-600 hover:bg-indigo-700"
+                                                        >
+                                                            <TrendingUp className="h-3.5 w-3.5" />
+                                                            Performance Report
+                                                        </Button>
+                                                    </div>
+                                                </CardFooter>
+                                            </Card>
+                                        ))
+                                    )}
                                 </div>
                             </CardContent>
                         </Card>

@@ -430,7 +430,7 @@ export default function StudentAttendanceSummary() {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-between items-center">
+          <div className="flex md:flex-row flex-col justify-between items-center">
             <div className="text-sm text-gray-500">
               {stats.class_name && (
                 <span>

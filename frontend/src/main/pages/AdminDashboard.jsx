@@ -134,7 +134,7 @@ export default function AdminDashboard() {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
           {/* Pie Chart */}
-          <div className="p-8 rounded-xl border space-y-6">
+          <div className="p-2 rounded-xl border space-y-6">
             <Skeleton className="h-5 w-40 rounded-lg" />
             <div className="flex justify-center">
               <Skeleton className="h-64 w-64 rounded-full" />
@@ -147,7 +147,7 @@ export default function AdminDashboard() {
           </div>
 
           {/* Admission */}
-          <div className="p-8 rounded-xl border space-y-6">
+          <div className="p-2 rounded-xl border space-y-6">
             <Skeleton className="h-6 w-40 rounded-lg" />
 
             <div className="grid grid-cols-2 gap-4">
@@ -167,12 +167,12 @@ export default function AdminDashboard() {
 
         {/* Bottom Charts */}
         <div className="space-y-6">
-          <div className="p-8 rounded-xl border">
+          <div className="p-2 rounded-xl border">
             <Skeleton className="h-6 w-48 mb-6 rounded-lg" />
             <Skeleton className="h-80 w-full rounded-xl" />
           </div>
 
-          <div className="p-8 rounded-xl border">
+          <div className="p-2 rounded-xl border">
             <Skeleton className="h-6 w-48 mb-6 rounded-lg" />
             <Skeleton className="h-80 w-full rounded-xl" />
           </div>
@@ -194,7 +194,7 @@ export default function AdminDashboard() {
     : classes.find(c => c.id.toString() === attendanceClassId)?.name || 'Class';
 
   return (
-    <div className="p-6 space-y-6 min-h-screen animate-in fade-in slide-in-from-bottom-10 duration-1000">
+    <div className="p-2 space-y-6 min-h-screen animate-in fade-in slide-in-from-bottom-10 duration-1000">
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
@@ -216,7 +216,7 @@ export default function AdminDashboard() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {stats.map((stat, idx) => (
-              <div key={idx} onClick={() => { if (stat.label === 'Today\'s Attendance') navigate("/school/class/attendance"); else if (stat.label === 'Total Students') navigate("/school/students/list"); else if (stat.label === 'Total Teachers') navigate("/school/teachers/list"); else if (stat.label === 'Fees Collected') navigate("/school/finance/invoice/manage"); }} className=" cursor-pointer hover:shadow-lg hover:bg-gray-100 dark:hover:bg-gray-800/50 bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border dark:border-gray-800 hover:border-gray-700 transition-all group overflow-hidden relative">
+              <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border dark:border-gray-800 hover:border-gray-700 transition-all group overflow-hidden relative">
                 <div className="relative z-10 flex items-start justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{stat.label}</p>
@@ -241,7 +241,7 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
             {/* Attendance Pie Chart */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-8 rounded-xl border dark:border-gray-800 shadow-lg">
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border dark:border-gray-800 shadow-lg">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xl font-bold">Daily Attendance</h3>
                 <Select
@@ -303,7 +303,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Admission Stats / Command Center */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-8 rounded-xl border shadow-md overflow-hidden relative">
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border shadow-md overflow-hidden relative">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 relative z-10">
                 <h3 className="text-xl font-black">Admissions</h3>
                 <div className="flex flex-wrap items-center gap-1">
@@ -350,7 +350,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 mb-8 relative z-10">
+              <div className="grid grid-cols-2 gap-2 mb-8 relative z-10">
                 <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex flex-col items-center">
                   <span className="text-xs font-bold text-blue-400 uppercase tracking-tighter">Boys</span>
                   <span className="text-3xl font-black text-blue-500">{data.summary.boysAdmission}</span>
@@ -385,7 +385,7 @@ export default function AdminDashboard() {
 
           <div className="grid grid-cols-1 gap-6 mt-6">
             {/* Finance Area Chart - Takes 2 columns */}
-            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-8 rounded-xl border dark:border-gray-800 shadow-lg">
+            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-xl border dark:border-gray-800 shadow-lg">
               <div className="flex items-center justify-between mb-8">
                 <h3 className="text-xl font-bold">Financial Growth</h3>
                 <select
@@ -409,10 +409,7 @@ export default function AdminDashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
                     <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{ backgroundColor: '#111827', borderRadius: '16px', border: '1px solid #374151', padding: '12px' }}
-                      itemStyle={{ color: '#60a5fa', fontWeight: 'bold' }}
-                    />
+                    <Tooltip content={<CustomTooltip title="Finance" />} />
                     <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorFinance)" dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
@@ -420,7 +417,7 @@ export default function AdminDashboard() {
             </div>
 
             {/* Students per Class Bar Chart */}
-            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-8 rounded-xl border dark:border-gray-800 shadow-lg">
+            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-xl border dark:border-gray-800 shadow-lg">
               <h3 className="text-xl font-bold mb-8">Capacity Breakdown</h3>
               <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
@@ -428,10 +425,7 @@ export default function AdminDashboard() {
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
                     <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} dy={10} />
                     <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} />
-                    <Tooltip
-                      cursor={{ fill: '#1f2937', opacity: 0.4 }}
-                      contentStyle={{ backgroundColor: '#111827', borderRadius: '16px', border: '1px solid #374151' }}
-                    />
+                    <Tooltip cursor={{ fill: '#1f2937', opacity: 0.4 }} content={<CustomTooltip title="Class Capacity" />} />
                     <Bar dataKey="students" fill="#818cf8" radius={[8, 8, 0, 0]} barSize={50}>
                       {data.classData.map((entry, index) => (
                         <Cell key={`bar-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#4f46e5'} opacity={0.8} />

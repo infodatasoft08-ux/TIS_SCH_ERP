@@ -9,7 +9,7 @@ export default function DynamicAnnouncement() {
     return (
         <div className="space-y-6">
             {/* Announcements & Events */}
-            <div className="p-8 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm">
+            <div className="p-2 sm:p-6 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm">
                 <div className="flex items-center gap-2 mb-6">
                     <Megaphone className="w-6 h-6 text-blue-500" />
                     <h3 className="text-2xl font-bold">Announcements & Events</h3>

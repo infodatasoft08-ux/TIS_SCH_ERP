@@ -163,7 +163,7 @@ const StudentFeeDetails = () => {
 
     // Mobile Card Renderers
     const renderInvoiceCard = (inv) => (
-        <div key={inv.id} className="p-5 space-y-4 hover:bg-muted/30 transition-all active:scale-[0.98]">
+        <div key={inv.id} className="p-2 md:p-4 space-y-4 hover:bg-muted/30 transition-all active:scale-[0.98]">
             <div className="flex justify-between items-start">
                 <div className="space-y-1">
                     <div className="text-[10px] font-black text-primary/40 uppercase tracking-[0.2em]">Invoice Registry</div>
@@ -191,7 +191,7 @@ const StudentFeeDetails = () => {
     );
 
     const renderPaymentCard = (p) => (
-        <div key={p.id} className="p-5 space-y-3 hover:bg-muted/30 transition-all">
+        <div key={p.id} className="p-2 md:p-4 space-y-3 hover:bg-muted/30 transition-all">
             <div className="flex justify-between items-center">
                 <div className="space-y-0.5">
                     <div className="text-[10px] text-primary/60 font-bold uppercase tracking-wider">{format(new Date(p.payment_date), 'EEEE')}</div>
@@ -324,7 +324,7 @@ const StudentFeeDetails = () => {
 
     if (loading) {
         return (
-            <div className="container mx-auto p-6 md:p-12 space-y-12 animate-in fade-in duration-700">
+            <div className="container mx-auto p-1 md:p-12 space-y-12 animate-in fade-in duration-700">
                 <div className="space-y-4">
                     <Skeleton className="h-12 w-64 rounded-xl" />
                     <Skeleton className="h-5 w-96 opacity-50" />
@@ -348,9 +348,9 @@ const StudentFeeDetails = () => {
     }
 
     return (
-        <div className="container mx-auto p-6 md:p-12 space-y-12 max-w-7xl animate-in fade-in slide-in-from-bottom-10 duration-1000">
+        <div className="container mx-auto p-1 md:p-12 space-y-12 max-w-7xl animate-in fade-in slide-in-from-bottom-10 duration-1000">
             {/* Superior Header Design */}
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-8 border-b border-muted pb-5">
+            <div className="flex flex-col md:flex-row justify-between items-center md:items-end gap-8 border-b border-muted pb-5">
                 <div className="space-y-3">
                     <div className="flex items-center gap-3">
                         <div className="bg-primary p-2 rounded-xl shadow-lg shadow-primary/20">
@@ -365,7 +365,7 @@ const StudentFeeDetails = () => {
                         Academic Cycle: <span className="text-foreground/80 font-bold">{data?.student?.academic_year_name || data?.student?.academic_year || '--'}</span>
                     </p>
                 </div>
-                <div className="flex flex-col items-end gap-3">
+                <div className="flex flex-col items-center justify-center md:justify-end gap-3">
                     <div className="flex items-center gap-3 bg-background p-2 rounded-2xl shadow-md ring-1 ring-border border-b-4 border-primary/20">
                         <div className="px-2 py-2 border-r border-muted flex flex-col items-center">
                             <span className="text-[10px] font-black uppercase text-muted-foreground tracking-widest mb-1">Standard</span>
@@ -376,11 +376,11 @@ const StudentFeeDetails = () => {
                             <Badge variant="outline" className="px-4 py-1.5 rounded-xl font-bold text-sm border-2 border-primary/10">{data?.student?.class_name}</Badge>
                         </div>
                     </div>
-                    
+
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">View Year:</span>
-                        <select 
-                            value={selectedAcademicYear} 
+                        <select
+                            value={selectedAcademicYear}
                             onChange={(e) => setSelectedAcademicYear(e.target.value)}
                             className="bg-background border-2 border-primary/20 rounded-xl px-4 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all cursor-pointer"
                         >

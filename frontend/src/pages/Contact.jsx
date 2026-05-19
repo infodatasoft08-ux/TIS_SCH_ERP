@@ -52,7 +52,7 @@ export default function Contact() {
         <div className="grid grid-cols-1 lg:grid-cols-2">
 
           {/* Left Side: Contact Form */}
-          <div className="p-8 lg:p-12 order-2 lg:order-1 flex flex-col justify-center">
+          <div className="p-2 lg:p-12 order-2 lg:order-1 flex flex-col justify-center">
 
             <div className="mb-8">
               <Link
@@ -172,7 +172,7 @@ export default function Contact() {
           </div>
 
           {/* Right Side: Map & Info */}
-          <div className="order-1 lg:order-2 bg-gradient-to-br from-blue-600 to-indigo-700 p-8 lg:p-12 text-white relative overflow-hidden flex flex-col justify-between">
+          <div className="order-1 lg:order-2 bg-gradient-to-br from-blue-600 to-indigo-700 p-2 lg:p-12 text-white relative overflow-hidden flex flex-col justify-between">
             {/* Background shapes */}
             <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-white/10 blur-3xl point-events-none"></div>
             <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-purple-500/20 blur-3xl point-events-none"></div>

@@ -112,7 +112,7 @@ export default function TeacherDashboard() {
   }
 
   return (
-    <div className="p-2 md:p-4 lg:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+    <div className="p-1.5 md:p-4 lg:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-extrabold tracking-tight">Teacher Dashboard</h2>
@@ -162,6 +162,7 @@ export default function TeacherDashboard() {
             <p className="text-sm text-amber-500/80 mt-1">{classInfo?.name || 'No Class Assigned'}</p>
           </CardContent>
         </Card>
+
 
         {/* My Attendance Analytics */}
         <Card className="rounded-[2rem] border-none shadow-sm bg-indigo-50 dark:bg-indigo-900/20 md:col-span-3">
@@ -252,12 +253,23 @@ export default function TeacherDashboard() {
         </CardContent>
       </Card>
 
+      {/* Attendance Calendar */}
+      {/* <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm overflow-hidden">
+        <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
+          <CalendarIcon className="w-6 h-6 text-blue-500" />
+          Class Attendance Overview
+        </h3>
+        <div className="text-sm text-gray-500">
+          <StudentAttendanceSummeryCalendar />
+        </div>
+      </div> */}
+
       <div className="text-sm text-gray-500">
         <StudentAttendanceSummeryCalendar />
       </div>
 
       {/* Personal Attendance History */}
-      <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm overflow-hidden">
+      <div className="p-1 md:p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm overflow-hidden">
         <h3 className="font-bold text-xl mb-6 flex items-center gap-2">
           <CalendarCheck className="w-6 h-6 text-indigo-500" />
           My Attendance History

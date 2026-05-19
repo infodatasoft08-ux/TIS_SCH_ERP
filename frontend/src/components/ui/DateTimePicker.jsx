@@ -23,18 +23,18 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
   // Parse the input value (YYYY-MM-DD HH:MM:SS format from MySQL)
   const parseInputValue = (val) => {
     if (!val) return { date: null, hour: "09", minute: "00", period: "AM" };
-    
+
     try {
       // Handle formats like "2026-01-12 21:30:00" or "2026-01-12T21:30:00"
       const dateTimeStr = val.replace('T', ' ');
       const [datePart, timePart] = dateTimeStr.split(' ');
-      
+
       if (!datePart || !timePart) return { date: null, hour: "09", minute: "00", period: "AM" };
-      
+
       const [hours, minutes] = timePart.split(':');
       let h = Number(hours);
       let period = "AM";
-      
+
       // Convert 24-hour to 12-hour format
       if (h >= 12) {
         period = "PM";
@@ -42,11 +42,11 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
       } else if (h === 0) {
         h = 12;
       }
-      
+
       const newDate = new Date(datePart + 'T00:00:00');
-      
+
       // console.log('DateTimePicker parsing:', { val, parsed: { h, minute: String(minutes), period } });
-      
+
       return {
         date: newDate,
         hour: String(h).padStart(2, '0'),
@@ -76,7 +76,7 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
   // Convert 12-hour to 24-hour and emit the formatted datetime
   const emitDateTime = React.useCallback((d, h, m, p) => {
     if (!d || !h || !m) return;
-    
+
     let hours24 = Number(h);
     if (p === "PM" && hours24 !== 12) {
       hours24 += 12;
@@ -89,7 +89,7 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
     const dayOfMonth = String(d.getDate()).padStart(2, '0');
     const formattedHours = String(hours24).padStart(2, '0');
     const formattedMinutes = String(m).padStart(2, '0');
-    
+
     // Format: YYYY-MM-DD HH:MM:SS (MySQL format, 24-hour)
     const dateTimeString = `${year}-${month}-${dayOfMonth} ${formattedHours}:${formattedMinutes}:00`;
     onChange(dateTimeString);
@@ -116,7 +116,7 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
   };
 
   return (
-    <Popover>
+    <Popover modal={true}>
       <PopoverTrigger asChild>
         <Button
           variant="outline"
@@ -127,7 +127,14 @@ export function DateTimePicker({ value, onChange, label = "Pick date & time", mi
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent side="left" align="center" sideOffset={8} className="w-auto p-4 space-y-4">
+      <PopoverContent
+        side="bottom"
+        align="center"
+        sideOffset={8}
+        className="w-auto p-4 space-y-4"
+        onWheel={(e) => e.stopPropagation()}
+        onTouchMove={(e) => e.stopPropagation()}
+      >
         {/* Date */}
         <Calendar
           mode="single"

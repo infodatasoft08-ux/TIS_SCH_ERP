@@ -96,8 +96,8 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+            <DialogContent className="w-full h-full max-w-none sm:max-w-[700px] sm:h-auto h-[100dvh] sm:max-h-[85vh] rounded-none sm:rounded-xl m-0 p-0 overflow-hidden flex flex-col left-0 top-0 translate-x-0 translate-y-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+                <div className="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white flex-shrink-0">
                     <DialogHeader className="p-0">
                         <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                             <ArrowUpCircle className="h-6 w-6 text-blue-100" />
@@ -109,10 +109,9 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                     </DialogHeader>
                 </div>
 
-                <div className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
-
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden min-h-0 bg-background">
+                        <div className="p-6 space-y-5 flex-grow overflow-y-auto min-h-0 pr-6">
                             <FormField
                                 control={form.control}
                                 name="student_id"
@@ -274,22 +273,22 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                                     )}
                                 />
                             </div>
+                        </div>
 
-                            <DialogFooter className="mt-6 gap-2">
-                                <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
-                                    <X className="h-4 w-4 mr-1" /> Cancel
-                                </Button>
-                                <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
-                                    {isSubmitting ? (
-                                        <span className="flex items-center gap-2">Promoting...</span>
-                                    ) : (
-                                        <span className="flex items-center gap-2"><ArrowUpCircle className="h-4 w-4" /> Promote Student</span>
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </div>
+                        <DialogFooter className="p-6 border-t flex-shrink-0 gap-2 mt-0 bg-gray-50/50 dark:bg-gray-900/50">
+                            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
+                                <X className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting} className="bg-blue-600 hover:bg-blue-700 text-white">
+                                {isSubmitting ? (
+                                    <span className="flex items-center gap-2">Promoting...</span>
+                                ) : (
+                                    <span className="flex items-center gap-2"><ArrowUpCircle className="h-4 w-4" /> Promote Student</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
     );

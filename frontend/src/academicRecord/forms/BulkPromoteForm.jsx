@@ -120,8 +120,8 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[800px] p-0 overflow-hidden border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()}>
-                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <DialogContent className="w-full h-full max-w-none sm:max-w-[800px] sm:h-auto h-[100dvh] sm:max-h-[85vh] rounded-none sm:rounded-xl m-0 p-0 overflow-hidden flex flex-col left-0 top-0 translate-x-0 translate-y-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()}>
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white flex-shrink-0">
                     <DialogHeader className="p-0">
                         <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                             <Users className="h-6 w-6 text-emerald-100" />
@@ -133,15 +133,14 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                     </DialogHeader>
                 </div>
 
-                <div className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-                            
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden min-h-0 bg-background">
+                        <div className="p-6 space-y-6 flex-grow overflow-y-auto min-h-0 pr-6">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                 {/* Left Side: Source & Selection */}
                                 <div className="space-y-4">
                                     <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider">Step 1: Select Students</h3>
-                                    
+
                                     <FormField
                                         control={form.control}
                                         name="source_grade_id"
@@ -224,7 +223,7 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                                                                                 className="cursor-pointer"
                                                                             >
                                                                                 <div className="flex items-center gap-2 w-full">
-                                                                                    <Checkbox 
+                                                                                    <Checkbox
                                                                                         checked={field.value.includes(student.id.toString())}
                                                                                         onCheckedChange={() => toggleStudent(student.id)}
                                                                                     />
@@ -319,28 +318,28 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                                             </FormItem>
                                         )}
                                     />
-                                    
+
                                     <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-amber-800 text-xs mt-4">
                                         <strong>Note:</strong> Students marked as <strong>'fail'</strong> in their current record will remain in the same class but will be updated to the new academic year.
                                     </div>
                                 </div>
                             </div>
+                        </div>
 
-                            <DialogFooter className="mt-8 gap-2">
-                                <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
-                                    <X className="h-4 w-4 mr-1" /> Cancel
-                                </Button>
-                                <Button type="submit" disabled={isSubmitting || selectedStudentsCount === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[150px]">
-                                    {isSubmitting ? (
-                                        <span className="flex items-center gap-2">Promoting...</span>
-                                    ) : (
-                                        <span className="flex items-center gap-2"><ArrowUpCircle className="h-4 w-4" /> Bulk Promote</span>
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </div>
+                        <DialogFooter className="p-6 border-t flex-shrink-0 gap-2 mt-0 bg-gray-50/50 dark:bg-gray-900/50">
+                            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
+                                <X className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting || selectedStudentsCount === 0} className="bg-emerald-600 hover:bg-emerald-700 text-white min-w-[150px]">
+                                {isSubmitting ? (
+                                    <span className="flex items-center gap-2">Promoting...</span>
+                                ) : (
+                                    <span className="flex items-center gap-2"><ArrowUpCircle className="h-4 w-4" /> Bulk Promote</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
     );

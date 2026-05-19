@@ -4,7 +4,7 @@ import { useAuth } from "@/auth/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Download, FileText, Image as ImageIcon, FileCode, Search, Filter } from "lucide-react";
+import { Download, FileText, Image as ImageIcon, FileCode, Search, Filter, Book } from "lucide-react";
 import { toast } from "sonner";
 import { downloadFile } from "@/utils/fileHelper";
 
@@ -73,7 +73,7 @@ export default function NotesViewer() {
 
     return (
         <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-600 to-teal-700 p-8 shadow-xl text-white">
+            {/* <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-green-600 to-teal-700 p-6 shadow-xl text-white">
                 <div className="absolute top-0 right-0 -mt-12 -mr-12 h-48 w-48 rounded-full bg-white/10 blur-3xl invisible md:visible"></div>
                 <div className="relative z-10 text-center md:text-left">
                     <h1 className="text-3xl font-bold tracking-tight">Access Study Materials</h1>
@@ -81,6 +81,13 @@ export default function NotesViewer() {
                         Browse, view, and download study notes uploaded by your teachers for your class.
                     </p>
                 </div>
+            </div> */}
+            <div className="flex flex-col gap-2">
+                <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
+                    <Book className="w-8 h-8 text-green-600" />
+                    Access Study Materials
+                </h1>
+                <p className="text-muted-foreground text-sm md:text-lg">Browse, view, and download study notes uploaded by your teachers for your class.</p>
             </div>
 
             <div className="flex flex-col md:flex-row gap-4 items-center justify-between">

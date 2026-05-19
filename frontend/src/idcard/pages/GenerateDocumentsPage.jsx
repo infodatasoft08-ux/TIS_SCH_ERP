@@ -194,28 +194,56 @@ export default function GenerateDocumentsPage() {
 
   const handleDownloadPrint = (action) => {
     if (!generatedBlob) return;
-    
-    const blobUrl = window.URL.createObjectURL(generatedBlob);
-    
-    if (action === 'download') {
+
+    const fileName = `${docType}_bulk_${Date.now()}.pdf`;
+
+    const sendToMobile = (base64, fileName, mimeType) => {
+      window.ReactNativeWebView.postMessage(JSON.stringify({
+        type: 'download',
+        payload: { base64, fileName, mimeType }
+      }));
+    };
+
+    const isMobileApp = typeof window !== 'undefined' && window.ReactNativeWebView;
+
+    if (isMobileApp) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64 = reader.result.split(',')[1];
+        if (action === 'download') {
+          sendToMobile(base64, fileName, 'application/pdf');
+          toast.success("Document downloaded successfully");
+        } else if (action === 'print') {
+          window.ReactNativeWebView.postMessage(JSON.stringify({
+            type: 'print',
+            payload: { base64 }
+          }));
+        }
+      };
+      reader.readAsDataURL(generatedBlob);
+    } else {
+      const pdfBlob = new Blob([generatedBlob], { type: 'application/pdf' });
+      const blobUrl = window.URL.createObjectURL(pdfBlob);
+
+      if (action === 'download') {
         const link = document.createElement('a');
         link.href = blobUrl;
-        link.download = `${docType}_bulk_${Date.now()}.pdf`;
+        link.download = fileName;
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
-        setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
-    } else if (action === 'print') {
-        const iframe = document.createElement('iframe');
-        iframe.style.display = 'none';
-        iframe.src = blobUrl;
-        document.body.appendChild(iframe);
-        iframe.onload = () => {
-            setTimeout(() => {
-                iframe.contentWindow.focus();
-                iframe.contentWindow.print();
-            }, 500);
-        };
+        window.URL.revokeObjectURL(blobUrl);
+        toast.success("Document downloaded successfully");
+      } else if (action === 'print') {
+        const printWindow = window.open(blobUrl, "_blank");
+        if (printWindow) {
+          printWindow.onload = () => {
+            printWindow.print();
+          };
+        } else {
+          toast.error("Pop-up blocked. Please allow pop-ups to print.");
+        }
+      }
     }
   };
 

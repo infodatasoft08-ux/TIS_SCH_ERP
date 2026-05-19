@@ -24,67 +24,6 @@ import {
 import { createEventModalPlugin } from "@schedule-x/event-modal";
 import { useThemeAnimation } from "@space-man/react-theme-animation";
 
-// Custom Event Modal Component - defined outside to prevent recreation on re-renders
-// function AttendanceEventModal({ calendarEvent }) {
-//   console.log("AttendanceEventModal called with calendarEvent: ", calendarEvent);
-
-//   // Check if calendarEvent and calendarEvent._customContent exist
-//   if (!calendarEvent) {
-//     console.error("No calendarEvent provided to AttendanceEventModal");
-//     return <div className="p-4 text-red-500">No event data available</div>;
-//   }
-
-//   // Access the custom data we stored
-//   const eventData = calendarEvent._customContent || calendarEvent;
-//   console.log("eventData: ", eventData);
-
-//   // Try to access data from different possible locations
-//   const d = eventData.data || {};
-
-//   console.log("Extracted data (d): ", d);
-
-//   return (
-//     <div className="space-y-4 p-2 text-sm">
-//       <div>
-//         <p className="text-muted-foreground">Student Name</p>
-//         <p className="font-semibold">{d.studentName || "N/A"}</p>
-//       </div>
-
-//       <div>
-//         <p className="text-muted-foreground">Class</p>
-//         <p className="font-semibold">{d.className || "N/A"}</p>
-//       </div>
-
-//       <div>
-//         <p className="text-muted-foreground">Status</p>
-//         <span
-//           className={cn(
-//             "inline-block px-2 py-1 rounded text-xs text-white",
-//             d.status === "present" && "bg-green-600",
-//             d.status === "absent" && "bg-red-600",
-//             d.status === "late" && "bg-yellow-500",
-//             d.status === "excused" && "bg-blue-600"
-//           )}
-//         >
-//           {d.status ? d.status.toUpperCase() : "N/A"}
-//         </span>
-//       </div>
-
-//       <div>
-//         <p className="text-muted-foreground">Taken By</p>
-//         <p className="font-semibold">{d.takenBy || "N/A"}</p>
-//       </div>
-
-//       <div>
-//         <p className="text-muted-foreground">Date</p>
-//         <p className="font-semibold">
-//           {d.date ? new Date(d.date).toLocaleDateString() : "N/A"}
-//         </p>
-//       </div>
-//     </div>
-//   );
-// }
-
 export default function StudentAttendanceCalendar() {
 
   // Helper function to get current date in YYYY-MM-DD format
@@ -398,7 +337,7 @@ export default function StudentAttendanceCalendar() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto p-4 md:p-6">
+    <div className="space-y-6 animate-in fade-in duration-500 max-w-7xl mx-auto p-1 md:p-6">
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-2">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Attendance Record</h1>
@@ -442,12 +381,12 @@ export default function StudentAttendanceCalendar() {
       <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
 
         {/* SIDEBAR / LEGEND */}
-        <div className="lg:col-span-1 space-y-6">
+        <div className="lg:col-span-1 space-y-2">
           <Card className="border-0 shadow-sm h-full">
             <CardHeader>
               <CardTitle className="text-lg text-muted-foreground dark:text-gray-300">Legend</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3 px-1">
               <div className="flex items-center gap-3 p-3 rounded-lg bg-green-50 dark:bg-green-900/20 border border-green-100 dark:border-green-900/50">
                 <div className="h-4 w-4 rounded-full bg-green-500 shadow-sm ring-2 ring-green-200 dark:ring-green-900"></div>
                 <span className="font-medium text-green-700 dark:text-green-300">Present</span>
@@ -472,7 +411,7 @@ export default function StudentAttendanceCalendar() {
         <div className="lg:col-span-3">
           <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="p-0">
-              <div className="p-4 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
+              <div className="p-0 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
                 {/* <FullCalendar
                   plugins={[dayGridPlugin, interactionPlugin]}
                   initialView="dayGridMonth"

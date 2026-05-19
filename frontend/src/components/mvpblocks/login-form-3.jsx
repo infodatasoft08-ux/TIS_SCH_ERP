@@ -221,7 +221,7 @@ export default function SignInPage() {
               </div>
 
               {/* Right Side - Login Form */}
-              <div className="flex flex-col justify-center p-8 lg:p-16 bg-white dark:bg-gray-800">
+              <div className="flex flex-col justify-center p-4 lg:p-16 bg-white dark:bg-gray-800">
                 <div className="mx-auto w-full max-w-md">
                   <div className="mb-10 text-center lg:text-left">
                     <div className="flex items-center flex-col gap-3">
@@ -385,13 +385,13 @@ export default function SignInPage() {
                     </div> */}
                   </form>
 
-                  <div className="mt-6 pt-6 border-t border-gray-100 dark:border-gray-700 text-center">
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 font-medium">
-                      New to the institution Or Existing Student ? Apply Here
+                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
+                    <p className="text-xs md:text-md text-gray-600 dark:text-gray-400 mb-3 font-medium">
+                      New to the institution Or Existing Candidate ? Apply here
                     </p>
                     <Link
                       to="/registration"
-                      className="inline-flex items-center justify-center w-1/2 rounded-xl border-2 border-blue-600 bg-blue-50/50 py-3 text-sm font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 dark:bg-gray-800 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white"
+                      className="inline-flex items-center justify-center w-1/2 rounded-xl border-2 border-blue-600 bg-blue-50/50 py-3 text-xs md:text-md font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 dark:bg-gray-800 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white"
                     >
                       <Users className="mr-2 h-4 w-4" />
                       Registered Here
@@ -404,9 +404,9 @@ export default function SignInPage() {
                       Contact Administration
                     </Link>
                   </div>
-                  <div className="mt-12 text-center text-xs text-muted-foreground w-full">
+                  <div className="mt-1 text-center text-xs text-muted-foreground w-full">
                     {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
-                    © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION PRIVATE LIMITED</b>
+                    © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
                   </div>
                 </div>
               </div>

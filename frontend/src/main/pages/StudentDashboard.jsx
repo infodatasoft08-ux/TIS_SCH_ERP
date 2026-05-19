@@ -61,7 +61,7 @@ export default function StudentDashboard() {
         {/* Info Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {[...Array(3)].map((_, i) => (
-            <div key={i} className="p-6 rounded-[2rem] border space-y-3">
+            <div key={i} className="p-2 rounded-[2rem] border space-y-3">
               <Skeleton className="h-3 w-24" />
               <Skeleton className="h-6 w-32" />
             </div>
@@ -69,7 +69,7 @@ export default function StudentDashboard() {
         </div>
 
         {/* Routine Section */}
-        <div className="p-4 rounded-[1rem] border shadow-xl space-y-4">
+        <div className="p-2 rounded-[1rem] border shadow-xl space-y-4">
           <Skeleton className="h-6 w-48" />
           <Skeleton className="h-40 w-full rounded-xl" />
         </div>
@@ -107,7 +107,7 @@ export default function StudentDashboard() {
   }
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 p-4 md:p-6 lg:p-8">
+    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 p-2 md:p-6 lg:p-8">
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-3xl font-extrabold tracking-tight">Dashboard</h2>
@@ -116,15 +116,15 @@ export default function StudentDashboard() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="p-6 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
+        <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
           <div className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">My Class</div>
           <div className="text-2xl font-bold text-blue-600">{student?.class_name || '--'}</div>
         </div>
-        <div className="p-6 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
+        <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
           <div className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Roll Number</div>
           <div className="text-2xl font-bold text-emerald-600">{student?.roll_no || '--'}</div>
         </div>
-        <div className="p-6 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
+        <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm transition-all hover:shadow-md">
           <div className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Academic Year</div>
           <div className="text-2xl font-bold text-amber-600">{student?.academic_year_name || student?.academic_year || '--'}</div>
         </div>
@@ -172,7 +172,7 @@ export default function StudentDashboard() {
       </div>
 
       {/* Announcements & Events */}
-      <div className="p-8 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm">
+      <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm">
         <div className="flex items-center gap-2 mb-6">
           <Megaphone className="w-6 h-6 text-blue-500" />
           <h3 className="text-2xl font-bold">Announcements & Events</h3>
@@ -184,7 +184,7 @@ export default function StudentDashboard() {
         />
       </div>
 
-      <div className="p-4 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm overflow-hidden">
+      <div className="p-2 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm overflow-hidden">
         <h3 className="font-bold text-xl px-4 py-2 flex items-center gap-2">
           <CalendarCheck className="w-6 h-6 text-blue-500" />
           Attendance Calendar

@@ -101,8 +101,8 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[700px] p-0 overflow-hidden border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
-                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white">
+            <DialogContent className="w-full h-full max-w-none sm:max-w-[700px] sm:h-auto h-[100dvh] sm:max-h-[85vh] rounded-none sm:rounded-xl m-0 p-0 overflow-hidden flex flex-col left-0 top-0 translate-x-0 translate-y-0 sm:left-[50%] sm:top-[50%] sm:translate-x-[-50%] sm:translate-y-[-50%] border-0 shadow-2xl" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+                <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 text-white flex-shrink-0">
                     <DialogHeader className="p-0">
                         <DialogTitle className="text-2xl font-bold flex items-center gap-2">
                             <GraduationCap className="h-6 w-6 text-emerald-100" />
@@ -114,9 +114,9 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                     </DialogHeader>
                 </div>
 
-                <div className="p-6">
-                    <Form {...form}>
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+                <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col flex-grow overflow-hidden min-h-0 bg-background">
+                        <div className="p-6 space-y-5 flex-grow overflow-y-auto min-h-0 pr-6">
                             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
                                 <FormItem className="col-span-1 sm:col-span-3">
                                     <FormField
@@ -275,22 +275,22 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                     )}
                                 />
                             </div>
+                        </div>
 
-                            <DialogFooter className="mt-6 gap-2">
-                                <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
-                                    <X className="h-4 w-4 mr-1" /> Cancel
-                                </Button>
-                                <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
-                                    {isSubmitting ? (
-                                        <span className="flex items-center gap-2">Saving...</span>
-                                    ) : (
-                                        <span className="flex items-center gap-2"><Save className="h-4 w-4" /> Save Record</span>
-                                    )}
-                                </Button>
-                            </DialogFooter>
-                        </form>
-                    </Form>
-                </div>
+                        <DialogFooter className="p-6 border-t flex-shrink-0 gap-2 mt-0 bg-gray-50/50 dark:bg-gray-900/50">
+                            <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>
+                                <X className="h-4 w-4 mr-1" /> Cancel
+                            </Button>
+                            <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                                {isSubmitting ? (
+                                    <span className="flex items-center gap-2">Saving...</span>
+                                ) : (
+                                    <span className="flex items-center gap-2"><Save className="h-4 w-4" /> Save Record</span>
+                                )}
+                            </Button>
+                        </DialogFooter>
+                    </form>
+                </Form>
             </DialogContent>
         </Dialog>
     );

@@ -213,8 +213,8 @@ export default function EmployeeAttendanceCalendar() {
 
         <div className="lg:col-span-3">
           <Card className="border-0 shadow-xl rounded-[2rem] overflow-hidden bg-white dark:bg-gray-900/50">
-            <CardContent className="p-4 sm:p-6">
-              <div className="p-4 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
+            <CardContent className="p-1 sm:p-2">
+              <div className="p-1 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
                 <ScheduleXCalendar calendarApp={calendar} />
               </div>
             </CardContent>

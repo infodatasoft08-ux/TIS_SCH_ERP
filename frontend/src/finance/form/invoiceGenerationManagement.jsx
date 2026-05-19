@@ -562,14 +562,28 @@ export default function Invoices() {
         responseType: "blob",
       });
 
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement("a");
-      link.href = url;
-      link.setAttribute("download", `due_invoices_${new Date().toISOString().split('T')[0]}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("CSV exported successfully");
+      const fileName = `due_invoices_${new Date().toISOString().split('T')[0]}.csv`;
+
+      if (isMobileApp) {
+        const reader = new FileReader();
+        reader.onloadend = () => {
+          // Extract the raw base64 string from data URL
+          const base64 = reader.result.split(',')[1];
+          sendToMobile(base64, fileName, 'text/csv');
+          toast.success("CSV exported successfully");
+        };
+        reader.readAsDataURL(res.data);
+      } else {
+        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'text/csv;charset=utf-8;' }));
+        const link = document.createElement("a");
+        link.href = url;
+        link.setAttribute("download", fileName);
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.URL.revokeObjectURL(url);
+        toast.success("CSV exported successfully");
+      }
     } catch (err) {
       console.error("Failed to export CSV", err);
       toast.error("No invoices with dues found for the selected criteria");
@@ -1045,8 +1059,8 @@ export default function Invoices() {
 
       {/* Filters */}
       <Card>
-        <CardContent className="p-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 items-end">
+        <CardContent className="p-2">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
             <div className="space-y-2">
               <Label>Academic Year</Label>
               <Select value={filterAcademicYear} onValueChange={(val) => { setFilterAcademicYear(val); loadInvoices(); }}>
@@ -1095,7 +1109,7 @@ export default function Invoices() {
               </Select>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="hidden md:flex items-center gap-2">
               <Button variant="outline" onClick={() => {
                 setFilterAcademicYear("all");
                 setFilterGrade("all");
@@ -1110,12 +1124,27 @@ export default function Invoices() {
               </Button>
             </div>
           </div>
+
+          <div className="block md:hidden mt-2 items-center gap-2">
+            <Button variant="outline" onClick={() => {
+              setFilterAcademicYear("all");
+              setFilterGrade("all");
+              setFilterClass("all");
+              loadInvoices();
+            }}>
+              Clear Filters
+            </Button>
+            <Button onClick={loadInvoices} disabled={loading}>
+              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+              Apply
+            </Button>
+          </div>
         </CardContent>
       </Card>
 
       {/* Search and Stats */}
       < Card >
-        <CardContent className="p-6">
+        <CardContent className="p-2">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative w-full md:w-96">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -1447,11 +1476,11 @@ export default function Invoices() {
                         <div className="text-muted-foreground">Total Amount</div>
                         <div className="font-bold text-base">{formatCurrency(invoice.amount_due)}</div>
                       </div>
-                      <div className="text-right">
+                      <div className="text-left">
                         <div className="text-muted-foreground">Amount Due</div>
                         <div className="font-bold text-base">{formatCurrency(calculateBalnaceinTable(invoice))}</div>
                       </div>
-                      <div className="col-span-2 flex justify-between items-center mt-1">
+                      <div className="text-right">
                         <div className="text-muted-foreground">Amount Paid</div>
                         <div className={invoice.amount_paid > 0 ? "text-green-600 dark:text-green-400 font-bold text-base" : "text-muted-foreground font-medium"}>
                           {formatCurrency(invoice.amount_paid)}
@@ -1459,7 +1488,7 @@ export default function Invoices() {
                       </div>
                     </div>
 
-                    <div className="flex items-center justify-end gap-2 mt-2 pt-3 border-t flex-wrap">
+                    <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t flex-wrap">
                       <Button
                         variant="outline"
                         size="sm"

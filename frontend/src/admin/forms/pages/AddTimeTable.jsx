@@ -351,7 +351,7 @@ export default function CreateTimeTable() {
   // }, [selectedClass]);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-2 space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold">Class Timetable Management</h1>
@@ -561,16 +561,17 @@ export default function CreateTimeTable() {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-lg sm:max-w-[600px] overflow-hidden p-4 sm:p-6"
+        <DialogContent
+          className="w-full h-[100dvh] sm:h-auto sm:w-[95vw] max-w-lg sm:max-w-[600px] p-0 flex flex-col overflow-hidden sm:rounded-2xl"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <DialogTitle>
+          <DialogHeader className="bg-gradient-to-r from-blue-600 to-indigo-600 dark:from-blue-700 dark:to-indigo-700 text-white p-4 sm:p-6 shrink-0 relative">
+            <DialogTitle className="text-xl font-bold text-white pr-6">
               {editingRoutine ? 'Edit Routine' : 'Add New Routine'}
             </DialogTitle>
           </DialogHeader>
-          <div className="overflow-y-auto px-2 py-2">
+          <div className="flex-grow overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0">
             <Form {...form}>
               <form id="routine-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -769,7 +770,7 @@ export default function CreateTimeTable() {
             </Form>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-row justify-end gap-2 sm:gap-0">
             <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setDialogOpen(false)}>
               Cancel
             </Button>
@@ -783,17 +784,18 @@ export default function CreateTimeTable() {
 
       {/* Add/Edit Dialog for Break */}
       <Dialog open={breakDialogOpen} onOpenChange={setBreakDialogOpen}>
-        <DialogContent className="w-[95vw] max-w-lg sm:max-w-[500px] overflow-hidden p-4 sm:p-6"
+        <DialogContent
+          className="w-full h-[100dvh] sm:h-auto sm:w-[95vw] max-w-lg sm:max-w-[500px] p-0 flex flex-col overflow-hidden sm:rounded-2xl"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}
         >
-          <DialogHeader>
-            <DialogTitle>
+          <DialogHeader className="bg-gradient-to-r from-purple-600 to-pink-600 dark:from-purple-700 dark:to-pink-700 text-white p-4 sm:p-6 shrink-0 relative">
+            <DialogTitle className="text-xl font-bold text-white pr-6">
               {editingBreak ? 'Edit Break' : 'Add New Break'}
             </DialogTitle>
           </DialogHeader>
 
-          <div className="overflow-y-auto px-2 py-2">
+          <div className="flex-grow overflow-y-auto px-4 py-4 sm:px-6 sm:py-6 min-h-0">
             <Form {...breakform}>
               <form id="break-form" onSubmit={breakform.handleSubmit(onSubmitBreak)} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -937,7 +939,7 @@ export default function CreateTimeTable() {
             </Form>
           </div>
 
-          <DialogFooter>
+          <DialogFooter className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 border-t border-gray-100 dark:border-gray-800 shrink-0 flex flex-row justify-end gap-2 sm:gap-0">
             <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => setBreakDialogOpen(false)}>
               Cancel
             </Button>

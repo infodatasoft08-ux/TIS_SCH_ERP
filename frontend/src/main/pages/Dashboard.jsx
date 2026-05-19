@@ -46,7 +46,7 @@ export default function Dashboard() {
 
     default:
       return (
-        <div className="p-6 text-red-600">
+        <div className="p-2 text-red-600">
           Role not supported
         </div>
       );

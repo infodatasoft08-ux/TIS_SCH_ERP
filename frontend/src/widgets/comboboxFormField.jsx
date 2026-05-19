@@ -48,7 +48,7 @@ export const ComboboxFormField = ({
                     {required && <span className="text-red-500 ml-1">*</span>}
                 </Label>
             )}
-            <Popover open={open} onOpenChange={setOpen}>
+            <Popover open={open} onOpenChange={setOpen} modal={true}>
                 <PopoverTrigger asChild>
                     <Button
                         variant="outline"
@@ -70,6 +70,8 @@ export const ComboboxFormField = ({
                 <PopoverContent
                     className="w-[--radix-popover-trigger-width] p-0"
                     align="start"
+                    onWheel={(e) => e.stopPropagation()}
+                    onTouchMove={(e) => e.stopPropagation()}
                 >
                     <Command>
                         <CommandInput
