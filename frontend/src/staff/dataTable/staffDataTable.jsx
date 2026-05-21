@@ -24,7 +24,7 @@ export default function StaffOperation() {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedStaff, setSelectedStaff] = useState(null);
   const [dialogKey, setDialogKey] = useState(Date.now());
-  const EXCLUDED_ROLE_IDS = [2, 1, 5, 3];
+  // const EXCLUDED_ROLE_IDS = [2, 1, 5, 3, 6, 5];
   const [bulkOpen, setBulkOpen] = useState(false);
   const [viewDialogOpen, setViewDialogOpen] = useState(false);
   const [viewData, setViewData] = useState(null);
@@ -59,8 +59,11 @@ export default function StaffOperation() {
       setStaffs(newStaffs);
 
       if (reset) {
+        // const filteredRoles = (rolesRes.data.roles || []).filter(
+        //   role => !EXCLUDED_ROLE_IDS.includes(role.id)
+        // );
         const filteredRoles = (rolesRes.data.roles || []).filter(
-          role => !EXCLUDED_ROLE_IDS.includes(role.id)
+          role => role.sub_role === "staff"
         );
         setRoles(filteredRoles);
       }
