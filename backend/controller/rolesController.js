@@ -2,28 +2,6 @@ const pool = require("../db");
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
-// Ensure sub_role column exists in roles table
-// (async () => {
-//     try {
-//         const [cols] = await pool.query('SHOW COLUMNS FROM roles LIKE "sub_role"');
-//         if (cols.length === 0) {
-//             await pool.query('ALTER TABLE roles ADD COLUMN sub_role VARCHAR(50) DEFAULT NULL');
-//             console.log('Added sub_role column to roles table');
-//             // Set existing roles sub_role = 'staff' if not student/teacher/admin/super
-//             const [roles] = await pool.query('SELECT id, role_name FROM roles');
-//             for (const r of roles) {
-//                 const nameLower = (r.role_name || '').toLowerCase();
-//                 const isCore = ['student', 'teacher', 'admin', 'super'].some(core => nameLower.includes(core));
-//                 if (!isCore) {
-//                     await pool.query('UPDATE roles SET sub_role = "staff" WHERE id = ?', [r.id]);
-//                 }
-//             }
-//         }
-//     } catch (err) {
-//         console.error('Error initializing roles sub_role column:', err.message);
-//     }
-// })();
-
 /* =========================
    ROLES CRUD
    ========================= */
@@ -33,7 +11,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
  */
 const getSubRole = (role_name) => {
     const nameLower = (role_name || '').toLowerCase();
-    const isCore = ['student', 'teacher', 'admin', 'super'].some(core => nameLower.includes(core));
+    const isCore = ['student', 'teacher', 'admin', 'superadmin', 'parents'].some(core => nameLower.includes(core));
     return isCore ? null : 'staff';
 };
 

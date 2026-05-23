@@ -20,7 +20,7 @@ export default function DynamicAnnouncement() {
                         userId={user?.id}
                         canManage={false}
                     />
-                ) : user.role_id === 4 ? (
+                ) : user.sub_role === 'staff' ? (
                     <AnnouncementDashboard
                         userRole="staff"
                         userId={user?.id}

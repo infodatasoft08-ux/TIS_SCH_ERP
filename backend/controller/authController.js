@@ -42,6 +42,7 @@ const login = async (req, res) => {
       name: user.name,
       email: user.Email,
       role_id: user.role_id,
+      sub_role: user.sub_role,
       phone: user.phone,
       gender: user.gender,
       avatar_url: user.avatar_url,
@@ -577,9 +578,11 @@ const GetStaffUserById = async (req, res) => {
     // );
     const [trows] = await db.execute(
       `SELECT s.id AS staff_id, s.user_id, s.employee_code, DATE_FORMAT(s.hire_date, '%Y-%m-%d') AS hire_date, s.qualification, s.bio, s.department,
-              u.name AS user_name, u.email AS user_email, u.avatar_url AS user_avatar_url, u.role_id, u.sub_role, u.address AS user_address, u.adhar_no AS user_adhar_no
+              u.name AS user_name, u.email AS user_email, u.avatar_url AS user_avatar_url, u.role_id, u.sub_role, u.address AS user_address, u.adhar_no AS user_adhar_no,
+              r.role_name AS role_name
        FROM staff s
        JOIN users u ON u.id = s.user_id
+       LEFT JOIN roles r ON r.id = s.department
        WHERE s.id = ?`,
       [staffId]
     );

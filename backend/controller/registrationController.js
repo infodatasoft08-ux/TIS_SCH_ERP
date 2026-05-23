@@ -183,7 +183,7 @@ const approveRegistration = async (req, res) => {
     }
 
     const data = typeof record.data === 'string' ? JSON.parse(record.data) : (record.data || {});
-    const { name, email, password_hash, phone, gender, adhar_no, address } = data;
+    const { name, email, password_hash, phone, gender, adhar_no, address, qualification, hire_date } = data;
 
     // Check if email already exists in users
     const [existingUsers] = await conn.execute("SELECT id FROM users WHERE email = ?", [email]);
@@ -298,19 +298,19 @@ const approveRegistration = async (req, res) => {
       const { sub_role, department } = data;
 
       // Smart lookup of specific sub_role ID if available
-      let staffRoleId = 4;
-      if (sub_role) {
-        const [specRoles] = await conn.execute("SELECT id FROM roles WHERE role_name = ? LIMIT 1", [sub_role]);
-        if (specRoles.length > 0) {
-          staffRoleId = specRoles[0].id;
-        } else {
-          const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE role_name IN ('staff', 'Staff') LIMIT 1");
-          if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
-        }
-      } else {
-        const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE role_name IN ('staff', 'Staff') LIMIT 1");
-        if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
-      }
+      // let staffRoleId;
+      // if (sub_role) {
+      //   const [specRoles] = await conn.execute("SELECT id FROM roles WHERE id = ? AND sub_role = ? LIMIT 1", [department, sub_role]);
+      //   if (specRoles.length > 0) {
+      //     staffRoleId = specRoles[0].id;
+      //   } else {
+      //     const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE sub_role = ? LIMIT 1", [sub_role]);
+      //     if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
+      //   }
+      // } else {
+      //   const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE sub_role = ? LIMIT 1", [sub_role]);
+      //   if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
+      // }
 
       const [settingsRows] = await conn.execute('SELECT setting_key, setting_value FROM school_settings WHERE setting_key = "employee_code_prefix"');
       const employeePrefix = settingsRows[0]?.setting_value;
@@ -321,14 +321,14 @@ const approveRegistration = async (req, res) => {
       }
 
       const [userRes] = await conn.execute(
-        `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, staffRoleId, phone || null, adhar_no || null, address || null]
+        `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, sub_role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
+        [name, email, gender?.toLowerCase() || 'other', password_hash, department, phone || null, adhar_no || null, address || null, sub_role]
       );
       const userId = userRes.insertId;
 
       await conn.execute(
-        `INSERT INTO staff (id, user_id, employee_code, department, sub_role) VALUES (?, ?, ?, ?, ?)`,
-        [userId, userId, finalEmployeeCode || null, department || null, sub_role || 'General Staff']
+        `INSERT INTO staff (id, user_id, employee_code, department, hire_date, qualification) VALUES (?, ?, ?, ?, ?, ?)`,
+        [userId, userId, finalEmployeeCode || null, department || null, hire_date || null, qualification || null]
       );
     }
 

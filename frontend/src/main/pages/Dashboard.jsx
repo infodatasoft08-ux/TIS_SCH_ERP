@@ -4,6 +4,7 @@ import TeacherDashboard from "./TeacherDashboard";
 import StudentDashboard from "./StudentDashboard";
 import { Library } from "lucide-react";
 import FinanceDashboard from "./financeDashboard";
+import StaffDashboard from "./StaffDashboard";
 
 const ROLES = {
   ADMIN: 3,
@@ -12,6 +13,7 @@ const ROLES = {
   PARENT: 5,
   ACCOUNTANT: 4,
   SUPERADMIN: 6,
+  STAFF: "staff"
 };
 
 export default function Dashboard() {
@@ -25,7 +27,9 @@ export default function Dashboard() {
     return <div className="p-6 text-red-600">Unauthorized</div>;
   }
 
-  switch (user.role_id) {
+  const activeRole = user.sub_role === "staff" ? "staff" : user.role_id;
+
+  switch (activeRole) {
     case ROLES.ADMIN:
       return <AdminDashboard />;
 
@@ -43,6 +47,9 @@ export default function Dashboard() {
 
     case ROLES.SUPERADMIN:
       return <AdminDashboard />;
+
+    case ROLES.STAFF:
+      return <StaffDashboard />;
 
     default:
       return (

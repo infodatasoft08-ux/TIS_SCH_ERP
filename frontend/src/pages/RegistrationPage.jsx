@@ -80,7 +80,7 @@ export default function RegistrationPage() {
   const [staffForm, setStaffForm] = useState({
     name: '', email: '', password: '', sub_role: 'staff', phone: '',
     gender: 'male', department: '', hire_date: '',
-    address: '', adhar_no: ''
+    address: '', adhar_no: '', qualification: '',
   });
 
   const handleStudentChange = (e) => {
@@ -103,7 +103,8 @@ export default function RegistrationPage() {
     }
     setLoading(true);
     try {
-      const res = await API.post('/registration/student', studentForm);
+      const submissionStudentData = { ...studentForm, password: studentForm.phone };
+      const res = await API.post('/registration/student', submissionStudentData);
       toast.success(res.data?.message || 'Student application submitted successfully!');
       setStudentForm({
         name: '', email: '', password: '', phone: '', blood_group: '',
@@ -128,7 +129,8 @@ export default function RegistrationPage() {
     }
     setLoading(true);
     try {
-      const res = await API.post('/registration/teacher', teacherForm);
+      const submissionTeacherData = { ...teacherForm, password: teacherForm.phone };
+      const res = await API.post('/registration/teacher', submissionTeacherData);
       toast.success(res.data?.message || 'Teacher application submitted successfully!');
       setTeacherForm({
         name: '', email: '', password: '', phone: '', gender: 'female',
@@ -150,12 +152,13 @@ export default function RegistrationPage() {
     }
     setLoading(true);
     try {
-      const res = await API.post('/registration/staff', staffForm);
+      const submissionData = { ...staffForm, password: staffForm.phone };
+      const res = await API.post('/registration/staff', submissionData);
       toast.success(res.data?.message || 'Staff application submitted successfully!');
       setStaffForm({
         name: '', email: '', password: '', sub_role: 'staff', phone: '',
         gender: 'male', department: '', hire_date: '',
-        address: '', adhar_no: ''
+        address: '', adhar_no: '', qualification: '',
       });
       setTimeout(() => navigate('/login'), 2000);
     } catch (err) {
@@ -229,7 +232,7 @@ export default function RegistrationPage() {
             <TabsList className="grid w-full h-12 grid-cols-3 bg-gray-100 dark:bg-gray-900 p-1 rounded-2xl mb-8 gap-2">
               <TabsTrigger
                 value="student"
-                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-blue-600 dark:data-[state=active]:text-blue-400 data-[state=active]:shadow-md flex-col space-y-1 items-center justify-center gap-2 sm:flex-row sm:space-y-0"
               >
                 <GraduationCap className="w-4 h-4" />
                 <span className="hidden sm:inline">Student Registration</span>
@@ -237,7 +240,7 @@ export default function RegistrationPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="teacher"
-                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-indigo-600 dark:data-[state=active]:text-indigo-400 data-[state=active]:shadow-md flex-col space-y-1 items-center justify-center gap-2 sm:flex-row sm:space-y-0"
               >
                 <Briefcase className="w-4 h-4" />
                 <span className="hidden sm:inline">Teacher Registration</span>
@@ -245,7 +248,7 @@ export default function RegistrationPage() {
               </TabsTrigger>
               <TabsTrigger
                 value="staff"
-                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-600 dark:data-[state=active]:text-purple-400 data-[state=active]:shadow-md flex items-center justify-center gap-2"
+                className="rounded-xl py-1.5 text-sm font-bold transition-all data-[state=active]:bg-white dark:data-[state=active]:bg-gray-800 data-[state=active]:text-purple-600 dark:data-[state=active]:text-purple-400 data-[state=active]:shadow-md flex-col space-y-1 items-center justify-center gap-2 sm:flex-row sm:space-y-0"
               >
                 <Users className="w-4 h-4" />
                 <span className="hidden sm:inline">Staff Registration</span>
@@ -287,20 +290,7 @@ export default function RegistrationPage() {
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-blue-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                      Password *
-                    </label>
-                    <Input
-                      type="password" name="password" value={studentForm.password} onChange={handleStudentChange}
-                      placeholder="••••••••" required
-                      className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-blue-500"
-                    />
-                  </div>
-                </div>
 
-                {/* Demographics & Identity */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                       Phone Number
@@ -311,6 +301,20 @@ export default function RegistrationPage() {
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-blue-500"
                     />
                   </div>
+                  {/* <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                      Password *
+                    </label>
+                    <Input
+                      type="password" name="password" value={studentForm.password} onChange={handleStudentChange}
+                      placeholder="••••••••" required
+                      className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-blue-500"
+                    />
+                  </div> */}
+                </div>
+
+                {/* Demographics & Identity */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                       Aadhaar Number
@@ -456,7 +460,7 @@ export default function RegistrationPage() {
                   type="submit" disabled={loading}
                   className="w-full py-4 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold text-base shadow-lg shadow-blue-500/20 active:scale-[0.99] transition-all duration-200"
                 >
-                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Request...</> : 'Submit Student Admission Request'}
+                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Application...</> : 'Submit Your Application'}
                 </Button>
               </form>
             </TabsContent>
@@ -495,20 +499,7 @@ export default function RegistrationPage() {
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-indigo-500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                      Password *
-                    </label>
-                    <Input
-                      type="password" name="password" value={teacherForm.password} onChange={handleTeacherChange}
-                      placeholder="••••••••" required
-                      className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-indigo-500"
-                    />
-                  </div>
-                </div>
 
-                {/* Identity & Background */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                       Phone Number
@@ -519,6 +510,20 @@ export default function RegistrationPage() {
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-indigo-500"
                     />
                   </div>
+                  {/* <div>
+                    <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                      Password *
+                    </label>
+                    <Input
+                      type="password" name="password" value={teacherForm.password} onChange={handleTeacherChange}
+                      placeholder="••••••••" required
+                      className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-indigo-500"
+                    />
+                  </div> */}
+                </div>
+
+                {/* Identity & Background */}
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                       Aadhaar Number
@@ -587,7 +592,7 @@ export default function RegistrationPage() {
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                     Correspondence Address
                   </label>
-                  <Input
+                  <Textarea
                     name="address" value={teacherForm.address} onChange={handleTeacherChange}
                     placeholder="House No, Suburb, City, Pincode"
                     className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-indigo-500"
@@ -598,7 +603,7 @@ export default function RegistrationPage() {
                   type="submit" disabled={loading}
                   className="w-full py-4 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white font-bold text-base shadow-lg shadow-indigo-500/20 active:scale-[0.99] transition-all duration-200"
                 >
-                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Application...</> : 'Submit Faculty Onboarding Application'}
+                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Application...</> : 'Submit Your Application'}
                 </Button>
               </form>
             </TabsContent>
@@ -637,7 +642,7 @@ export default function RegistrationPage() {
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-purple-500"
                     />
                   </div>
-                  <div>
+                  {/* <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                       Password *
                     </label>
@@ -646,7 +651,7 @@ export default function RegistrationPage() {
                       placeholder="••••••••" required
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-purple-500"
                     />
-                  </div>
+                  </div> */}
                 </div>
 
                 {/* Sub Role Selection mapped directly to user instruction */}
@@ -727,12 +732,26 @@ export default function RegistrationPage() {
                   </div>
                 </div>
 
+                {/* Highest Qualification & Certifications */}
+                <div>
+                  <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
+                    Highest Qualification & Certifications
+                  </label>
+                  <Textarea
+                    name="qualification"
+                    value={staffForm.qualification}
+                    onChange={handleStaffChange}
+                    placeholder="List your degrees, certifications, and relevant training"
+                    className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-purple-500"
+                  />
+                </div>
+
                 {/* Address */}
                 <div>
                   <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
                     Contact Address
                   </label>
-                  <Input
+                  <Textarea
                     name="address" value={staffForm.address} onChange={handleStaffChange}
                     placeholder="Locality, Zone, City, Pincode"
                     className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-purple-500"
@@ -743,7 +762,7 @@ export default function RegistrationPage() {
                   type="submit" disabled={loading}
                   className="w-full py-4 rounded-xl text-white font-bold text-base shadow-lg shadow-purple-500/20 active:scale-[0.99] transition-all duration-200"
                 >
-                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Record...</> : 'Submit Staff Registration Portal'}
+                  {loading ? <><Loader2 className="w-5 h-5 mr-2 animate-spin" /> Submitting Record...</> : 'Submit Your Application'}
                 </Button>
               </form>
             </TabsContent>
