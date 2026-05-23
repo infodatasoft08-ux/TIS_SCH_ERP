@@ -9,7 +9,6 @@ import { createCalendar, createViewList, createViewMonthAgenda, createViewMonthG
 import { createEventsServicePlugin } from "@schedule-x/events-service";
 import { DatePicker } from "@/components/ui/date-picker";
 import { cn } from "@/lib/utils";
-import { createEventModalPlugin } from "@schedule-x/event-modal";
 import "@schedule-x/theme-default/dist/index.css";
 import {
   Dialog,
@@ -88,41 +87,15 @@ export default function EmployeeAttendanceCalendar() {
       views: [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek(), createViewList()],
       events: calendarEvents,
       defaultView: 'month-grid',
-      plugins: [eventsService, createEventModalPlugin()],
-      customComponents: {
-        eventModal: ({ event }) => {
-          const d = event.data;
-          return (
-            <div className="space-y-3 text-sm p-2">
-              <div>
-                <p className="text-muted-foreground font-semibold uppercase text-[10px]">Status</p>
-                <span
-                  className={cn(
-                    "inline-block px-2 py-0.5 rounded text-xs text-white mt-1",
-                    d.status === "present" && "bg-green-600",
-                    d.status === "absent" && "bg-red-600",
-                    d.status === "late" && "bg-yellow-500",
-                    d.status === "excused" && "bg-blue-600",
-                    d.status === "leave" && "bg-purple-600"
-                  )}
-                >
-                  {d.status.toUpperCase()}
-                </span>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground font-semibold uppercase text-[10px]">Recorded By</p>
-                <p className="font-semibold text-gray-700 dark:text-gray-200">{d.recordedBy || "System"}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground font-semibold uppercase text-[10px]">Date</p>
-                <p className="font-semibold text-gray-700 dark:text-gray-200">
-                  {new Date(d.date).toLocaleDateString(undefined, { dateStyle: 'full' })}
-                </p>
-              </div>
-            </div>
-          );
+      plugins: [eventsService],
+      callbacks: {
+        onEventClick: (event) => {
+          const processedEvent = {
+            ...event,
+            _originalData: event.data || {}
+          };
+          setSelectedEvent(processedEvent);
+          setIsDialogOpen(true);
         }
       },
       calendars: {
@@ -160,6 +133,18 @@ export default function EmployeeAttendanceCalendar() {
   if (loading && events.length === 0) {
     return <Skeleton className="h-[400px] w-full rounded-2xl" />;
   }
+
+  const getStatusColor = (status) => {
+    if (!status) return "bg-gray-500";
+    switch (status.toLowerCase()) {
+      case 'present': return "bg-green-500";
+      case 'absent': return "bg-red-500";
+      case 'late': return "bg-yellow-500";
+      case 'excused': return "bg-blue-500";
+      case 'leave': return "bg-purple-500";
+      default: return "bg-gray-500";
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -224,54 +209,54 @@ export default function EmployeeAttendanceCalendar() {
 
       {/* Event Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Attendance Details</DialogTitle>
-            <DialogDescription>
-              View detailed information about this attendance record
-            </DialogDescription>
-          </DialogHeader>
-          {selectedEvent && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+        <DialogContent className="sm:max-w-[375px] p-0 overflow-hidden border-0 shadow-2xl">
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col space-y-1">
+              <h3 className="font-semibold text-lg tracking-tight">Attendance Details</h3>
+              <p className="text-sm text-muted-foreground">View detailed information</p>
+            </div>
+
+            {selectedEvent && (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Name</p>
-                  <p className="text-base font-semibold">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Employee</p>
+                  <p className="text-sm font-medium">
                     {selectedEvent._originalData?.name || selectedEvent.description || 'N/A'}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className={cn("w-3 h-3 rounded-full", getStatusColor(selectedEvent._originalData?.status || selectedEvent.title))} />
-                    <p className="text-base font-semibold capitalize">
-                      {selectedEvent._originalData?.status || selectedEvent.title || 'N/A'}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Date</p>
+                    <p className="text-sm font-medium">
+                      {selectedEvent._originalData?.date
+                        ? new Date(selectedEvent._originalData.date).toLocaleDateString()
+                        : 'N/A'
+                      }
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Taken By</p>
+                    <p className="text-sm font-medium">
+                      {selectedEvent._originalData?.recordedBy || selectedEvent._originalData?.takenBy || 'N/A'}
                     </p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Taken By</p>
-                  <p className="text-base font-semibold">
-                    {selectedEvent._originalData?.takenBy || 'N/A'}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm font-medium text-muted-foreground">Date</p>
-                  <p className="text-base font-semibold">
-                    {selectedEvent._originalData?.date
-                      ? new Date(selectedEvent._originalData.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                      : 'N/A'
-                    }
-                  </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Status</p>
+                    <div className="flex items-center gap-2">
+                      <div className={cn("w-2 h-2 rounded-full", getStatusColor(selectedEvent._originalData?.status || selectedEvent.title))} />
+                      <p className="text-sm font-medium capitalize">
+                        {selectedEvent._originalData?.status || selectedEvent.title || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
     </div>

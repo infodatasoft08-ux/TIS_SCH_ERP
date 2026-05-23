@@ -21,7 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { createEventModalPlugin } from "@schedule-x/event-modal";
 import { useThemeAnimation } from "@space-man/react-theme-animation";
 
 export default function StudentAttendanceCalendar() {
@@ -65,8 +64,8 @@ export default function StudentAttendanceCalendar() {
 
       const records = res.data.records || {};
       setEvents(records);
-      console.log("attendance record summary records: ", records);
-      console.log("attendance record summary event: ", events);
+      // console.log("attendance record summary records: ", records);
+      // console.log("attendance record summary event: ", events);
 
     } catch (err) {
       console.error("Failed to load attendance", err);
@@ -105,51 +104,15 @@ export default function StudentAttendanceCalendar() {
       views: [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek(), createViewList()],
       events: calendarEvents,
       defaultView: 'month-grid',
-      plugins: [eventsService, createEventModalPlugin()],
-      customComponents: {
-        eventModal: ({ event }) => {
-          const d = event.data;
-
-          return (
-            <div className="space-y-3 text-sm">
-              <div>
-                <p className="text-muted-foreground">Student</p>
-                <p className="font-semibold">{d.studentName}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Class</p>
-                <p className="font-semibold">{d.className}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Status</p>
-                <span
-                  className={cn(
-                    "inline-block px-2 py-0.5 rounded text-xs text-white",
-                    d.status === "present" && "bg-green-600",
-                    d.status === "absent" && "bg-red-600",
-                    d.status === "late" && "bg-yellow-500",
-                    d.status === "excused" && "bg-blue-600"
-                  )}
-                >
-                  {d.status.toUpperCase()}
-                </span>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Taken By</p>
-                <p className="font-semibold">{d.takenBy || "N/A"}</p>
-              </div>
-
-              <div>
-                <p className="text-muted-foreground">Date</p>
-                <p className="font-semibold">
-                  {new Date(d.date).toLocaleDateString()}
-                </p>
-              </div>
-            </div>
-          );
+      plugins: [eventsService],
+      callbacks: {
+        onEventClick: (event) => {
+          const processedEvent = {
+            ...event,
+            _originalData: event.data || {}
+          };
+          setSelectedEvent(processedEvent);
+          setIsDialogOpen(true);
         }
       },
       calendars: {
@@ -411,20 +374,7 @@ export default function StudentAttendanceCalendar() {
         <div className="lg:col-span-3">
           <Card className="border-0 shadow-md overflow-hidden">
             <CardContent className="p-0">
-              <div className="p-0 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
-                {/* <FullCalendar
-                  plugins={[dayGridPlugin, interactionPlugin]}
-                  initialView="dayGridMonth"
-                  events={events}
-                  height="auto"
-                  headerToolbar={{
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: ''
-                  }}
-                  dayMaxEventRows={1}
-                /> */}
-
+              <div className="relative p-0 [&_.fc-toolbar-title]:text-xl [&_.fc-toolbar-title]:font-bold [&_.fc-button]:bg-primary [&_.fc-button]:border-0 [&_.fc-daygrid-day-number]:font-medium [&_.fc-col-header-cell]:py-3 [&_.fc-col-header-cell]:bg-muted/30">
                 <ScheduleXCalendar
                   calendarApp={calendar}
                 />
@@ -434,62 +384,61 @@ export default function StudentAttendanceCalendar() {
         </div>
       </div>
 
-      {/* Event Details Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Attendance Details</DialogTitle>
-            <DialogDescription>
-              View detailed information about this attendance record
-            </DialogDescription>
-          </DialogHeader>
-          {selectedEvent && (
-            <div className="space-y-4 mt-4">
-              <div className="grid grid-cols-2 gap-4">
+        <DialogContent className="sm:max-w-[375px] p-0 overflow-hidden border-0 shadow-2xl">
+          <div className="p-6 space-y-6">
+            <div className="flex flex-col space-y-1">
+              <h3 className="font-semibold text-lg tracking-tight">Attendance Details</h3>
+              <p className="text-sm text-muted-foreground">View detailed information</p>
+            </div>
+
+            {selectedEvent && (
+              <div className="space-y-4">
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Student Name</p>
-                  <p className="text-base font-semibold">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Student</p>
+                  <p className="text-sm font-medium">
                     {selectedEvent._originalData?.studentName || selectedEvent.description || 'N/A'}
                   </p>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Class</p>
-                  <p className="text-base font-semibold">
-                    {selectedEvent._originalData?.className || selectedEvent.location || 'N/A'}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Status</p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <div className={cn("w-3 h-3 rounded-full", getStatusColor(selectedEvent._originalData?.status || selectedEvent.title))} />
-                    <p className="text-base font-semibold capitalize">
-                      {selectedEvent._originalData?.status || selectedEvent.title || 'N/A'}
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Class</p>
+                    <p className="text-sm font-medium">
+                      {selectedEvent._originalData?.className || selectedEvent.location || 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Date</p>
+                    <p className="text-sm font-medium">
+                      {selectedEvent._originalData?.date
+                        ? new Date(selectedEvent._originalData.date).toLocaleDateString()
+                        : 'N/A'
+                      }
                     </p>
                   </div>
                 </div>
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Taken By</p>
-                  <p className="text-base font-semibold">
-                    {selectedEvent._originalData?.takenBy || 'N/A'}
-                  </p>
-                </div>
-                <div className="col-span-2">
-                  <p className="text-sm font-medium text-muted-foreground">Date</p>
-                  <p className="text-base font-semibold">
-                    {selectedEvent._originalData?.date
-                      ? new Date(selectedEvent._originalData.date).toLocaleDateString('en-US', {
-                        weekday: 'long',
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric'
-                      })
-                      : 'N/A'
-                    }
-                  </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Status</p>
+                    <div className="flex items-center gap-2">
+                      <div className={cn("w-2 h-2 rounded-full", getStatusColor(selectedEvent._originalData?.status || selectedEvent.title))} />
+                      <p className="text-sm font-medium capitalize">
+                        {selectedEvent._originalData?.status || selectedEvent.title || 'N/A'}
+                      </p>
+                    </div>
+                  </div>
+                  <div>
+                    <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Taken By</p>
+                    <p className="text-sm font-medium">
+                      {selectedEvent._originalData?.takenBy || 'N/A'}
+                    </p>
+                  </div>
                 </div>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
 

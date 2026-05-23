@@ -21,15 +21,14 @@ const createClassSchema = (isEditMode) => z.object({
   grade_id: z.number().min(1, "Grade required"),
   name: z.string().min(1, "Class name required").trim(),
   // section: z.string().optional(),
-  supervisor_teacher_id: z
-    .number() // accept string from input/combobox
-    .optional()
+  supervisor_teacher_id: z.any()
     .transform((val) => {
-      if (!val || val === "" || val === "Select Teacher") return null;
+      if (val === "" || val === "Select Teacher" || val === null || val === undefined || val === "none") return null;
       const num = Number(val);
       return isNaN(num) ? null : num;
     })
-    .nullable(),
+    .nullable()
+    .optional(),
   room: z.string().optional().nullable(),
   capacity: z.coerce
     .number()
@@ -55,7 +54,7 @@ export default function AddClassDialog({
   const form = useForm({
     resolver: zodResolver(classSchema),
     mode: "onChange", // Validate on change to see errors immediately
-    defaultValues: { grade_id: "", name: "", supervisor_teacher_id: "", room: "", capacity: null },
+    defaultValues: { grade_id: "", name: "", supervisor_teacher_id: null, room: "", capacity: null },
   });
 
   // Reset form when studentToEdit changes or dialog opens
@@ -69,7 +68,7 @@ export default function AddClassDialog({
           grade_id: classToEdit?.grade_id || "",
           name: classToEdit?.name || "",
           // section: classToEdit?.section || "",
-          supervisor_teacher_id: classToEdit?.supervisor_teacher_id || "",
+          supervisor_teacher_id: classToEdit?.supervisor_teacher_id || null,
           room: classToEdit?.room || "",
           capacity: classToEdit?.capacity || null,
         });
@@ -79,7 +78,7 @@ export default function AddClassDialog({
           grade_id: "",
           name: "",
           // section: "",
-          supervisor_teacher_id: "",
+          supervisor_teacher_id: null,
           room: "",
           capacity: null
         });
