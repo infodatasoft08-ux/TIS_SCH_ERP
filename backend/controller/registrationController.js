@@ -320,6 +320,14 @@ const approveRegistration = async (req, res) => {
         finalEmployeeCode = await generateNextId(employeePrefix, 'staff', 'employee_code');
       }
 
+      let departmentName = department;
+      if (department) {
+        const [roleRows] = await conn.execute("SELECT role_name FROM roles WHERE id = ?", [department]);
+        if (roleRows.length > 0) {
+          departmentName = roleRows[0].role_name;
+        }
+      }
+
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, sub_role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
         [name, email, gender?.toLowerCase() || 'other', password_hash, department, phone || null, adhar_no || null, address || null, sub_role]
@@ -328,7 +336,7 @@ const approveRegistration = async (req, res) => {
 
       await conn.execute(
         `INSERT INTO staff (id, user_id, employee_code, department, hire_date, qualification) VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, userId, finalEmployeeCode || null, department || null, hire_date || null, qualification || null]
+        [userId, userId, finalEmployeeCode || null, departmentName || null, hire_date || null, qualification || null]
       );
     }
 

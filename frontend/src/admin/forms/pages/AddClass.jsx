@@ -628,7 +628,7 @@ export default function AcademicFormsAdmin() {
         open={isClassDialogOpen}
         onOpenChange={handleClassDialogClose}
         classToEdit={selectedClass}
-        onSuccess={loadClassDropDown}
+        onSuccess={loadClass}
         grade={classDropDown}
         teacher={teachers}
       />

@@ -97,8 +97,8 @@ export default function RegistrationPage() {
 
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
-    if (!studentForm.name || !studentForm.email || !studentForm.password) {
-      toast.error('Please fill in Name, Email, and Password fields.');
+    if (!studentForm.name || !studentForm.email || !studentForm.phone) {
+      toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
     setLoading(true);
@@ -123,8 +123,8 @@ export default function RegistrationPage() {
 
   const handleTeacherSubmit = async (e) => {
     e.preventDefault();
-    if (!teacherForm.name || !teacherForm.email || !teacherForm.password) {
-      toast.error('Please fill in Name, Email, and Password fields.');
+    if (!teacherForm.name || !teacherForm.email || !teacherForm.phone) {
+      toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
     setLoading(true);
@@ -146,8 +146,8 @@ export default function RegistrationPage() {
 
   const handleStaffSubmit = async (e) => {
     e.preventDefault();
-    if (!staffForm.name || !staffForm.email || !staffForm.password) {
-      toast.error('Please fill in Name, Email, and Password fields.');
+    if (!staffForm.name || !staffForm.email || !staffForm.phone) {
+      toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
     setLoading(true);

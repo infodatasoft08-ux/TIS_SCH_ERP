@@ -454,16 +454,14 @@ const AddStaffUser = async (req, res) => {
       !isNonEmptyString(gender) ||
       !isNonEmptyString(password) ||
       !toInt(role_id) ||
-      !isNonEmptyString(sub_role) ||
       !isNonEmptyString(phone) ||
-      !isNonEmptyString(employee_code) ||
       !isNonEmptyString(department) ||
       !isNonEmptyString(adhar_no)
     ) {
       if (avatar_url) await deleteFromCloudinary(avatar_url);
       return res
         .status(400)
-        .json({ error: "name, email, gender, password, phone and role_id, employee_code, department, adhar_no are required" });
+        .json({ error: "name, email, gender, password, phone, role_id, department, and adhar_no are required" });
     }
     if (password.length < 6) {
       if (avatar_url) await deleteFromCloudinary(avatar_url);
