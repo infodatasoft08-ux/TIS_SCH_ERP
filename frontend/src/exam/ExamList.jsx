@@ -100,11 +100,17 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                           <DropdownMenuItem onClick={() => onCreateRoutine(exam)}>
                             <CalendarClock className="mr-2 h-4 w-4" /> Schedule/Routine
                           </DropdownMenuItem>
-                          {!isOver ? (
-                            <DropdownMenuItem onClick={() => onAddMarks(exam)} className="text-blue-600 font-medium">
-                              <CheckCircle className="mr-2 h-4 w-4" /> Add Marks
-                            </DropdownMenuItem>
-                          ) : (
+                          {!exam.is_results_published && (
+                            <>
+                              <DropdownMenuItem onClick={() => onAddMarks(exam, 'add')} className="text-blue-600 font-medium">
+                                <PlusCircle className="mr-2 h-4 w-4" /> Add Marks
+                              </DropdownMenuItem>
+                              {/* <DropdownMenuItem onClick={() => onAddMarks(exam, 'update')} className="text-indigo-600 font-medium">
+                                <CheckCircle className="mr-2 h-4 w-4" /> Update Marks
+                              </DropdownMenuItem> */}
+                            </>
+                          )}
+                          {isOver && (
                             <>
                               <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
                                 {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
@@ -115,7 +121,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                               </DropdownMenuItem>
                             </>
                           )}
-                          {!isOver && (
+                          {exam.status === 'Draft' && (
                             <DropdownMenuItem onClick={() => deleteExam(exam.id)} className="text-red-600">
                               <Trash2 className="mr-2 h-4 w-4" /> Delete
                             </DropdownMenuItem>
@@ -213,16 +219,28 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     Routine / Schedule
                   </Button>
 
-                  {!isOver ? (
-                    <Button
-                      size="sm"
-                      className="w-full text-xs bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white shadow-md shadow-blue-500/20 border-0 justify-start"
-                      onClick={() => onAddMarks(exam)}
-                    >
-                      <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                      Add Marks
-                    </Button>
-                  ) : (
+                  {!exam.is_results_published && (
+                    <div className="flex gap-2 w-full">
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md border-0 justify-start"
+                        onClick={() => onAddMarks(exam, 'add')}
+                      >
+                        <PlusCircle className="mr-2 h-3.5 w-3.5" />
+                        Add Marks
+                      </Button>
+                      <Button
+                        size="sm"
+                        className="flex-1 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md border-0 justify-start"
+                        onClick={() => onAddMarks(exam, 'update')}
+                      >
+                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
+                        Update Marks
+                      </Button>
+                    </div>
+                  )}
+
+                  {isOver && (
                     <>
                       <Button
                         size="sm"
@@ -244,7 +262,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     </>
                   )}
 
-                  {!isOver && (
+                  {exam.status === 'Draft' && (
                     <Button
                       variant="outline"
                       size="sm"

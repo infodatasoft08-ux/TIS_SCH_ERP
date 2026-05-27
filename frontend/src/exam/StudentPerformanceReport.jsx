@@ -19,6 +19,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
     const barChartRef = useRef(null);
     const lineChartRef = useRef(null);
     const pieChartRef = useRef(null);
+    const labOralChartRef = useRef(null);
 
     // Prepare data for Charts
     const exams = student?.exams || [];
@@ -67,6 +68,36 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
 
     const COLORS = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#ec4899', '#06b6d4'];
 
+    // 4. Lab and Oral Performance Chart Data: Subject breakdown by exam
+    const showLabOralChart = exams.some(ex => (ex.subjects || []).some(s => s.has_lab == 1 || s.has_oral == 1));
+    const activeLabOralKeys = [];
+    exams.forEach(ex => {
+        (ex.subjects || []).forEach(s => {
+            if (s.has_lab == 1) {
+                const key = `${s.subject_name} Lab`;
+                if (!activeLabOralKeys.includes(key)) activeLabOralKeys.push(key);
+            }
+            if (s.has_oral == 1) {
+                const key = `${s.subject_name} Oral`;
+                if (!activeLabOralKeys.includes(key)) activeLabOralKeys.push(key);
+            }
+        });
+    });
+
+    const labOralChartData = exams.map(ex => {
+        const entry = { name: ex.name || 'Unnamed Exam' };
+        const subjects = ex.subjects || [];
+        subjects.forEach(s => {
+            if (s.has_lab == 1) {
+                entry[`${s.subject_name} Lab`] = s.attendance_status === 'Absent' ? 0 : (parseFloat(s.lab_marks_obtained) || 0);
+            }
+            if (s.has_oral == 1) {
+                entry[`${s.subject_name} Oral`] = s.attendance_status === 'Absent' ? 0 : (parseFloat(s.oral_marks_obtained) || 0);
+            }
+        });
+        return entry;
+    });
+
     const downloadPDF = async () => {
         setIsExporting(true);
         const doc = new jsPDF('p', 'mm', 'a4');
@@ -81,7 +112,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
-            doc.text("TIMES INTERNATIONAL SCHOOL", pageWidth / 2, 18, { align: "center" });
+            doc.text("TIMES INTERNATION SCHOOL", pageWidth / 2, 18, { align: "center" });
 
             doc.setFontSize(14);
             doc.setFont("helvetica", "normal");
@@ -123,6 +154,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
             const barImg = await captureChart(barChartRef);
             const lineImg = await captureChart(lineChartRef);
             const pieImg = await captureChart(pieChartRef);
+            const labOralImg = await captureChart(labOralChartRef);
 
             let currentY = 85;
 
@@ -149,6 +181,15 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                 const barVals = barChartData.map(d => `${d.name}: ${d.percentage}%`).join(' | ');
                 doc.text(barVals, 20, valueY, { maxWidth: chartWidth });
 
+                const subjectTrendsSummary = allSubjects.map(sub => {
+                    const examMarks = exams.map(ex => {
+                        const s = (ex.subjects || []).find(subObj => subObj.subject_name === sub);
+                        return `${ex.name}: ${s && s.attendance_status === 'Present' ? s.marks_obtained : 'AB'}`;
+                    }).join(', ');
+                    return `${sub}: ${examMarks}`;
+                }).join(' | ');
+                doc.text(subjectTrendsSummary, pageWidth / 2, valueY, { maxWidth: chartWidth });
+
                 currentY += chartHeight + 20;
             } else if (barImg || lineImg) {
                 const img = barImg || lineImg;
@@ -156,8 +197,37 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                 currentY += 85;
             }
 
-            // Row 2: Pie Chart and Stats
-            if (pieImg) {
+            // Row 2: Pie Chart and Lab/Oral Chart
+            if (pieImg && labOralImg && showLabOralChart) {
+                doc.setFontSize(10);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(79, 70, 229);
+                doc.text("Attendance Analytics", 20, currentY);
+                doc.text("Practical & Oral Marks Analysis", pageWidth / 2 + 5, currentY);
+
+                doc.addImage(pieImg, 'PNG', 15, currentY + 3, chartWidth + 5, chartHeight);
+                doc.addImage(labOralImg, 'PNG', pageWidth / 2, currentY + 3, chartWidth + 5, chartHeight);
+
+                // Add textual data highlights below Row 2 charts
+                let valueY = currentY + chartHeight + 8;
+                doc.setFontSize(7);
+                doc.setTextColor(100, 100, 100);
+                doc.setFont("helvetica", "italic");
+
+                const attendanceSummary = `Total Present: ${presentCount} | Total Absent: ${absentCount}`;
+                doc.text(attendanceSummary, 20, valueY, { maxWidth: chartWidth });
+
+                const labOralSummary = activeLabOralKeys.map(key => {
+                    const examMarks = exams.map(ex => {
+                        const marks = labOralChartData.find(d => d.name === ex.name)?.[key];
+                        return `${ex.name}: ${marks !== undefined ? marks : '-'}`;
+                    }).join(', ');
+                    return `${key}: ${examMarks}`;
+                }).join(' | ');
+                doc.text(labOralSummary, pageWidth / 2 + 5, valueY, { maxWidth: chartWidth });
+
+                currentY += chartHeight + 20;
+            } else if (pieImg) {
                 doc.setFontSize(10);
                 doc.setFont("helvetica", "bold");
                 doc.text("Attendance Analytics", 20, currentY);
@@ -190,27 +260,72 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
             currentY += 5;
 
             exams.forEach((exam, index) => {
-                const tableBody = (exam.subjects || []).map(sub => [
-                    sub.subject_name,
-                    sub.max_marks,
-                    sub.attendance_status === 'Absent' ? 'AB' : sub.marks_obtained,
-                    sub.grade || '-',
-                    sub.attendance_status
-                ]);
+                const hasTheory = exam.subjects?.some(s => s.has_theory == 1 || s.has_theory === true || String(s.has_theory) === 'true');
+                const hasLab = exam.subjects?.some(s => s.has_lab == 1 || s.has_lab === true || String(s.has_lab) === 'true');
+                const hasOral = exam.subjects?.some(s => s.has_oral == 1 || s.has_oral === true || String(s.has_oral) === 'true');
+
+                // Build Table Head dynamically
+                const headRow = ['Subject'];
+                if (hasTheory) headRow.push('Theory');
+                if (hasLab) headRow.push('Lab');
+                if (hasOral) headRow.push('Oral');
+                headRow.push('Max Marks', 'Obtained', 'Grade', 'Status');
+
+                const colSpan = headRow.length;
+
+                // Build Table Body dynamically
+                const tableBody = (exam.subjects || []).map(sub => {
+                    const row = [sub.subject_name];
+                    if (hasTheory) {
+                        if (sub.has_theory == 1 || sub.has_theory === true || String(sub.has_theory) === 'true') {
+                            row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/${sub.theory_max_marks || 0}`);
+                        } else {
+                            row.push('-');
+                        }
+                    }
+                    if (hasLab) {
+                        if (sub.has_lab == 1 || sub.has_lab === true || String(sub.has_lab) === 'true') {
+                            row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/${sub.lab_max_marks || 0}`);
+                        } else {
+                            row.push('-');
+                        }
+                    }
+                    if (hasOral) {
+                        if (sub.has_oral == 1 || sub.has_oral === true || String(sub.has_oral) === 'true') {
+                            row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/${sub.oral_max_marks || 0}`);
+                        } else {
+                            row.push('-');
+                        }
+                    }
+                    row.push(
+                        sub.max_marks,
+                        sub.attendance_status === 'Absent' ? 'AB' : sub.marks_obtained,
+                        sub.grade || '-',
+                        sub.attendance_status
+                    );
+                    return row;
+                });
+
+                // Dynamically setup column styles to ensure alignment
+                const colStyles = {
+                    0: { cellWidth: 50 },
+                };
+                let colIdx = 1;
+                if (hasTheory) { colStyles[colIdx] = { halign: 'center' }; colIdx++; }
+                if (hasLab) { colStyles[colIdx] = { halign: 'center' }; colIdx++; }
+                if (hasOral) { colStyles[colIdx] = { halign: 'center' }; colIdx++; }
+                colStyles[colIdx] = { halign: 'center' }; colIdx++; // Max Marks
+                colStyles[colIdx] = { halign: 'center', fontStyle: 'bold' }; colIdx++; // Obtained
+                colStyles[colIdx] = { halign: 'center' }; colIdx++; // Grade
+                colStyles[colIdx] = { halign: 'center' }; colIdx++; // Status
 
                 autoTable(doc, {
                     startY: currentY,
-                    head: [[{ content: `Exam: ${exam.name}`, colSpan: 5, styles: { halign: 'left', fillColor: [100, 100, 100], fontStyle: 'bold' } }], ['Subject', 'Max Marks', 'Obtained', 'Grade', 'Status']],
+                    head: [[{ content: `Exam: ${exam.name}`, colSpan: colSpan, styles: { halign: 'left', fillColor: [100, 100, 100], fontStyle: 'bold' } }], headRow],
                     body: tableBody,
                     theme: 'grid',
                     headStyles: { fillColor: [79, 70, 229], fontSize: 9, halign: 'center' },
-                    columnStyles: {
-                        0: { cellWidth: 50 },
-                        1: { halign: 'center' },
-                        2: { halign: 'center', fontStyle: 'bold' },
-                        3: { halign: 'center' },
-                        4: { halign: 'center' }
-                    },
+                    columnStyles: colStyles,
                     styles: { fontSize: 8 },
                     margin: { left: 20, right: 20 },
                     pageBreak: 'auto'
@@ -341,7 +456,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                     cursor={{ fill: '#f3f4f6' }}
                                                     contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}
                                                 />
-                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={32}>
+                                                <Bar dataKey="percentage" name="Result (%)" fill="#6366f1" radius={[8, 8, 0, 0]} barSize={32} isAnimationActive={false}>
                                                     <LabelList dataKey="percentage" position="top" style={{ fontSize: '10px', fontWeight: 'bold', fill: '#1e1b4b' }} />
                                                 </Bar>
                                             </BarChart>
@@ -370,6 +485,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                         dataKey={sub}
                                                         fill={COLORS[idx % COLORS.length]}
                                                         radius={[4, 4, 0, 0]}
+                                                        isAnimationActive={false}
                                                     >
                                                         <LabelList dataKey={sub} position="top" style={{ fontSize: '9px', fontWeight: 'bold', fill: '#1e1b4b' }} offset={5} />
                                                     </Bar>
@@ -396,6 +512,8 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                     outerRadius={100}
                                                     paddingAngle={6}
                                                     dataKey="value"
+                                                    label={({ name, value }) => `${name}: ${value}`}
+                                                    isAnimationActive={false}
                                                 >
                                                     {pieChartData.map((entry, index) => (
                                                         <Cell key={`cell-${index}`} fill={entry.color} />
@@ -407,6 +525,39 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                         </ResponsiveContainer>
                                     </CardContent>
                                 </Card>
+
+                                {showLabOralChart && (
+                                    <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-white dark:bg-gray-900 overflow-hidden">
+                                        <CardHeader className="pb-2">
+                                            <CardTitle className="text-base sm:text-lg font-bold flex items-center gap-2">
+                                                <BarChart3 className="h-5 w-5 text-purple-500" />
+                                                Practical & Oral Marks Analysis
+                                            </CardTitle>
+                                        </CardHeader>
+                                        <CardContent className="h-[280px] sm:h-[350px] p-3 sm:p-6" ref={labOralChartRef}>
+                                            <ResponsiveContainer width="100%" height="100%">
+                                                <BarChart data={labOralChartData}>
+                                                    <CartesianGrid strokeDasharray="3 3" vertical={false} strokeOpacity={0.1} />
+                                                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                                                    <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 10 }} />
+                                                    <Tooltip contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }} />
+                                                    <Legend iconType="circle" wrapperStyle={{ fontSize: '11px' }} />
+                                                    {activeLabOralKeys.map((key, idx) => (
+                                                        <Bar
+                                                            key={key}
+                                                            dataKey={key}
+                                                            fill={COLORS[idx % COLORS.length]}
+                                                            radius={[4, 4, 0, 0]}
+                                                            isAnimationActive={false}
+                                                        >
+                                                            <LabelList dataKey={key} position="top" style={{ fontSize: '9px', fontWeight: 'bold', fill: '#1e1b4b' }} offset={5} />
+                                                        </Bar>
+                                                    ))}
+                                                </BarChart>
+                                            </ResponsiveContainer>
+                                        </CardContent>
+                                    </Card>
+                                )}
 
                                 <Card className="border-0 shadow-sm rounded-2xl sm:rounded-[2rem] bg-indigo-600 text-white overflow-hidden">
                                     <CardContent className="p-6 sm:p-10 h-full flex flex-col justify-center">
@@ -433,48 +584,80 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                             </div>
                                         </CardHeader>
                                         <CardContent className="p-0 overflow-x-auto">
-                                            <Table className="min-w-[600px] sm:min-w-full">
-                                                <TableHeader>
-                                                    <TableRow className="bg-gray-50/30 dark:bg-gray-900/20 border-0 hover:bg-transparent">
-                                                        <TableHead className="pl-4 sm:pl-8 py-3 sm:py-4 font-bold">Subject</TableHead>
-                                                        <TableHead className="font-bold">Max Marks</TableHead>
-                                                        <TableHead className="font-bold">Marks Obtained</TableHead>
-                                                        <TableHead className="font-bold">Grade</TableHead>
-                                                        <TableHead className="font-bold pr-4 sm:pr-8 text-right">Attendance</TableHead>
-                                                    </TableRow>
-                                                </TableHeader>
-                                                <TableBody>
-                                                    {exam.subjects.map((sub, sIdx) => (
-                                                        <TableRow key={sIdx} className="border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
-                                                            <TableCell className="pl-4 sm:pl-8 py-4 sm:py-5 font-semibold text-gray-700 dark:text-gray-200">{sub.subject_name}</TableCell>
-                                                            <TableCell>{sub.max_marks}</TableCell>
-                                                            <TableCell className="font-bold">
-                                                                {sub.attendance_status === 'Absent' ? (
-                                                                    <span className="text-red-500 flex items-center gap-1"><XCircle className="h-4 w-4" /> AB</span>
-                                                                ) : (
-                                                                    <span className="text-indigo-600 dark:text-indigo-400">{sub.marks_obtained}</span>
-                                                                )}
-                                                            </TableCell>
-                                                            <TableCell>
-                                                                <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-0">{sub.grade || 'N/A'}</Badge>
-                                                            </TableCell>
-                                                            <TableCell className="pr-4 sm:pr-8 text-right">
-                                                                <div className="flex justify-end">
-                                                                    {sub.attendance_status === 'Present' ? (
-                                                                        <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0 gap-1 px-3">
-                                                                            <CheckCircle className="h-3 w-3" /> Present
-                                                                        </Badge>
-                                                                    ) : (
-                                                                        <Badge className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0 gap-1 px-3">
-                                                                            <XCircle className="h-3 w-3" /> Absent
-                                                                        </Badge>
+                                            {(() => {
+                                                const examHasTheory = exam.subjects?.some(s => s.has_theory == 1 || s.has_theory === true || String(s.has_theory) === 'true');
+                                                const examHasLab = exam.subjects?.some(s => s.has_lab == 1 || s.has_lab === true || String(s.has_lab) === 'true');
+                                                const examHasOral = exam.subjects?.some(s => s.has_oral == 1 || s.has_oral === true || String(s.has_oral) === 'true');
+
+                                                return (
+                                                    <Table className="min-w-[600px] sm:min-w-full">
+                                                        <TableHeader>
+                                                            <TableRow className="bg-gray-50/30 dark:bg-gray-900/20 border-0 hover:bg-transparent">
+                                                                <TableHead className="pl-4 sm:pl-8 py-3 sm:py-4 font-bold">Subject</TableHead>
+                                                                {examHasTheory && <TableHead className="font-bold">Theory</TableHead>}
+                                                                {examHasLab && <TableHead className="font-bold">Lab</TableHead>}
+                                                                {examHasOral && <TableHead className="font-bold">Oral</TableHead>}
+                                                                <TableHead className="font-bold">Max Marks</TableHead>
+                                                                <TableHead className="font-bold">Marks Obtained</TableHead>
+                                                                <TableHead className="font-bold">Grade</TableHead>
+                                                                <TableHead className="font-bold pr-4 sm:pr-8 text-right">Attendance</TableHead>
+                                                            </TableRow>
+                                                        </TableHeader>
+                                                        <TableBody>
+                                                            {exam.subjects.map((sub, sIdx) => (
+                                                                <TableRow key={sIdx} className="border-gray-50 dark:border-gray-800/50 hover:bg-gray-50/50 dark:hover:bg-gray-800/20 transition-colors">
+                                                                    <TableCell className="pl-4 sm:pl-8 py-4 sm:py-5 font-semibold text-gray-700 dark:text-gray-200">{sub.subject_name}</TableCell>
+                                                                    {examHasTheory && (
+                                                                        <TableCell>
+                                                                            {sub.has_theory == 1 || sub.has_theory === true || String(sub.has_theory) === 'true' ? (
+                                                                                sub.attendance_status === 'Absent' ? 'AB' : `${sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/${sub.theory_max_marks || 0}`
+                                                                            ) : '-'}
+                                                                        </TableCell>
                                                                     )}
-                                                                </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))}
-                                                </TableBody>
-                                            </Table>
+                                                                    {examHasLab && (
+                                                                        <TableCell>
+                                                                            {sub.has_lab == 1 || sub.has_lab === true || String(sub.has_lab) === 'true' ? (
+                                                                                sub.attendance_status === 'Absent' ? 'AB' : `${sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/${sub.lab_max_marks || 0}`
+                                                                            ) : '-'}
+                                                                        </TableCell>
+                                                                    )}
+                                                                    {examHasOral && (
+                                                                        <TableCell>
+                                                                            {sub.has_oral == 1 || sub.has_oral === true || String(sub.has_oral) === 'true' ? (
+                                                                                sub.attendance_status === 'Absent' ? 'AB' : `${sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/${sub.oral_max_marks || 0}`
+                                                                            ) : '-'}
+                                                                        </TableCell>
+                                                                    )}
+                                                                    <TableCell>{sub.max_marks}</TableCell>
+                                                                    <TableCell className="font-bold">
+                                                                        {sub.attendance_status === 'Absent' ? (
+                                                                            <span className="text-red-500 flex items-center gap-1"><XCircle className="h-4 w-4" /> AB</span>
+                                                                        ) : (
+                                                                            <span className="text-indigo-600 dark:text-indigo-400">{sub.marks_obtained}</span>
+                                                                        )}
+                                                                    </TableCell>
+                                                                    <TableCell>
+                                                                        <Badge className="bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300 border-0">{sub.grade || 'N/A'}</Badge>
+                                                                    </TableCell>
+                                                                    <TableCell className="pr-4 sm:pr-8 text-right">
+                                                                        <div className="flex justify-end">
+                                                                            {sub.attendance_status === 'Present' ? (
+                                                                                <Badge className="bg-emerald-50 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400 border-0 gap-1 px-3">
+                                                                                    <CheckCircle className="h-3 w-3" /> Present
+                                                                                </Badge>
+                                                                            ) : (
+                                                                                <Badge className="bg-red-50 text-red-700 dark:bg-red-900/30 dark:text-red-400 border-0 gap-1 px-3">
+                                                                                    <XCircle className="h-3 w-3" /> Absent
+                                                                                </Badge>
+                                                                            )}
+                                                                        </div>
+                                                                    </TableCell>
+                                                                </TableRow>
+                                                            ))}
+                                                        </TableBody>
+                                                    </Table>
+                                                );
+                                            })()}
                                         </CardContent>
                                     </Card>
                                 ))}

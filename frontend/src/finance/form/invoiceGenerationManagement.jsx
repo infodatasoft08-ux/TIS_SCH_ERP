@@ -648,7 +648,7 @@ export default function Invoices() {
   };
 
   const calculateBalnaceinTable = (invoice) => {
-    let balance = parseFloat(invoice.amount_due) - parseFloat(invoice.amount_paid);
+    let balance = parseFloat(invoice.amount_due || 0) - parseFloat(invoice.amount_paid || 0);
     return balance < 0 ? 0 : balance;
   };
 
@@ -1164,7 +1164,9 @@ export default function Invoices() {
               <Badge variant="outline" className="px-3 py-1">
                 <ReceiptIndianRupee className="h-3 w-3 mr-1" />
                 {formatCurrency(
-                  filteredInvoices.reduce((sum, inv) => sum + parseFloat(inv.amount_due || 0), 0)
+                  filteredInvoices.reduce((sum, inv) =>
+                    inv.status !== 'carried_forward' ? sum + calculateBalnaceinTable(inv) : sum
+                    , 0)
                 )} Total Due
               </Badge>
             </div>

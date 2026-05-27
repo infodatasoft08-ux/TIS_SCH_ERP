@@ -29,6 +29,7 @@ export default function ExamDataTable() {
     const [subjects, setSubjects] = useState([]);
     const [studentSummaries, setStudentSummaries] = useState([]);
     const [isAddMarksDialogOpen, setIsAddMarksDialogOpen] = useState(false);
+    const [marksDialogMode, setMarksDialogMode] = useState("add");
     const [isRoutineDialogOpen, setIsRoutineDialogOpen] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
@@ -165,8 +166,21 @@ export default function ExamDataTable() {
         setIsDialogOpen(true);
     }
 
-    function openAddMarksDialog(exam) {
+    function openAddMarksDialog(exam, mode = "add") {
+        const academicSubjects = exam.subjects?.filter(s => {
+            const n = s.subject_name?.toLowerCase().trim();
+            return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+        }) || [];
+
+        const isRoutineScheduled = academicSubjects.length > 0 && academicSubjects.some(s => s.exam_date !== null && s.exam_date !== undefined && s.exam_date !== '');
+
+        if (!isRoutineScheduled) {
+            toast.warning("Please create exam routine first");
+            return;
+        }
+
         setSelectedExam(exam);
+        setMarksDialogMode(mode);
         setIsAddMarksDialogOpen(true);
     }
 
@@ -919,10 +933,11 @@ export default function ExamDataTable() {
                 />
 
                 <AddExamMarksDialog
-                    key={selectedExam ? `marks-${selectedExam.id}` : 'add-marks'}
+                    key={selectedExam ? `marks-${selectedExam.id}-${marksDialogMode}` : 'add-marks'}
                     open={isAddMarksDialogOpen}
                     onOpenChange={handleAddMarksDialogClose}
                     exam={selectedExam}
+                    initialMode={marksDialogMode}
                     onSuccess={loadExams}
                 />
 

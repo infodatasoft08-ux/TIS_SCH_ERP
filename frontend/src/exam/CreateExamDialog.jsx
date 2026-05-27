@@ -27,7 +27,13 @@ const schema = z.object({
   subjects: z.array(z.object({
     subject_id: z.coerce.number(),
     max_marks: z.coerce.number(),
-    passing_marks: z.coerce.number()
+    passing_marks: z.coerce.number(),
+    has_theory: z.boolean().optional(),
+    has_lab: z.boolean().optional(),
+    has_oral: z.boolean().optional(),
+    theory_max_marks: z.coerce.number().optional(),
+    lab_max_marks: z.coerce.number().optional(),
+    oral_max_marks: z.coerce.number().optional()
   })).min(1, "At least one subject is required")
 });
 
@@ -81,22 +87,42 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           start_date: examToEdit.start_date || "",
           end_date: examToEdit.end_date || "",
           note: examToEdit.note || "",
-          subjects: examToEdit.subjects ? examToEdit.subjects.map(s => ({ subject_id: s.subject_id, max_marks: s.max_marks, passing_marks: s.passing_marks })) : []
+          subjects: examToEdit.subjects ? examToEdit.subjects.map(s => ({
+            subject_id: s.subject_id,
+            max_marks: s.max_marks,
+            passing_marks: s.passing_marks,
+            has_theory: s.has_theory === 1 || s.has_theory === true,
+            has_lab: s.has_lab === 1 || s.has_lab === true,
+            has_oral: s.has_oral === 1 || s.has_oral === true,
+            theory_max_marks: s.theory_max_marks || 0,
+            lab_max_marks: s.lab_max_marks || 0,
+            oral_max_marks: s.oral_max_marks || 0
+          })) : []
         });
-        
+
         if (examToEdit.class_id) {
-            // Find grade for this class
-            const c = classes.find(cls => cls.id === examToEdit.class_id);
-            if (c) {
-                form.setValue("grade_id", c.grade_id.toString());
-            }
+          // Find grade for this class
+          const c = classes.find(cls => cls.id === examToEdit.class_id);
+          if (c) {
+            form.setValue("grade_id", c.grade_id.toString());
+          }
         }
 
         const initialMap = {};
         if (examToEdit.subjects) {
-            examToEdit.subjects.forEach(s => {
-                initialMap[s.subject_id] = { checked: true, max_marks: s.max_marks, passing_marks: s.passing_marks };
-            });
+          examToEdit.subjects.forEach(s => {
+            initialMap[s.subject_id] = {
+              checked: true,
+              max_marks: s.max_marks,
+              passing_marks: s.passing_marks,
+              has_theory: s.has_theory === 1 || s.has_theory === true,
+              has_lab: s.has_lab === 1 || s.has_lab === true,
+              has_oral: s.has_oral === 1 || s.has_oral === true,
+              theory_max_marks: s.theory_max_marks || 0,
+              lab_max_marks: s.lab_max_marks || 0,
+              oral_max_marks: s.oral_max_marks || 0
+            };
+          });
         }
         setSelectedSubjectsMap(initialMap);
       } else {
@@ -119,7 +145,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     async function fetchAcademicYears() {
       try {
         const res = await API.get("/admin/get/academic-years");
-        const years = res.data.academic_years || [];
+        const years = res.data.academic_years || res.data.years || res.data.academicYears || [];
         setAcademicYears(years);
 
         if (!examToEdit && years.length > 0 && !form.getValues("academic_year_id")) {
@@ -135,33 +161,72 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     if (open) fetchAcademicYears();
   }, [open, examToEdit, form]);
 
+  useEffect(() => {
+    if (form.formState.errors && Object.keys(form.formState.errors).length > 0) {
+      console.error("CreateExamDialog validation errors:", form.formState.errors);
+      // Construct a helpful message listing the error fields
+      const errorFields = Object.keys(form.formState.errors).map(key => {
+        if (key === 'subjects') return 'At least one subject is required';
+        return `${key}: ${form.formState.errors[key]?.message || 'Invalid value'}`;
+      }).join(', ');
+      toast.error(`Validation failed: ${errorFields}`);
+    }
+  }, [form.formState.errors]);
+
   const handleSubjectToggle = (subject, checked) => {
-      const updatedMap = { ...selectedSubjectsMap };
-      if (checked) {
-          updatedMap[subject.id] = { checked: true, max_marks: 100, passing_marks: 35 };
-      } else {
-          delete updatedMap[subject.id];
-      }
-      setSelectedSubjectsMap(updatedMap);
-      syncFormSubjects(updatedMap);
+    const updatedMap = { ...selectedSubjectsMap };
+    if (checked) {
+      updatedMap[subject.id] = {
+        checked: true,
+        max_marks: 100,
+        passing_marks: 35,
+        has_theory: true,
+        has_lab: false,
+        has_oral: false,
+        theory_max_marks: 100,
+        lab_max_marks: 0,
+        oral_max_marks: 0
+      };
+    } else {
+      delete updatedMap[subject.id];
+    }
+    setSelectedSubjectsMap(updatedMap);
+    syncFormSubjects(updatedMap);
   };
 
   const handleMarksChange = (subjectId, field, value) => {
-      const updatedMap = { ...selectedSubjectsMap };
-      if (updatedMap[subjectId]) {
-          updatedMap[subjectId][field] = value;
-          setSelectedSubjectsMap(updatedMap);
-          syncFormSubjects(updatedMap);
-      }
+    const updatedMap = { ...selectedSubjectsMap };
+    if (updatedMap[subjectId]) {
+      updatedMap[subjectId] = {
+        ...updatedMap[subjectId],
+        [field]: value
+      };
+
+      // Recompute total max_marks based on enabled components
+      const thMax = updatedMap[subjectId].has_theory ? (parseInt(updatedMap[subjectId].theory_max_marks) || 0) : 0;
+      const lbMax = updatedMap[subjectId].has_lab ? (parseInt(updatedMap[subjectId].lab_max_marks) || 0) : 0;
+      const orMax = updatedMap[subjectId].has_oral ? (parseInt(updatedMap[subjectId].oral_max_marks) || 0) : 0;
+
+      updatedMap[subjectId].max_marks = thMax + lbMax + orMax;
+
+      setSelectedSubjectsMap(updatedMap);
+      syncFormSubjects(updatedMap);
+    }
   };
 
   const syncFormSubjects = (map) => {
-      const subjectsArray = Object.keys(map).map(id => ({
-          subject_id: parseInt(id),
-          max_marks: map[id].max_marks,
-          passing_marks: map[id].passing_marks
-      }));
-      form.setValue("subjects", subjectsArray, { shouldValidate: true });
+    const subjectsArray = Object.keys(map).map(id => ({
+      subject_id: parseInt(id),
+      max_marks: map[id].max_marks,
+      passing_marks: map[id].passing_marks,
+      has_theory: !!map[id].has_theory,
+      has_lab: !!map[id].has_lab,
+      has_oral: !!map[id].has_oral,
+      theory_max_marks: map[id].has_theory ? parseInt(map[id].theory_max_marks) || 0 : 0,
+      lab_max_marks: map[id].has_lab ? parseInt(map[id].lab_max_marks) || 0 : 0,
+      oral_max_marks: map[id].has_oral ? parseInt(map[id].oral_max_marks) || 0 : 0
+    }));
+    form.setValue("subjects", subjectsArray, { shouldValidate: true });
   };
 
   async function submit(data) {
@@ -197,7 +262,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] rounded-3xl"
+      <DialogContent className="sm:max-w-[780px] rounded-3xl"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
@@ -291,111 +356,177 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <FormField
-                    control={form.control}
-                    name="start_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Exam Start Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="dd/mm/yyyy"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="end_date"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Exam End Date</FormLabel>
-                        <FormControl>
-                          <DatePicker
-                            value={field.value}
-                            onChange={field.onChange}
-                            placeholder="dd/mm/yyyy"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  control={form.control}
+                  name="start_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Exam Start Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="end_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Exam End Date</FormLabel>
+                      <FormControl>
+                        <DatePicker
+                          value={field.value}
+                          onChange={field.onChange}
+                          placeholder="dd/mm/yyyy"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               <div className="grid grid-cols-1 gap-4">
-                  <FormField
-                    name="note"
-                    control={form.control}
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Instructions/Note</FormLabel>
-                        <FormControl>
-                          <Textarea {...field} placeholder="Enter exam instructions..." rows={1} />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                <FormField
+                  name="note"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Instructions/Note</FormLabel>
+                      <FormControl>
+                        <Textarea {...field} placeholder="Enter exam instructions..." rows={1} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               </div>
 
               {filteredSubjects.length > 0 && (
-                  <div className="mt-6 border-t pt-4">
-                      <FormLabel className="text-lg font-semibold mb-2 block">Select Subjects for Exam *</FormLabel>
-                      {form.formState.errors.subjects && <p className="text-sm text-red-500 mb-2">{form.formState.errors.subjects.message}</p>}
-                      <div className="space-y-4">
-                          {filteredSubjects.filter(s => {
-                              const n = s.name?.toLowerCase().trim();
-                              return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-                          }).map(subject => {
-                              const isChecked = !!selectedSubjectsMap[subject.id];
-                              return (
-                                  <div key={subject.id} className="flex flex-col md:flex-row items-start md:items-center justify-between border p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
-                                      <div className="flex items-center space-x-2">
-                                          <Checkbox 
-                                            id={`subject-${subject.id}`} 
-                                            checked={isChecked}
-                                            disabled={!!examToEdit}
-                                            onCheckedChange={(checked) => handleSubjectToggle(subject, checked)}
-                                          />
-                                          <label htmlFor={`subject-${subject.id}`} className="font-medium cursor-pointer text-slate-900 dark:text-slate-100">
-                                              {subject.name}
-                                          </label>
-                                      </div>
-                                      
-                                      {isChecked && (
-                                          <div className="flex space-x-4 mt-2 md:mt-0 ml-6 md:ml-0">
-                                              <div>
-                                                  <label className="text-xs text-gray-500 block">Total Marks</label>
-                                                  <Input 
-                                                    type="number" 
-                                                    className="w-24 h-8" 
-                                                    value={selectedSubjectsMap[subject.id].max_marks}
-                                                    onChange={(e) => handleMarksChange(subject.id, 'max_marks', parseInt(e.target.value) || 0)}
-                                                    min="1"
-                                                  />
-                                              </div>
-                                              <div>
-                                                  <label className="text-xs text-gray-500 block">Passing Marks</label>
-                                                  <Input 
-                                                    type="number" 
-                                                    className="w-24 h-8" 
-                                                    value={selectedSubjectsMap[subject.id].passing_marks}
-                                                    onChange={(e) => handleMarksChange(subject.id, 'passing_marks', parseInt(e.target.value) || 0)}
-                                                    min="1"
-                                                  />
-                                              </div>
-                                          </div>
-                                      )}
-                                  </div>
-                              )
-                          })}
-                      </div>
+                <div className="mt-6 border-t pt-4">
+                  <FormLabel className="text-lg font-semibold mb-2 block">Select Subjects for Exam *</FormLabel>
+                  {form.formState.errors.subjects && <p className="text-sm text-red-500 mb-2">{form.formState.errors.subjects.message}</p>}
+                  <div className="space-y-4">
+                    {filteredSubjects.filter(s => {
+                      const n = s.name?.toLowerCase().trim();
+                      return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                    }).map(subject => {
+                      const isChecked = !!selectedSubjectsMap[subject.id];
+                      return (
+                        <div key={subject.id} className="flex flex-col md:flex-row items-start md:items-center justify-between border p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`subject-${subject.id}`}
+                              checked={isChecked}
+                              disabled={!!examToEdit}
+                              onCheckedChange={(checked) => handleSubjectToggle(subject, checked)}
+                            />
+                            <label htmlFor={`subject-${subject.id}`} className="font-medium cursor-pointer text-slate-900 dark:text-slate-100">
+                              {subject.name}
+                            </label>
+                          </div>
+
+                          {isChecked && (
+                            <div className="flex flex-col gap-3 mt-3 w-full border-t pt-3 ml-6 md:ml-3">
+                              <div className="flex flex-wrap gap-4 items-center">
+                                <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 p-2.5 rounded-lg border">
+                                  <Checkbox
+                                    id={`theory-${subject.id}`}
+                                    checked={!!selectedSubjectsMap[subject.id].has_theory}
+                                    disabled={!!examToEdit}
+                                    onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_theory', !!checked)}
+                                  />
+                                  <label htmlFor={`theory-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Theory</label>
+                                  {selectedSubjectsMap[subject.id].has_theory && (
+                                    <Input
+                                      type="number"
+                                      className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                                      placeholder="Max"
+                                      value={selectedSubjectsMap[subject.id].theory_max_marks || ''}
+                                      disabled={!!examToEdit}
+                                      onChange={(e) => handleMarksChange(subject.id, 'theory_max_marks', parseInt(e.target.value) || 0)}
+                                      min="0"
+                                    />
+                                  )}
+                                </div>
+
+                                <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 p-2.5 rounded-lg border">
+                                  <Checkbox
+                                    id={`lab-${subject.id}`}
+                                    checked={!!selectedSubjectsMap[subject.id].has_lab}
+                                    disabled={!!examToEdit}
+                                    onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_lab', !!checked)}
+                                  />
+                                  <label htmlFor={`lab-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Lab/Practical</label>
+                                  {selectedSubjectsMap[subject.id].has_lab && (
+                                    <Input
+                                      type="number"
+                                      className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                                      placeholder="Max"
+                                      value={selectedSubjectsMap[subject.id].lab_max_marks || ''}
+                                      disabled={!!examToEdit}
+                                      onChange={(e) => handleMarksChange(subject.id, 'lab_max_marks', parseInt(e.target.value) || 0)}
+                                      min="0"
+                                    />
+                                  )}
+                                </div>
+
+                                <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 p-2.5 rounded-lg border">
+                                  <Checkbox
+                                    id={`oral-${subject.id}`}
+                                    checked={!!selectedSubjectsMap[subject.id].has_oral}
+                                    disabled={!!examToEdit}
+                                    onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_oral', !!checked)}
+                                  />
+                                  <label htmlFor={`oral-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Oral</label>
+                                  {selectedSubjectsMap[subject.id].has_oral && (
+                                    <Input
+                                      type="number"
+                                      className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                                      placeholder="Max"
+                                      value={selectedSubjectsMap[subject.id].oral_max_marks || ''}
+                                      disabled={!!examToEdit}
+                                      onChange={(e) => handleMarksChange(subject.id, 'oral_max_marks', parseInt(e.target.value) || 0)}
+                                      min="0"
+                                    />
+                                  )}
+                                </div>
+                              </div>
+
+                              <div className="flex gap-4">
+                                <div>
+                                  <label className="text-xs text-gray-500 block font-semibold">Total Max Marks</label>
+                                  <Input
+                                    type="number"
+                                    className="w-24 h-8 bg-slate-100 dark:bg-slate-800 font-semibold cursor-not-allowed"
+                                    value={selectedSubjectsMap[subject.id].max_marks}
+                                    readOnly
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 block font-semibold">Passing Marks</label>
+                                  <Input
+                                    type="number"
+                                    className="w-24 h-8"
+                                    value={selectedSubjectsMap[subject.id].passing_marks || ''}
+                                    onChange={(e) => handleMarksChange(subject.id, 'passing_marks', parseInt(e.target.value) || 0)}
+                                    min="1"
+                                  />
+                                </div>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      )
+                    })}
                   </div>
+                </div>
               )}
             </form>
           </ScrollArea>

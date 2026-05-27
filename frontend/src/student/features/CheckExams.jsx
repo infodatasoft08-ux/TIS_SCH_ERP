@@ -227,7 +227,22 @@ const CheckExams = () => {
                                                         <td className="p-3 text-center font-bold">
                                                             {selectedExam.is_results_published ? (
                                                                 sub.attendance_status === 'Absent' ? <span className="text-red-500">Absent</span> :
-                                                                    sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'
+                                                                    <div className="flex flex-col items-center">
+                                                                        <span className="text-sm font-bold text-slate-800 dark:text-slate-200">
+                                                                            {sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'}
+                                                                        </span>
+                                                                        <div className="flex flex-wrap gap-2 text-[10px] text-muted-foreground font-normal mt-0.5 justify-center">
+                                                                            {sub.has_theory === 1 && (
+                                                                                <span>T: {sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/{sub.theory_max_marks}</span>
+                                                                            )}
+                                                                            {sub.has_lab === 1 && (
+                                                                                <span>L: {sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/{sub.lab_max_marks}</span>
+                                                                            )}
+                                                                            {sub.has_oral === 1 && (
+                                                                                <span>O: {sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/{sub.oral_max_marks}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
                                                             ) : (
                                                                 <span className="text-muted-foreground text-xs font-normal italic">Pending Publication</span>
                                                             )}
@@ -285,7 +300,20 @@ const CheckExams = () => {
                                                         <span className="font-semibold text-foreground">
                                                             {selectedExam.is_results_published ? (
                                                                 sub.attendance_status === 'Absent' ? <span className="text-red-500">Absent</span> :
-                                                                    sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'
+                                                                    <div className="flex flex-col">
+                                                                        <span>{sub.marks_obtained !== null && sub.marks_obtained !== undefined ? sub.marks_obtained : '-'}</span>
+                                                                        <div className="flex flex-col text-[10px] text-muted-foreground font-normal mt-0.5">
+                                                                            {sub.has_theory === 1 && (
+                                                                                <span>Theory: {sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/{sub.theory_max_marks}</span>
+                                                                            )}
+                                                                            {sub.has_lab === 1 && (
+                                                                                <span>Lab: {sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/{sub.lab_max_marks}</span>
+                                                                            )}
+                                                                            {sub.has_oral === 1 && (
+                                                                                <span>Oral: {sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/{sub.oral_max_marks}</span>
+                                                                            )}
+                                                                        </div>
+                                                                    </div>
                                                             ) : (
                                                                 <span className="text-muted-foreground text-xs font-normal italic">Pending</span>
                                                             )}

@@ -268,6 +268,15 @@
                 <thead>
                     <tr>
                         <th>Subject</th>
+                        {{#if exam.showTheory}}
+                        <th>Theory</th>
+                        {{/if}}
+                        {{#if exam.showLab}}
+                        <th>Lab</th>
+                        {{/if}}
+                        {{#if exam.showOral}}
+                        <th>Oral</th>
+                        {{/if}}
                         <th>Max Marks</th>
                         <th>Marks Obtained</th>
                         <th>Grade</th>
@@ -278,6 +287,36 @@
                     {{#each exam.subjects}}
                     <tr>
                         <td>{{this.subject_name}}</td>
+                        {{#if ../exam.showTheory}}
+                        <td>
+                            {{#if this.has_theory}}
+                            {{#if (eq this.attendance_status "Absent")}}AB{{else}}{{this.theory_marks_obtained}} /
+                            {{this.theory_max_marks}}{{/if}}
+                            {{else}}
+                            -
+                            {{/if}}
+                        </td>
+                        {{/if}}
+                        {{#if ../exam.showLab}}
+                        <td>
+                            {{#if this.has_lab}}
+                            {{#if (eq this.attendance_status "Absent")}}AB{{else}}{{this.lab_marks_obtained}} /
+                            {{this.lab_max_marks}}{{/if}}
+                            {{else}}
+                            -
+                            {{/if}}
+                        </td>
+                        {{/if}}
+                        {{#if ../exam.showOral}}
+                        <td>
+                            {{#if this.has_oral}}
+                            {{#if (eq this.attendance_status "Absent")}}AB{{else}}{{this.oral_marks_obtained}} /
+                            {{this.oral_max_marks}}{{/if}}
+                            {{else}}
+                            -
+                            {{/if}}
+                        </td>
+                        {{/if}}
                         <td>{{this.max_marks}}</td>
                         <td>{{#if (eq this.attendance_status "Absent")}}AB{{else}}{{this.marks_obtained}}{{/if}}</td>
                         <td>{{this.grade}}</td>

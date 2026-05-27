@@ -1,6 +1,8 @@
 const formatMySQLDate = require('../config/deateConverter');
 const db = require('../db');
 const pdfService = require('../services/pdfService');
+const storageService = require('../services/storageService');
+const path = require('path');
 const { generateAdmitCardPDF } = require('../helper/pdfHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -33,9 +35,30 @@ const AddExamGroup = async (req, res) => {
 
         // insert exam_group_subjects
         for (const sub of subjects) {
+            const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
+            const hasLab = sub.has_lab ? 1 : 0;
+            const hasOral = sub.has_oral ? 1 : 0;
+            
+            const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
+            const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
+            const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
+            
+            const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
+
             await conn.execute(
-                `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks) VALUES (?, ?, ?, ?)`,
-                [examGroupId, toInt(sub.subject_id), toInt(sub.max_marks) || 100, toInt(sub.passing_marks) || 35]
+                `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                [
+                    examGroupId, 
+                    toInt(sub.subject_id), 
+                    calculatedMax, 
+                    toInt(sub.passing_marks) || 35,
+                    hasTheory,
+                    hasLab,
+                    hasOral,
+                    hasTheory ? thMax : null,
+                    hasLab ? lbMax : null,
+                    hasOral ? orMax : null
+                ]
             );
         }
 
@@ -197,26 +220,49 @@ const UpdateExamRoutine = async (req, res) => {
 
 const AddExamGroupMarks = async (req, res) => {
     const { exam_group_id, marks } = req.body;
-    // marks: [{ student_id, student_academic_id, subject_id, attendance_status, marks_obtained }]
+    // marks: [{ student_id, student_academic_id, subject_id, attendance_status, theory_marks_obtained, lab_marks_obtained, oral_marks_obtained }]
     if (!exam_group_id || !Array.isArray(marks)) return res.status(400).json({ error: 'exam_group_id and marks array required' });
 
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
 
+        // 1. Verify results are not published
+        const [[examGroup]] = await conn.execute(`SELECT is_results_published FROM exam_groups WHERE id = ?`, [exam_group_id]);
+        if (examGroup && examGroup.is_results_published) {
+            conn.release();
+            return res.status(400).json({ error: 'Cannot add or update marks after results are published' });
+        }
+
         // Get subjects for this group
-        const [subRows] = await conn.execute(`SELECT id, subject_id, passing_marks, max_marks FROM exam_group_subjects WHERE exam_group_id = ?`, [exam_group_id]);
-        const subjectMap = {}; // subject_id -> { id, max_marks }
+        const [subRows] = await conn.execute(`SELECT id, subject_id, passing_marks, max_marks, has_theory, has_lab, has_oral FROM exam_group_subjects WHERE exam_group_id = ?`, [exam_group_id]);
+        const subjectMap = {}; // subject_id -> { id, max_marks, has_theory, has_lab, has_oral }
         subRows.forEach(s => subjectMap[s.subject_id] = s);
 
         for (const m of marks) {
             const groupSub = subjectMap[m.subject_id];
             if (!groupSub) continue;
 
+            const hasTheory = groupSub.has_theory;
+            const hasLab = groupSub.has_lab;
+            const hasOral = groupSub.has_oral;
+
+            let thMarks = null;
+            let lbMarks = null;
+            let orMarks = null;
+            let totalObtained = null;
+
+            if (m.attendance_status === 'Present') {
+                thMarks = hasTheory && m.theory_marks_obtained !== undefined && m.theory_marks_obtained !== null && m.theory_marks_obtained !== '' ? parseFloat(m.theory_marks_obtained) : 0;
+                lbMarks = hasLab && m.lab_marks_obtained !== undefined && m.lab_marks_obtained !== null && m.lab_marks_obtained !== '' ? parseFloat(m.lab_marks_obtained) : 0;
+                orMarks = hasOral && m.oral_marks_obtained !== undefined && m.oral_marks_obtained !== null && m.oral_marks_obtained !== '' ? parseFloat(m.oral_marks_obtained) : 0;
+                totalObtained = thMarks + lbMarks + orMarks;
+            }
+
             // Simple grade calculation based on percentage
             let grade = 'F';
-            if (m.attendance_status === 'Present' && m.marks_obtained !== null) {
-                const percentage = (m.marks_obtained / groupSub.max_marks) * 100;
+            if (m.attendance_status === 'Present' && totalObtained !== null) {
+                const percentage = (totalObtained / groupSub.max_marks) * 100;
                 if (percentage >= 90) grade = 'A+';
                 else if (percentage >= 80) grade = 'A';
                 else if (percentage >= 70) grade = 'B';
@@ -227,14 +273,17 @@ const AddExamGroupMarks = async (req, res) => {
             }
 
             await conn.execute(`
-                INSERT INTO exam_group_results (exam_group_subject_id, student_id, student_academic_id, attendance_status, marks_obtained, grade, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO exam_group_results (exam_group_subject_id, student_id, student_academic_id, attendance_status, marks_obtained, theory_marks_obtained, lab_marks_obtained, oral_marks_obtained, grade, recorded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ON DUPLICATE KEY UPDATE
                     attendance_status = VALUES(attendance_status),
                     marks_obtained = VALUES(marks_obtained),
+                    theory_marks_obtained = VALUES(theory_marks_obtained),
+                    lab_marks_obtained = VALUES(lab_marks_obtained),
+                    oral_marks_obtained = VALUES(oral_marks_obtained),
                     grade = VALUES(grade),
                     recorded_at = NOW()
-            `, [groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, m.marks_obtained, grade]);
+            `, [groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained, thMarks, lbMarks, orMarks, grade]);
         }
 
         // Change status to Over
@@ -309,7 +358,8 @@ const GetExamsForStudent = async (req, res) => {
             const groupIds = examRows.map(r => r.id);
             const [subjectRows] = await conn.query(`
                 SELECT egs.*, s.name AS subject_name,
-                       egr.marks_obtained, egr.grade as result_grade, egr.attendance_status
+                       egr.marks_obtained, egr.grade as result_grade, egr.attendance_status,
+                       egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained
                 FROM exam_group_subjects egs
                 JOIN subjects s ON s.id = egs.subject_id
                 LEFT JOIN exam_group_results egr ON egr.exam_group_subject_id = egs.id AND egr.student_id = ?
@@ -379,6 +429,9 @@ const GetAllStudentExamSummaries = async (req, res) => {
                    COALESCE(ay.name, eg_ay.name) as academic_year_name,
                    eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
                    egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+                   egs.has_theory, egs.has_lab, egs.has_oral,
+                   egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
+                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
                    COALESCE(
                        (
                            SELECT CASE WHEN si.status = 'paid' THEN 1 ELSE 0 END
@@ -434,7 +487,16 @@ const GetAllStudentExamSummaries = async (req, res) => {
                 marks_obtained: row.marks_obtained,
                 max_marks: row.max_marks,
                 grade: row.grade,
-                attendance_status: row.attendance_status
+                attendance_status: row.attendance_status,
+                has_theory: row.has_theory,
+                has_lab: row.has_lab,
+                has_oral: row.has_oral,
+                theory_max_marks: row.theory_max_marks,
+                lab_max_marks: row.lab_max_marks,
+                oral_max_marks: row.oral_max_marks,
+                theory_marks_obtained: row.theory_marks_obtained,
+                lab_marks_obtained: row.lab_marks_obtained,
+                oral_marks_obtained: row.oral_marks_obtained
             });
         });
 
@@ -472,7 +534,10 @@ const GenerateMarksheetPDF = async (req, res) => {
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
                    COALESCE(ay.name, eg_ay.name) as academic_year_name,
                    eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
-                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name
+                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+                   egs.has_theory, egs.has_lab, egs.has_oral,
+                   egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
+                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained
             FROM exam_group_results egr
             JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
             JOIN exam_groups eg ON eg.id = egs.exam_group_id
@@ -515,7 +580,16 @@ const GenerateMarksheetPDF = async (req, res) => {
                 marks_obtained: row.marks_obtained,
                 max_marks: row.max_marks,
                 grade: row.grade || '-',
-                attendance_status: row.attendance_status
+                attendance_status: row.attendance_status,
+                has_theory: row.has_theory,
+                has_lab: row.has_lab,
+                has_oral: row.has_oral,
+                theory_max_marks: row.theory_max_marks,
+                lab_max_marks: row.lab_max_marks,
+                oral_max_marks: row.oral_max_marks,
+                theory_marks_obtained: row.theory_marks_obtained,
+                lab_marks_obtained: row.lab_marks_obtained,
+                oral_marks_obtained: row.oral_marks_obtained
             });
             totalMax += Number(row.max_marks || 0);
             if (row.attendance_status !== 'Absent') {
@@ -523,12 +597,21 @@ const GenerateMarksheetPDF = async (req, res) => {
             }
         });
 
+        const showTheory = exam.subjects.some(s => s.has_theory === 1 || s.has_theory === true);
+        const showLab = exam.subjects.some(s => s.has_lab === 1 || s.has_lab === true);
+        const showOral = exam.subjects.some(s => s.has_oral === 1 || s.has_oral === true);
+
         const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
         const currentDate = new Date().toLocaleDateString();
 
         const templateData = {
             student,
-            exam,
+            exam: {
+                ...exam,
+                showTheory,
+                showLab,
+                showOral
+            },
             totalMax,
             totalObtained,
             percentage,
