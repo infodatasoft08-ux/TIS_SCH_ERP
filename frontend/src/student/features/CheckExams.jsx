@@ -20,6 +20,15 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import API from '@/api';
 
+const formatTime12Hour = (timeStr) => {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+};
+
 const CheckExams = () => {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -221,7 +230,7 @@ const CheckExams = () => {
                                                             {sub.exam_date ? format(new Date(sub.exam_date), 'dd MMM yyyy') : 'N/A'}
                                                         </td>
                                                         <td className="p-3">
-                                                            {sub.start_time ? `${sub.start_time} - ${sub.end_time}` : 'N/A'}
+                                                            {sub.start_time ? `${formatTime12Hour(sub.start_time)} - ${formatTime12Hour(sub.end_time)}` : 'N/A'}
                                                         </td>
                                                         <td className="p-3 text-center">{sub.max_marks}</td>
                                                         <td className="p-3 text-center font-bold">
@@ -288,7 +297,7 @@ const CheckExams = () => {
                                                     <div>
                                                         <span className="text-muted-foreground block text-xs">Time</span>
                                                         <span className="font-medium text-foreground">
-                                                            {sub.start_time ? `${sub.start_time} - ${sub.end_time}` : 'N/A'}
+                                                            {sub.start_time ? `${formatTime12Hour(sub.start_time)} - ${formatTime12Hour(sub.end_time)}` : 'N/A'}
                                                         </span>
                                                     </div>
                                                     <div>

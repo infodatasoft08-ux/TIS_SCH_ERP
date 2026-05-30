@@ -112,7 +112,7 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
             doc.setFontSize(22);
             doc.setTextColor(255, 255, 255);
             doc.setFont("helvetica", "bold");
-            doc.text("TIMES INTERNATION SCHOOL", pageWidth / 2, 18, { align: "center" });
+            doc.text("TIMES INTERNATIONAL SCHOOL", pageWidth / 2, 18, { align: "center" });
 
             doc.setFontSize(14);
             doc.setFont("helvetica", "normal");
@@ -260,9 +260,10 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
             currentY += 5;
 
             exams.forEach((exam, index) => {
-                const hasTheory = exam.subjects?.some(s => s.has_theory == 1 || s.has_theory === true || String(s.has_theory) === 'true');
-                const hasLab = exam.subjects?.some(s => s.has_lab == 1 || s.has_lab === true || String(s.has_lab) === 'true');
-                const hasOral = exam.subjects?.some(s => s.has_oral == 1 || s.has_oral === true || String(s.has_oral) === 'true');
+                const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1) || (typeof val === 'object' && val !== null && val[0] === 1);
+                const hasTheory = exam.subjects?.some(s => checkTrue(s.has_theory));
+                const hasLab = exam.subjects?.some(s => checkTrue(s.has_lab));
+                const hasOral = exam.subjects?.some(s => checkTrue(s.has_oral));
 
                 // Build Table Head dynamically
                 const headRow = ['Subject'];
@@ -277,21 +278,21 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                 const tableBody = (exam.subjects || []).map(sub => {
                     const row = [sub.subject_name];
                     if (hasTheory) {
-                        if (sub.has_theory == 1 || sub.has_theory === true || String(sub.has_theory) === 'true') {
+                        if (checkTrue(sub.has_theory)) {
                             row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/${sub.theory_max_marks || 0}`);
                         } else {
                             row.push('-');
                         }
                     }
                     if (hasLab) {
-                        if (sub.has_lab == 1 || sub.has_lab === true || String(sub.has_lab) === 'true') {
+                        if (checkTrue(sub.has_lab)) {
                             row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/${sub.lab_max_marks || 0}`);
                         } else {
                             row.push('-');
                         }
                     }
                     if (hasOral) {
-                        if (sub.has_oral == 1 || sub.has_oral === true || String(sub.has_oral) === 'true') {
+                        if (checkTrue(sub.has_oral)) {
                             row.push(sub.attendance_status === 'Absent' ? 'AB' : `${sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/${sub.oral_max_marks || 0}`);
                         } else {
                             row.push('-');
@@ -585,9 +586,10 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                         </CardHeader>
                                         <CardContent className="p-0 overflow-x-auto">
                                             {(() => {
-                                                const examHasTheory = exam.subjects?.some(s => s.has_theory == 1 || s.has_theory === true || String(s.has_theory) === 'true');
-                                                const examHasLab = exam.subjects?.some(s => s.has_lab == 1 || s.has_lab === true || String(s.has_lab) === 'true');
-                                                const examHasOral = exam.subjects?.some(s => s.has_oral == 1 || s.has_oral === true || String(s.has_oral) === 'true');
+                                                const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1) || (typeof val === 'object' && val !== null && val[0] === 1);
+                                                const examHasTheory = exam.subjects?.some(s => checkTrue(s.has_theory));
+                                                const examHasLab = exam.subjects?.some(s => checkTrue(s.has_lab));
+                                                const examHasOral = exam.subjects?.some(s => checkTrue(s.has_oral));
 
                                                 return (
                                                     <Table className="min-w-[600px] sm:min-w-full">
@@ -609,21 +611,21 @@ export default function StudentPerformanceReport({ open, onOpenChange, student }
                                                                     <TableCell className="pl-4 sm:pl-8 py-4 sm:py-5 font-semibold text-gray-700 dark:text-gray-200">{sub.subject_name}</TableCell>
                                                                     {examHasTheory && (
                                                                         <TableCell>
-                                                                            {sub.has_theory == 1 || sub.has_theory === true || String(sub.has_theory) === 'true' ? (
+                                                                            {checkTrue(sub.has_theory) ? (
                                                                                 sub.attendance_status === 'Absent' ? 'AB' : `${sub.theory_marks_obtained !== null && sub.theory_marks_obtained !== undefined ? sub.theory_marks_obtained : 0}/${sub.theory_max_marks || 0}`
                                                                             ) : '-'}
                                                                         </TableCell>
                                                                     )}
                                                                     {examHasLab && (
                                                                         <TableCell>
-                                                                            {sub.has_lab == 1 || sub.has_lab === true || String(sub.has_lab) === 'true' ? (
+                                                                            {checkTrue(sub.has_lab) ? (
                                                                                 sub.attendance_status === 'Absent' ? 'AB' : `${sub.lab_marks_obtained !== null && sub.lab_marks_obtained !== undefined ? sub.lab_marks_obtained : 0}/${sub.lab_max_marks || 0}`
                                                                             ) : '-'}
                                                                         </TableCell>
                                                                     )}
                                                                     {examHasOral && (
                                                                         <TableCell>
-                                                                            {sub.has_oral == 1 || sub.has_oral === true || String(sub.has_oral) === 'true' ? (
+                                                                            {checkTrue(sub.has_oral) ? (
                                                                                 sub.attendance_status === 'Absent' ? 'AB' : `${sub.oral_marks_obtained !== null && sub.oral_marks_obtained !== undefined ? sub.oral_marks_obtained : 0}/${sub.oral_max_marks || 0}`
                                                                             ) : '-'}
                                                                         </TableCell>

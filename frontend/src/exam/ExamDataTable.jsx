@@ -16,8 +16,12 @@ import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { useAuth } from "@/auth/AuthContext";
 
 export default function ExamDataTable() {
+    const { user } = useAuth();
+    const isTeacher = user?.role_id === 2;
+
     const [exams, setExams] = useState([]);
     const [students, setStudents] = useState([]);
     const [classes, setClasses] = useState([]);
@@ -696,55 +700,57 @@ export default function ExamDataTable() {
                                                                     </PopoverContent>
                                                                 </Popover>
 
-                                                                {student.due_cleared ? (
-                                                                    <Popover>
-                                                                        <PopoverTrigger asChild>
-                                                                            <Button variant="outline" size="sm" className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
-                                                                                <FileText className="h-3.5 w-3.5" /> Admit Card
-                                                                            </Button>
-                                                                        </PopoverTrigger>
-                                                                        <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
-                                                                            <div className="space-y-1">
-                                                                                <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
-                                                                                {student.exams.map(ex => (
-                                                                                    <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                        <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                                        <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                            <Button
-                                                                                                variant="ghost"
-                                                                                                size="icon"
-                                                                                                className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                                onClick={() => handleAdmitCardAction(student, ex, 'download')}
-                                                                                                title="Download Admit Card"
-                                                                                                disabled={isGenerating}
-                                                                                            >
-                                                                                                <Download className="h-4 w-4" />
-                                                                                            </Button>
-                                                                                            <Button
-                                                                                                variant="ghost"
-                                                                                                size="icon"
-                                                                                                className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                                onClick={() => handleAdmitCardAction(student, ex, 'print')}
-                                                                                                title="Print Admit Card"
-                                                                                                disabled={isGenerating}
-                                                                                            >
-                                                                                                <Printer className="h-4 w-4" />
-                                                                                            </Button>
+                                                                {!isTeacher && (
+                                                                    student.due_cleared ? (
+                                                                        <Popover>
+                                                                            <PopoverTrigger asChild>
+                                                                                <Button variant="outline" size="sm" className="gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
+                                                                                    <FileText className="h-3.5 w-3.5" /> Admit Card
+                                                                                </Button>
+                                                                            </PopoverTrigger>
+                                                                            <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
+                                                                                <div className="space-y-1">
+                                                                                    <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
+                                                                                    {student.exams.map(ex => (
+                                                                                        <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                            <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                                    title="Download Admit Card"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Download className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                                    title="Print Admit Card"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Printer className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                            </div>
                                                                                         </div>
-                                                                                    </div>
-                                                                                ))}
-                                                                            </div>
-                                                                        </PopoverContent>
-                                                                    </Popover>
-                                                                ) : (
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        size="sm"
-                                                                        className="gap-2 text-rose-500 border-rose-200 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
-                                                                        title="Admit Card locked: Student has pending fee dues."
-                                                                    >
-                                                                        <Lock className="h-3.5 w-3.5" /> Dues Pending
-                                                                    </Button>
+                                                                                    ))}
+                                                                                </div>
+                                                                            </PopoverContent>
+                                                                        </Popover>
+                                                                    ) : (
+                                                                        <Button
+                                                                            variant="outline"
+                                                                            size="sm"
+                                                                            className="gap-2 text-rose-500 border-rose-200 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-400 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
+                                                                            title="Admit Card locked: Student has pending fee dues."
+                                                                        >
+                                                                            <Lock className="h-3.5 w-3.5" /> Dues Pending
+                                                                        </Button>
+                                                                    )
                                                                 )}
 
                                                                 <Button
@@ -848,57 +854,59 @@ export default function ExamDataTable() {
                                                             </PopoverContent>
                                                         </Popover>
 
-                                                        {student.due_cleared ? (
-                                                            <Popover>
-                                                                <PopoverTrigger asChild>
-                                                                    <Button variant="outline" size="sm" className="w-full text-xs justify-start gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
-                                                                        <FileText className="h-3.5 w-3.5" />
-                                                                        Download Admit Card
-                                                                    </Button>
-                                                                </PopoverTrigger>
-                                                                <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
-                                                                    <div className="space-y-1">
-                                                                        <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
-                                                                        {student.exams.map(ex => (
-                                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                                <div className="flex items-center gap-1">
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="icon"
-                                                                                        className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                        onClick={() => handleAdmitCardAction(student, ex, 'download')}
-                                                                                        title="Download Admit Card"
-                                                                                        disabled={isGenerating}
-                                                                                    >
-                                                                                        <Download className="h-4 w-4" />
-                                                                                    </Button>
-                                                                                    <Button
-                                                                                        variant="ghost"
-                                                                                        size="icon"
-                                                                                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                        onClick={() => handleAdmitCardAction(student, ex, 'print')}
-                                                                                        title="Print Admit Card"
-                                                                                        disabled={isGenerating}
-                                                                                    >
-                                                                                        <Printer className="h-4 w-4" />
-                                                                                    </Button>
+                                                        {!isTeacher && (
+                                                            student.due_cleared ? (
+                                                                <Popover>
+                                                                    <PopoverTrigger asChild>
+                                                                        <Button variant="outline" size="sm" className="w-full text-xs justify-start gap-2 text-indigo-600 border-indigo-200 hover:bg-indigo-50 dark:text-indigo-400 dark:border-indigo-900 dark:hover:bg-indigo-950/30">
+                                                                            <FileText className="h-3.5 w-3.5" />
+                                                                            Download Admit Card
+                                                                        </Button>
+                                                                    </PopoverTrigger>
+                                                                    <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
+                                                                        <div className="space-y-1">
+                                                                            <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
+                                                                            {student.exams.map(ex => (
+                                                                                <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                    <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                            title="Download Admit Card"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Download className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                            title="Print Admit Card"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Printer className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
                                                                                 </div>
-                                                                            </div>
-                                                                        ))}
-                                                                    </div>
-                                                                </PopoverContent>
-                                                            </Popover>
-                                                        ) : (
-                                                            <Button
-                                                                variant="outline"
-                                                                size="sm"
-                                                                className="w-full text-xs justify-start gap-2 text-rose-500 border-rose-250 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-450 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
-                                                                title="Admit Card locked: Student has pending fee dues."
-                                                            >
-                                                                <Lock className="h-3.5 w-3.5 text-rose-500" />
-                                                                Dues Pending (Admit Card Locked)
-                                                            </Button>
+                                                                            ))}
+                                                                        </div>
+                                                                    </PopoverContent>
+                                                                </Popover>
+                                                            ) : (
+                                                                <Button
+                                                                    variant="outline"
+                                                                    size="sm"
+                                                                    className="w-full text-xs justify-start gap-2 text-rose-500 border-rose-250 bg-rose-50/50 hover:bg-rose-50 hover:text-rose-600 dark:text-rose-450 dark:border-rose-950 dark:bg-rose-950/10 cursor-not-allowed"
+                                                                    title="Admit Card locked: Student has pending fee dues."
+                                                                >
+                                                                    <Lock className="h-3.5 w-3.5 text-rose-500" />
+                                                                    Dues Pending (Admit Card Locked)
+                                                                </Button>
+                                                            )
                                                         )}
 
                                                         <Button

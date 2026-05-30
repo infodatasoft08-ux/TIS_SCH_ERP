@@ -4,8 +4,11 @@ import { Badge } from "@/components/ui/badge";
 import { CalendarIcon, BookOpen, Layers, Edit, PlusCircle, CheckCircle, Loader2, RefreshCw, Trash2, CalendarClock, Globe, Lock, Printer, MoreVertical } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { useAuth } from "@/auth/AuthContext";
 
 export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh }) {
+  const { user } = useAuth();
+  const isTeacher = user?.role_id === 2;
 
   if (!exams || exams.length === 0) {
     return (
@@ -112,10 +115,12 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                           )}
                           {isOver && (
                             <>
-                              <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
-                                {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
-                                {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
-                              </DropdownMenuItem>
+                              {!isTeacher && (
+                                <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
+                                  {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
+                                  {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
+                                </DropdownMenuItem>
+                              )}
                               <DropdownMenuItem onClick={() => window.print()}>
                                 <Printer className="mr-2 h-4 w-4" /> Print Marksheet
                               </DropdownMenuItem>
@@ -242,14 +247,16 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
 
                   {isOver && (
                     <>
-                      <Button
-                        size="sm"
-                        className={`w-full text-xs justify-start ${exam.is_results_published ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
-                        onClick={() => onToggleResultsPublish(exam)}
-                      >
-                        {exam.is_results_published ? <Lock className="mr-2 h-3.5 w-3.5" /> : <CheckCircle className="mr-2 h-3.5 w-3.5" />}
-                        {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
-                      </Button>
+                      {!isTeacher && (
+                        <Button
+                          size="sm"
+                          className={`w-full text-xs justify-start ${exam.is_results_published ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}
+                          onClick={() => onToggleResultsPublish(exam)}
+                        >
+                          {exam.is_results_published ? <Lock className="mr-2 h-3.5 w-3.5" /> : <CheckCircle className="mr-2 h-3.5 w-3.5" />}
+                          {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
+                        </Button>
+                      )}
                       <Button
                         size="sm"
                         variant="default"

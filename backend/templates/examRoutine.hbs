@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admit Card</title>
+    <title>Exam Routine</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 
@@ -31,13 +31,12 @@
             margin: 0;
         }
 
-        .admit-card-container {
+        .routine-container {
             max-width: 800px;
             margin: auto;
             margin-top: 4px;
             position: relative;
             min-height: 90vh;
-            /* Takes up most of the page height */
             display: flex;
             flex-direction: column;
         }
@@ -97,7 +96,7 @@
             padding-bottom: 10px;
         }
 
-        .admit-card-title {
+        .routine-title {
             font-size: 20px;
             font-weight: 700;
             color: var(--primary-color);
@@ -118,8 +117,7 @@
 
         .details-grid {
             display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
+            grid-template-columns: 1fr;
             margin-bottom: 15px;
             background: var(--bg-light);
             padding: 15px;
@@ -183,33 +181,6 @@
             background: #fafafa;
         }
 
-        .instructions {
-            margin-top: 15px;
-            padding: 15px;
-            background: #fffbeb;
-            border: 1px solid #fef3c7;
-            border-radius: 8px;
-        }
-
-        .instructions h4 {
-            margin: 0 0 10px 0;
-            color: #b45309;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .instructions ol {
-            margin: 0;
-            padding-left: 20px;
-            color: #78350f;
-            font-size: 11px;
-        }
-
-        .instructions li {
-            margin-bottom: 6px;
-        }
-
         .footer {
             margin-top: auto;
             padding-top: 15px;
@@ -253,7 +224,7 @@
 </head>
 
 <body>
-    <div class="admit-card-container">
+    <div class="routine-container">
         {{#if cmcLogo}}
         <img src="{{cmcLogo}}" class="watermark" alt="Watermark">
         {{/if}}
@@ -279,37 +250,16 @@
 
         <!-- Title Section -->
         <div class="title-section">
-            <div class="admit-card-title">EXAMINATION ADMIT CARD</div>
-            <div class="exam-session">{{student.academic_year_name}}</div>
+            <div class="routine-title">EXAMINATION ROUTINE</div>
+            <div class="exam-session">{{exam_session}}</div>
         </div>
 
-        <!-- Student Details Grid -->
+        <!-- Exam Details -->
         <div class="details-grid">
-            <div>
-                <h3 class="section-title">Student Details</h3>
-                <div class="detail-row">
-                    <div class="detail-label">Student Name:</div>
-                    <div class="detail-value">{{student.name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Father's Name:</div>
-                    <div class="detail-value">{{student.fathers_name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Roll Number:</div>
-                    <div class="detail-value">{{student.roll_no}}</div>
-                </div>
-            </div>
-            <div>
-                <h3 class="section-title">Examination Details</h3>
-                <div class="detail-row">
-                    <div class="detail-label">Exam Name:</div>
-                    <div class="detail-value">{{exam_name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Grade / Class:</div>
-                    <div class="detail-value">{{student.grade_name}} / {{student.class_name}}</div>
-                </div>
+            <h3 class="section-title">Examination Details</h3>
+            <div class="detail-row">
+                <div class="detail-label">Exam Name:</div>
+                <div class="detail-value">{{exam_name}}</div>
             </div>
         </div>
 
@@ -336,23 +286,11 @@
             </tbody>
         </table>
 
-        <!-- Instructions -->
-        <div class="instructions">
-            <h4>Instructions to Candidates</h4>
-            <ol>
-                <li>Candidates must carry this Admit Card to the examination hall for every session.</li>
-                <li>Please report to the examination hall at least 15 minutes before the start time.</li>
-                <li>No electronic devices, calculators, or mobile phones are allowed inside the examination hall.</li>
-                <li>Candidates found using unfair means will be disqualified immediately.</li>
-                <li>Ensure all fee dues are fully cleared; otherwise, entry to the examination may be restricted.</li>
-            </ol>
-        </div>
-
         <!-- Footer -->
         <div class="footer">
             <div class="footer-note">
                 Generated internally by CMC Management System<br>
-                Verification Code: {{admitCardCode}}
+                Date: {{currentDate}}
             </div>
             <div class="signature-area">
                 <div class="signature-line">Controller of Examinations</div>

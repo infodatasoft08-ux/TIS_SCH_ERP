@@ -124,18 +124,42 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
         const numMarks = parseFloat(marks);
         if (isNaN(numMarks)) return '';
 
+        const passMark = parseFloat(passingMarks) || 35; // Fallback to 35
+        if (numMarks < passMark) return 'F';
+
         const percentage = (numMarks / maxMarks) * 100;
         if (percentage >= 90) return 'A+';
         if (percentage >= 80) return 'A';
         if (percentage >= 70) return 'B';
         if (percentage >= 60) return 'C';
-        if (percentage >= passingMarks) return 'P';
-        return 'F';
+        return 'P';
     };
 
     const handleMarkChange = (studentId, subjectId, field, value) => {
         const sId = String(studentId);
         const subId = String(subjectId);
+
+        const groupSub = exam.subjects.find(s => String(s.subject_id) === subId);
+
+        if (groupSub && value !== '') {
+            const numValue = parseFloat(value);
+            if (!isNaN(numValue)) {
+                if (field === 'theory_marks_obtained') {
+                    const max = groupSub.theory_max_marks || groupSub.max_marks;
+                    if (numValue > max) value = max.toString();
+                    if (numValue < 0) value = '0';
+                } else if (field === 'lab_marks_obtained') {
+                    const max = groupSub.lab_max_marks || groupSub.max_marks;
+                    if (numValue > max) value = max.toString();
+                    if (numValue < 0) value = '0';
+                } else if (field === 'oral_marks_obtained') {
+                    const max = groupSub.oral_max_marks || groupSub.max_marks;
+                    if (numValue > max) value = max.toString();
+                    if (numValue < 0) value = '0';
+                }
+            }
+        }
+
         setMarksData(prev => {
             const updated = { ...prev };
             const studentData = { ...updated[sId] };
@@ -296,6 +320,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                 <TableRow>
                                                                     <TableHead className="w-[180px]">Subject</TableHead>
                                                                     <TableHead className="w-[90px]">Total Marks</TableHead>
+                                                                    <TableHead className="w-[100px]">Passing Marks</TableHead>
                                                                     <TableHead className="w-[110px]">Status</TableHead>
                                                                     <TableHead>Marks Obtained</TableHead>
                                                                     <TableHead className="w-[120px]">Calculated Grade</TableHead>
@@ -311,6 +336,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                         <TableRow key={sub.subject_id}>
                                                                             <TableCell className="font-medium">{sub.subject_name}</TableCell>
                                                                             <TableCell>{sub.max_marks}</TableCell>
+                                                                            <TableCell>{sub.passing_marks}</TableCell>
                                                                             <TableCell>
                                                                                 <Select
                                                                                     value={mData.attendance_status || 'Present'}

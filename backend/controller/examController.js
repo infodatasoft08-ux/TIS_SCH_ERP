@@ -3,7 +3,7 @@ const db = require('../db');
 const pdfService = require('../services/pdfService');
 const storageService = require('../services/storageService');
 const path = require('path');
-const { generateAdmitCardPDF } = require('../helper/pdfHelper');
+const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -262,12 +262,16 @@ const AddExamGroupMarks = async (req, res) => {
             // Simple grade calculation based on percentage
             let grade = 'F';
             if (m.attendance_status === 'Present' && totalObtained !== null) {
-                const percentage = (totalObtained / groupSub.max_marks) * 100;
-                if (percentage >= 90) grade = 'A+';
-                else if (percentage >= 80) grade = 'A';
-                else if (percentage >= 70) grade = 'B';
-                else if (percentage >= 60) grade = 'C';
-                else if (percentage >= groupSub.passing_marks) grade = 'P';
+                if (totalObtained >= groupSub.passing_marks) {
+                    const percentage = (totalObtained / groupSub.max_marks) * 100;
+                    if (percentage >= 90) grade = 'A+';
+                    else if (percentage >= 80) grade = 'A';
+                    else if (percentage >= 70) grade = 'B';
+                    else if (percentage >= 60) grade = 'C';
+                    else grade = 'P';
+                } else {
+                    grade = 'F';
+                }
             } else if (m.attendance_status === 'Absent') {
                 grade = 'AB';
             }
@@ -597,9 +601,10 @@ const GenerateMarksheetPDF = async (req, res) => {
             }
         });
 
-        const showTheory = exam.subjects.some(s => s.has_theory === 1 || s.has_theory === true);
-        const showLab = exam.subjects.some(s => s.has_lab === 1 || s.has_lab === true);
-        const showOral = exam.subjects.some(s => s.has_oral === 1 || s.has_oral === true);
+        const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+        const showTheory = exam.subjects.some(s => checkTrue(s.has_theory));
+        const showLab = exam.subjects.some(s => checkTrue(s.has_lab));
+        const showOral = exam.subjects.some(s => checkTrue(s.has_oral));
 
         const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
         const currentDate = new Date().toLocaleDateString();
@@ -707,6 +712,51 @@ const GenerateAdmitCardPDF = async (req, res) => {
     }
 };
 
+
+const GenerateExamRoutinePDF = async (req, res) => {
+    const { exam_id } = req.body;
+    if (!exam_id) {
+        return res.status(400).json({ error: 'Exam ID is required' });
+    }
+
+    try {
+        // Fetch exam group info
+        const [[examGroup]] = await db.execute(`
+            SELECT eg.name, ay.name AS academic_year_name
+            FROM exam_groups eg
+            LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
+            WHERE eg.id = ?
+        `, [exam_id]);
+
+        if (!examGroup) {
+            return res.status(404).json({ error: 'Exam not found' });
+        }
+
+        // Fetch the schedule / routine for the exam group
+        const [routine] = await db.execute(`
+            SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
+            FROM exam_group_subjects egs
+            JOIN subjects s ON s.id = egs.subject_id
+            WHERE egs.exam_group_id = ?
+            ORDER BY egs.exam_date ASC, egs.start_time ASC
+        `, [exam_id]);
+
+        // Generate Exam Routine PDF
+        const pdfBuffer = await generateExamRoutinePDF({
+            exam_name: examGroup.name,
+            exam_session: examGroup.academic_year_name || 'N/A',
+            routine
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=ExamRoutine_${examGroup.name.replace(/\s+/g, '_')}.pdf`);
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('POST /api/exam/generate-exam-routine error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     AddExamGroup,
     GetExamGroups,
@@ -720,5 +770,6 @@ module.exports = {
     GetAllStudentExamSummaries,
     GetSupervisedClassExamTrends,
     GenerateMarksheetPDF,
-    GenerateAdmitCardPDF
+    GenerateAdmitCardPDF,
+    GenerateExamRoutinePDF
 };

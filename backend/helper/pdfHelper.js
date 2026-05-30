@@ -305,6 +305,15 @@ const generateTeacherDetailsPDF = async (teacherData) => {
     });
 };
 
+const formatTime12Hour = (timeStr) => {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    const hour = parseInt(h, 10);
+    const ampm = hour >= 12 ? 'PM' : 'AM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
+};
+
 const generateBulkInvoicesPDF = async (invoices) => {
     // Convert logo to base64 for embedding
     let logoData = null;
@@ -405,7 +414,7 @@ const generateAdmitCardPDF = async (admitCardData) => {
     const formattedRoutine = (admitCardData.routine || []).map(r => ({
         ...r,
         exam_date: r.exam_date ? new Date(r.exam_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
-        time: r.start_time && r.end_time ? `${r.start_time.substring(0, 5)} - ${r.end_time.substring(0, 5)}` : 'TBD'
+        time: r.start_time && r.end_time ? `${formatTime12Hour(r.start_time)} - ${formatTime12Hour(r.end_time)}` : 'TBD'
     }));
 
     const admitCardCode = `AC-${admitCardData.student.roll_no || admitCardData.student.id}-${admitCardData.exam_id}-${Date.now().toString().slice(-4)}`;
@@ -421,6 +430,67 @@ const generateAdmitCardPDF = async (admitCardData) => {
     });
 };
 
+const generateExamRoutinePDF = async (routineData) => {
+    // Convert logos
+    let logoData = null;
+    let cmcLogo = null;
+    try {
+        const logoPath = path.join(__dirname, '../assets/school_invoice_logo.png');
+        if (fs.existsSync(logoPath)) {
+            const logoBuffer = fs.readFileSync(logoPath);
+            logoData = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+        }
+        
+        const cmcPath = path.join(__dirname, '../assets/cmc_logo.png');
+        if (fs.existsSync(cmcPath)) {
+            const cmcBuffer = fs.readFileSync(cmcPath);
+            cmcLogo = `data:image/png;base64,${cmcBuffer.toString('base64')}`;
+        }
+    } catch (e) { console.error('Logo error:', e); }
+
+    const templatePath = path.join(__dirname, '../templates/examRoutine.hbs');
+    const templateSource = fs.readFileSync(templatePath, 'utf8');
+
+    // Register add helper if not exists (handled globally usually, but just in case)
+    if (!handlebars.helpers.add) {
+        handlebars.registerHelper('add', (a, b) => a + b);
+    }
+
+    const compiledTemplate = handlebars.compile(templateSource);
+
+    // Format dates in routine
+    const formattedRoutine = (routineData.routine || []).map(r => ({
+        ...r,
+        exam_date: r.exam_date ? new Date(r.exam_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
+        time: r.start_time && r.end_time ? `${formatTime12Hour(r.start_time)} - ${formatTime12Hour(r.end_time)}` : 'TBD'
+    }));
+
+    const html = compiledTemplate({
+        ...routineData,
+        routine: formattedRoutine,
+        logoData,
+        cmcLogo,
+        currentDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+    });
+
+    const browser = await puppeteer.launch({
+        headless: 'new',
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    });
+
+    const page = await browser.newPage();
+    await page.setContent(html, { waitUntil: 'networkidle0' });
+
+    const pdfBuffer = await page.pdf({
+        format: 'A4',
+        printBackground: true,
+        margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+    });
+
+    await browser.close();
+    return pdfBuffer;
+};
+
 module.exports = {
     generateInvoicePDF,
     generatePaymentReceiptPDF,
@@ -428,5 +498,6 @@ module.exports = {
     generateAdmissionFormPDF,
     generateTeacherDetailsPDF,
     generateBulkInvoicesPDF,
-    generateAdmitCardPDF
+    generateAdmitCardPDF,
+    generateExamRoutinePDF
 };
