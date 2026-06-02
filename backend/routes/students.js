@@ -3,7 +3,7 @@ const router = express.Router();
 const auth = require('../middleware/auth');
 const pool = require('../db');
 const { getUsers } = require('../controller/getUsersController');
-const { AddStudent, GetStudent, GetStudentById, UpdateStudent, UpdateStudentPassword, AddParentOnStudent, DeleteStudent, DeleteParentOnStudent, GetStudentByClassId, GetStudentsByClassId, GetStudentSubjects, DownloadAdmissionForm } = require('../controller/studentController');
+const { AddStudent, GetStudent, GetStudentById, UpdateStudent, UpdateStudentPassword, AddParentOnStudent, DeleteStudent, DeleteParentOnStudent, GetStudentByClassId, GetStudentsByClassId, GetStudentSubjects, DownloadAdmissionForm, GetStudentsForInvoice } = require('../controller/studentController');
 const { GetStudentExamHistory } = require('../controller/examController');
 const { uploadStudentImage } = require('../middleware/uploadMiddleware');
 const { createStudent, updateStudent } = require('../middleware/studentMiddleware');
@@ -26,6 +26,7 @@ router.get('/get/student', auth, GetStudent);
 // curl http://localhost:5000/api/students/1
 router.get('/get/student_id', auth, GetStudentById);
 router.get('/get/my-subjects', auth, GetStudentSubjects);
+router.get('/getstudents/invoice', auth, GetStudentsForInvoice);
 // router.get('/get/student/class/:classId', auth, GetStudentByClassId);
 
 // curl -X PUT http://localhost:5000/api/students/update/student/1 -H "Content-Type: application/json" -d '{"first_name":"Rahul","class_id":3}'

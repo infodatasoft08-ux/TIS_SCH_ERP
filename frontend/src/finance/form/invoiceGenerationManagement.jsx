@@ -112,6 +112,10 @@ export default function Invoices() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalInvoices, setTotalInvoices] = useState(0);
+  const [totalDue, setTotalDue] = useState(0);
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
+  const [filterMonth, setFilterMonth] = useState("all");
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState(false);
@@ -125,11 +129,22 @@ export default function Invoices() {
   const [filterClass, setFilterClass] = useState("all");
 
   useEffect(() => {
-    loadInvoices();
-    loadStudents();
+    // loadInvoices();
     loadAllGradesAndClasses();
     loadAcademicYears();
   }, []);
+
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    loadInvoices();
+  }, [currentPage, pageSize, filterAcademicYear, filterGrade, filterClass, filterMonth, debouncedSearchQuery]);
 
   async function loadAcademicYears() {
     try {
@@ -180,33 +195,35 @@ export default function Invoices() {
     }
   }, [prevDuesDialogOpen]);
 
-  useEffect(() => {
-    if (searchQuery.trim() === "") {
-      setFilteredInvoices(invoices);
-    } else {
-      const filtered = invoices.filter(invoice => {
-        const studentName = invoice.user_name || "";
-        return (
-          studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          invoice.id.toString().includes(searchQuery) ||
-          invoice.class_name?.toLowerCase().includes(searchQuery.toLowerCase())
-        );
-      });
-      setFilteredInvoices(filtered);
-    }
-  }, [searchQuery, invoices, students]);
+  // useEffect(() => {
+  //   if (searchQuery.trim() === "") {
+  //     setFilteredInvoices(invoices);
+  //   } else {
+  //     const filtered = invoices.filter(invoice => {
+  //       const studentName = invoice.user_name || "";
+  //       return (
+  //         studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+  //         invoice.id.toString().includes(searchQuery) ||
+  //         invoice.class_name?.toLowerCase().includes(searchQuery.toLowerCase())
+  //       );
+  //     });
+  //     setFilteredInvoices(filtered);
+  //   }
+  // }, [searchQuery, invoices, students]);
 
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery]);
+  // useEffect(() => {
+  //   setCurrentPage(1);
+  // }, [searchQuery]);
 
 
   // Removed loadGrades from here as it's handled by loadAllGradesAndClasses
 
   useEffect(() => {
     if (formData.grade_id) {
+      loadStudentsByClass(formData.grade_id);
       loadGradeFeeStructure(formData.grade_id);
     } else {
+      setStudents([]);
       setAvailableFeeTypes([]);
     }
   }, [formData.grade_id]);
@@ -232,9 +249,7 @@ export default function Invoices() {
     }
   }
 
-  const filteredStudents = formData.grade_id
-    ? students.filter((s) => String(s.grade_id) == String(formData.grade_id))
-    : [];
+  const filteredStudents = students;
 
 
   const allStudentIds = filteredStudents.map(s => s.id);
@@ -246,14 +261,18 @@ export default function Invoices() {
   async function loadInvoices() {
     setLoading(true);
     try {
-      const params = { limit: 200, offset: 0 };
+      const params = { limit: pageSize, offset: (currentPage - 1) * pageSize };
       if (filterAcademicYear !== "all") params.academic_year_id = filterAcademicYear;
       if (filterGrade !== "all") params.grade_id = filterGrade;
       if (filterClass !== "all") params.class_id = filterClass;
+      if (filterMonth !== "all") params.month = filterMonth;
+      if (debouncedSearchQuery) params.search = debouncedSearchQuery;
 
       const res = await API.get(`/fee/list/invoices`, { params });
       setInvoices(res.data.invoices || []);
       setFilteredInvoices(res.data.invoices || []);
+      setTotalInvoices(res.data.total || 0);
+      setTotalDue(res.data.totalDue || 0);
     } catch (err) {
       console.error("Failed to load invoices", err);
       toast.error("Failed to load invoices");
@@ -262,18 +281,23 @@ export default function Invoices() {
     }
   }
 
-  async function loadStudents() {
-    setLoadingStudents(true);
+
+  const loadStudentsByClass = async (classId) => {
     try {
-      const res = await API.get("/students/get/student");
-      setStudents(res.data.students || res.data || []);
+      setLoadingStudents(true);
+
+      const res = await API.get(
+        `students/getstudents/invoice?grade_id=${classId}`
+      );
+
+      setStudents(res.data.students || []);
     } catch (err) {
-      console.error("Failed to load students", err);
+      console.error(err);
       toast.error("Failed to load students");
     } finally {
       setLoadingStudents(false);
     }
-  }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -718,7 +742,7 @@ export default function Invoices() {
   };
 
   const handleToggleSelectAll = () => {
-    const currentPageInvoices = filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize);
+    const currentPageInvoices = filteredInvoices;
     const currentPageIds = currentPageInvoices.map(inv => inv.id);
     const allSelected = currentPageIds.every(id => selectedInvoiceIds.includes(id));
 
@@ -1109,11 +1133,35 @@ export default function Invoices() {
               </Select>
             </div>
 
+            <div className="flex-1 min-w-[150px]">
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  <SelectItem value="1">January</SelectItem>
+                  <SelectItem value="2">February</SelectItem>
+                  <SelectItem value="3">March</SelectItem>
+                  <SelectItem value="4">April</SelectItem>
+                  <SelectItem value="5">May</SelectItem>
+                  <SelectItem value="6">June</SelectItem>
+                  <SelectItem value="7">July</SelectItem>
+                  <SelectItem value="8">August</SelectItem>
+                  <SelectItem value="9">September</SelectItem>
+                  <SelectItem value="10">October</SelectItem>
+                  <SelectItem value="11">November</SelectItem>
+                  <SelectItem value="12">December</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <div className="hidden md:flex items-center gap-2">
               <Button variant="outline" onClick={() => {
                 setFilterAcademicYear("all");
                 setFilterGrade("all");
                 setFilterClass("all");
+                setFilterMonth("all");
                 loadInvoices();
               }}>
                 Clear Filters
@@ -1130,6 +1178,7 @@ export default function Invoices() {
               setFilterAcademicYear("all");
               setFilterGrade("all");
               setFilterClass("all");
+              setFilterMonth("all");
               loadInvoices();
             }}>
               Clear Filters
@@ -1157,17 +1206,13 @@ export default function Invoices() {
               />
             </div>
             <div className="flex items-center gap-4">
-              <Badge variant="outline" className="px-3 py-1">
+              <Badge variant="outline" className="hidden sm:inline-flex bg-background/50 backdrop-blur-sm">
                 <FileText className="h-3 w-3 mr-1" />
-                {filteredInvoices.length} Invoices
+                {totalInvoices} Invoices
               </Badge>
               <Badge variant="outline" className="px-3 py-1">
                 <ReceiptIndianRupee className="h-3 w-3 mr-1" />
-                {formatCurrency(
-                  filteredInvoices.reduce((sum, inv) =>
-                    inv.status !== 'carried_forward' ? sum + calculateBalnaceinTable(inv) : sum
-                    , 0)
-                )} Total Due
+                {formatCurrency(totalDue)} Total Due
               </Badge>
             </div>
           </div>
@@ -1251,8 +1296,8 @@ export default function Invoices() {
                       <TableHead className="w-12">
                         <Checkbox
                           checked={
-                            filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).length > 0 &&
-                            filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).every(inv => selectedInvoiceIds.includes(inv.id))
+                            filteredInvoices.length > 0 &&
+                            filteredInvoices.every(inv => selectedInvoiceIds.includes(inv.id))
                           }
                           onCheckedChange={handleToggleSelectAll}
                         />
@@ -1269,8 +1314,8 @@ export default function Invoices() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((invoice) => (
-                      <TableRow key={invoice.id} className={selectedInvoiceIds.includes(invoice.id) ? "bg-primary/5" : ""}>
+                    {filteredInvoices.map((invoice) => (
+                      <TableRow key={invoice.id} className="hover:bg-muted/50 transition-colors">
                         <TableCell>
                           <Checkbox
                             checked={selectedInvoiceIds.includes(invoice.id)}
@@ -1434,162 +1479,164 @@ export default function Invoices() {
 
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 xl:hidden">
-                {filteredInvoices.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((invoice) => (
-                  <Card key={invoice.id} className={cn("p-4 flex flex-col gap-3 relative transition-all duration-200", selectedInvoiceIds.includes(invoice.id) ? "border-primary ring-1 ring-primary bg-primary/5 shadow-md" : "hover:shadow-md")}>
-                    <div className="absolute top-4 right-4 z-10">
-                      <Checkbox
-                        checked={selectedInvoiceIds.includes(invoice.id)}
-                        onCheckedChange={() => handleToggleSelectInvoice(invoice.id)}
-                        className="h-5 w-5"
-                      />
-                    </div>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <div className="font-mono font-bold text-sm text-primary">
-                          INV-{invoice.id.toString().padStart(4, '0')}
-                        </div>
-                        <div className="font-medium text-lg mt-1">{getStudentName(invoice.user_name)}</div>
-                        <div className="text-sm text-muted-foreground">{invoice.class_name || `Class ${invoice.class_id}`}</div>
+                <div className="space-y-4 pb-4">
+                  {filteredInvoices.map((invoice) => (
+                    <Card key={invoice.id} className="overflow-hidden border border-border/50 shadow-sm p-4 flex flex-col gap-3 relative transition-all duration-200">
+                      <div className="absolute top-4 right-4 z-10">
+                        <Checkbox
+                          checked={selectedInvoiceIds.includes(invoice.id)}
+                          onCheckedChange={() => handleToggleSelectInvoice(invoice.id)}
+                          className="h-5 w-5"
+                        />
                       </div>
-                      <div className="flex flex-col gap-1 items-end">
-                        {getStatusBadge(invoice.status)}
-                        {isOverdue(invoice) && (
-                          <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
-                            Overdue
-                          </Badge>
-                        )}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <div className="font-mono font-bold text-sm text-primary">
+                            INV-{invoice.id.toString().padStart(4, '0')}
+                          </div>
+                          <div className="font-medium text-lg mt-1">{getStudentName(invoice.user_name)}</div>
+                          <div className="text-sm text-muted-foreground">{invoice.class_name || `Class ${invoice.class_id}`}</div>
+                        </div>
+                        <div className="flex flex-col gap-1 items-end">
+                          {getStatusBadge(invoice.status)}
+                          {isOverdue(invoice) && (
+                            <Badge className="bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-400">
+                              Overdue
+                            </Badge>
+                          )}
+                          {invoice.is_auto_generate === 1 && (
+                            <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
+                              Auto-Gen Enabled
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 text-sm mt-2 border-t pt-3">
+                        <div>
+                          <div className="text-muted-foreground">Period</div>
+                          <div className="font-medium">{formatDate(invoice.period_start)} to {formatDate(invoice.period_end)}</div>
+                          <div className="text-xs text-muted-foreground mt-0.5">
+                            {invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'}
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-muted-foreground">Total Amount</div>
+                          <div className="font-bold text-base">{formatCurrency(invoice.amount_due)}</div>
+                        </div>
+                        <div className="text-left">
+                          <div className="text-muted-foreground">Amount Due</div>
+                          <div className="font-bold text-base">{formatCurrency(calculateBalnaceinTable(invoice))}</div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-muted-foreground">Amount Paid</div>
+                          <div className={invoice.amount_paid > 0 ? "text-green-600 dark:text-green-400 font-bold text-base" : "text-muted-foreground font-medium"}>
+                            {formatCurrency(invoice.amount_paid)}
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t flex-wrap">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/school/finance/invoices/${invoice.id}`)}
+                          disabled={selectedInvoiceIds.length > 0}
+                        >
+                          <Eye className="h-4 w-4 mr-1" /> View
+                        </Button>
                         {invoice.is_auto_generate === 1 && (
-                          <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400">
-                            Auto-Gen Enabled
-                          </Badge>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDisableAutoGenerate(invoice.id)}
+                            className="text-orange-500 border-orange-200"
+                            disabled={selectedInvoiceIds.length > 0}
+                          >
+                            <RefreshCw className="h-4 w-4 mr-1" /> Disable Auto-Gen
+                          </Button>
                         )}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 text-sm mt-2 border-t pt-3">
-                      <div>
-                        <div className="text-muted-foreground">Period</div>
-                        <div className="font-medium">{formatDate(invoice.period_start)} to {formatDate(invoice.period_end)}</div>
-                        <div className="text-xs text-muted-foreground mt-0.5">
-                          {invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'}
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-muted-foreground">Total Amount</div>
-                        <div className="font-bold text-base">{formatCurrency(invoice.amount_due)}</div>
-                      </div>
-                      <div className="text-left">
-                        <div className="text-muted-foreground">Amount Due</div>
-                        <div className="font-bold text-base">{formatCurrency(calculateBalnaceinTable(invoice))}</div>
-                      </div>
-                      <div className="text-right">
-                        <div className="text-muted-foreground">Amount Paid</div>
-                        <div className={invoice.amount_paid > 0 ? "text-green-600 dark:text-green-400 font-bold text-base" : "text-muted-foreground font-medium"}>
-                          {formatCurrency(invoice.amount_paid)}
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-2 mt-2 pt-3 border-t flex-wrap">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => navigate(`/school/finance/invoices/${invoice.id}`)}
-                        disabled={selectedInvoiceIds.length > 0}
-                      >
-                        <Eye className="h-4 w-4 mr-1" /> View
-                      </Button>
-                      {invoice.is_auto_generate === 1 && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => handleDisableAutoGenerate(invoice.id)}
-                          className="text-orange-500 border-orange-200"
-                          disabled={selectedInvoiceIds.length > 0}
-                        >
-                          <RefreshCw className="h-4 w-4 mr-1" /> Disable Auto-Gen
-                        </Button>
-                      )}
-                      {invoice.status !== 'paid' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setPaymentDialogOpen(true);
-                          }}
-                          className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
-                          disabled={selectedInvoiceIds.length > 0}
-                        >
-                          <CreditCard className="h-4 w-4 mr-1" /> Pay
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          setSelectedInvoice(invoice);
-                          setFineDialogOpen(true);
-                        }}
-                        className="text-red-600 dark:text-red-400"
-                        disabled={selectedInvoiceIds.length > 0}
-                      >
-                        <IndianRupeeIcon className="h-4 w-4 mr-1" /> Fine
-                      </Button>
-                      {invoice.status !== 'paid' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setDiscountDialogOpen(true);
-                          }}
-                          className="text-orange-500 dark:text-orange-400 border-orange-200 dark:border-orange-800"
-                          disabled={selectedInvoiceIds.length > 0}
-                        >
-                          <IndianRupeeIcon className="h-4 w-4 mr-1" /> Discount
-                        </Button>
-                      )}
-                      {invoice.status !== 'paid' && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSelectedInvoice(invoice);
-                            setPrevDuesDialogOpen(true);
-                          }}
-                          className="text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800"
-                          disabled={selectedInvoiceIds.length > 0}
-                        >
-                          <History className="h-4 w-4 mr-1" /> Previous Dues
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handlePrintDemand(invoice.id)}
-                        className="text-blue-500 border-blue-200"
-                        disabled={printingId === invoice.id || selectedInvoiceIds.length > 0}
-                      >
-                        {printingId === invoice.id ? (
-                          <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
-                        ) : (
-                          <FileText className="h-4 w-4 mr-1" />
+                        {invoice.status !== 'paid' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setPaymentDialogOpen(true);
+                            }}
+                            className="text-green-600 dark:text-green-400 border-green-200 dark:border-green-800"
+                            disabled={selectedInvoiceIds.length > 0}
+                          >
+                            <CreditCard className="h-4 w-4 mr-1" /> Pay
+                          </Button>
                         )}
-                        {printingId === invoice.id ? "Printing..." : "Print Bill"}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDeleteInvoice(invoice.id)}
-                        className="text-red-500 dark:text-red-400 border-red-200 dark:border-red-800"
-                        disabled={selectedInvoiceIds.length > 0}
-                      >
-                        <AlertCircle className="h-4 w-4 mr-1" /> Delete
-                      </Button>
-                    </div>
-                  </Card>
-                ))}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setSelectedInvoice(invoice);
+                            setFineDialogOpen(true);
+                          }}
+                          className="text-red-600 dark:text-red-400"
+                          disabled={selectedInvoiceIds.length > 0}
+                        >
+                          <IndianRupeeIcon className="h-4 w-4 mr-1" /> Fine
+                        </Button>
+                        {invoice.status !== 'paid' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setDiscountDialogOpen(true);
+                            }}
+                            className="text-orange-500 dark:text-orange-400 border-orange-200 dark:border-orange-800"
+                            disabled={selectedInvoiceIds.length > 0}
+                          >
+                            <IndianRupeeIcon className="h-4 w-4 mr-1" /> Discount
+                          </Button>
+                        )}
+                        {invoice.status !== 'paid' && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              setSelectedInvoice(invoice);
+                              setPrevDuesDialogOpen(true);
+                            }}
+                            className="text-purple-600 dark:text-purple-400 border-purple-200 dark:border-purple-800"
+                            disabled={selectedInvoiceIds.length > 0}
+                          >
+                            <History className="h-4 w-4 mr-1" /> Previous Dues
+                          </Button>
+                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handlePrintDemand(invoice.id)}
+                          className="text-blue-500 border-blue-200"
+                          disabled={printingId === invoice.id || selectedInvoiceIds.length > 0}
+                        >
+                          {printingId === invoice.id ? (
+                            <RefreshCw className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4 mr-1" />
+                          )}
+                          {printingId === invoice.id ? "Printing..." : "Print Bill"}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleDeleteInvoice(invoice.id)}
+                          className="text-red-500 dark:text-red-400 border-red-200 dark:border-red-800"
+                          disabled={selectedInvoiceIds.length > 0}
+                        >
+                          <AlertCircle className="h-4 w-4 mr-1" /> Delete
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
               </div>
 
               {/* Pagination Controls */}
@@ -1624,26 +1671,30 @@ export default function Invoices() {
                   >
                     <RefreshCw className="h-4 w-4" />
                   </Button>
-                  <span className="text-sm text-muted-foreground">
-                    Page {currentPage} of {Math.ceil(filteredInvoices.length / pageSize) || 1}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                      disabled={currentPage === 1}
-                    >
-                      Previous
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredInvoices.length / pageSize), p + 1))}
-                      disabled={currentPage === Math.ceil(filteredInvoices.length / pageSize) || filteredInvoices.length === 0}
-                    >
-                      Next
-                    </Button>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-muted-foreground">
+                      Page {currentPage} of {Math.ceil(totalInvoices / pageSize) || 1}
+                    </span>
+                    <div className="flex space-x-1">
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                        disabled={currentPage === 1}
+                        className="h-8 w-8"
+                      >
+                        <ChevronsUpDown className="h-4 w-4 rotate-90" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalInvoices / pageSize), p + 1))}
+                        disabled={currentPage === Math.ceil(totalInvoices / pageSize) || totalInvoices === 0}
+                        className="h-8 w-8"
+                      >
+                        <ChevronsUpDown className="h-4 w-4 -rotate-90" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               </div>

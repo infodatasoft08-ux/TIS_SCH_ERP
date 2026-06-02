@@ -56,6 +56,7 @@ export default function AdminDashboard() {
 
   // Filter States
   const [financeFilter, setFinanceFilter] = useState('monthly');
+  const [financeMonth, setFinanceMonth] = useState('all');
   const [admissionYear, setAdmissionYear] = useState('');
   const [admissionGradeId, setAdmissionGradeId] = useState('all');
   const [attendanceClassId, setAttendanceClassId] = useState('all');
@@ -91,6 +92,7 @@ export default function AdminDashboard() {
       try {
         const params = new URLSearchParams({
           financeFilter,
+          financeMonth: financeMonth === "all" ? "" : financeMonth,
           academicYear: admissionYear,
           admissionGradeId: admissionGradeId === "all" ? "" : admissionGradeId,
           attendanceClassId: attendanceClassId === "all" ? "" : attendanceClassId
@@ -104,7 +106,7 @@ export default function AdminDashboard() {
       }
     };
     fetchDashboardData();
-  }, [financeFilter, admissionYear, admissionGradeId, attendanceClassId]);
+  }, [financeFilter, financeMonth, admissionYear, admissionGradeId, attendanceClassId]);
 
   if (loading) {
     return (
@@ -386,16 +388,37 @@ export default function AdminDashboard() {
           <div className="grid grid-cols-1 gap-6 mt-6">
             {/* Finance Area Chart - Takes 2 columns */}
             <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-xl border dark:border-gray-800 shadow-lg">
-              <div className="flex items-center justify-between mb-8">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
                 <h3 className="text-xl font-bold">Financial Growth</h3>
-                <select
-                  value={financeFilter}
-                  onChange={(e) => setFinanceFilter(e.target.value.toLowerCase())}
-                  className="bg-gray-800 text-sm border-none rounded-lg px-3 py-1 text-gray-300 outline-none"
-                >
-                  <option value="yearly">Yearly</option>
-                  <option value="monthly">Monthly</option>
-                </select>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select
+                    value={financeMonth}
+                    onChange={(e) => setFinanceMonth(e.target.value)}
+                    className="bg-gray-800 text-sm border-none rounded-lg px-3 py-1 text-gray-300 outline-none"
+                  >
+                    <option value="all">All Months</option>
+                    <option value="1">January</option>
+                    <option value="2">February</option>
+                    <option value="3">March</option>
+                    <option value="4">April</option>
+                    <option value="5">May</option>
+                    <option value="6">June</option>
+                    <option value="7">July</option>
+                    <option value="8">August</option>
+                    <option value="9">September</option>
+                    <option value="10">October</option>
+                    <option value="11">November</option>
+                    <option value="12">December</option>
+                  </select>
+                  <select
+                    value={financeFilter}
+                    onChange={(e) => setFinanceFilter(e.target.value.toLowerCase())}
+                    className="bg-gray-800 text-sm border-none rounded-lg px-3 py-1 text-gray-300 outline-none"
+                  >
+                    <option value="yearly">Yearly</option>
+                    <option value="monthly">Monthly</option>
+                  </select>
+                </div>
               </div>
               <div className="h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">

@@ -33,11 +33,12 @@ import { DatePicker } from "@/components/ui/date-picker";
 
 export default function PaymentHistory() {
   const [payments, setPayments] = useState([]);
-  const [filteredPayments, setFilteredPayments] = useState([]);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("all");
   const [filterMethod, setFilterMethod] = useState("all");
+  const [filterMonth, setFilterMonth] = useState("all");
   const [dateRange, setDateRange] = useState({
     start: "",
     end: ""
@@ -52,9 +53,11 @@ export default function PaymentHistory() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
+  const [totalPaymentsCount, setTotalPaymentsCount] = useState(0);
+  const [totalPaymentsAmount, setTotalPaymentsAmount] = useState(0);
+  const [uniqueStudentsCount, setUniqueStudentsCount] = useState(0);
 
   useEffect(() => {
-    loadPayments();
     loadAllGradesAndClasses();
     loadAcademicYears();
   }, []);
@@ -82,61 +85,36 @@ export default function PaymentHistory() {
   }
 
   useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filterStatus, filterMethod, dateRange]);
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+      setCurrentPage(1);
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   useEffect(() => {
-    let filtered = payments;
+    setCurrentPage(1);
+  }, [filterStatus, filterMethod, filterMonth, dateRange, filterAcademicYear, filterGrade, filterClass]);
 
-    // Search filter
-    if (searchQuery.trim() !== "") {
-      filtered = filtered.filter(payment =>
-        payment.student_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.reference?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        payment.invoice_id.toString().includes(searchQuery)
-      );
-    }
-
-    // Status filter
-    if (filterStatus !== "all") {
-      // You might need to adjust this based on your payment status field
-    }
-
-    // Method filter
-    if (filterMethod !== "all") {
-      filtered = filtered.filter(payment => payment.payment_method === filterMethod);
-    }
-
-    // Date range filter
-    if (dateRange.start) {
-      const startDate = new Date(dateRange.start);
-      filtered = filtered.filter(payment =>
-        new Date(payment.payment_date) >= startDate
-      );
-    }
-
-    if (dateRange.end) {
-      const endDate = new Date(dateRange.end);
-      endDate.setHours(23, 59, 59, 999);
-      filtered = filtered.filter(payment =>
-        new Date(payment.payment_date) <= endDate
-      );
-    }
-
-    setFilteredPayments(filtered);
-  }, [searchQuery, filterStatus, filterMethod, dateRange, payments]);
+  useEffect(() => {
+    loadPayments();
+  }, [currentPage, pageSize, debouncedSearchQuery, filterStatus, filterMethod, filterMonth, dateRange, filterAcademicYear, filterGrade, filterClass]);
 
   async function loadPayments() {
     setLoading(true);
     try {
-      const params = { limit: 200, offset: 0, start_date: dateRange.start, end_date: dateRange.end, payment_method: filterMethod };
+      const params = { limit: pageSize, offset: (currentPage - 1) * pageSize, start_date: dateRange.start, end_date: dateRange.end, payment_method: filterMethod };
       if (filterAcademicYear !== "all") params.academic_year_id = filterAcademicYear;
       if (filterGrade !== "all") params.grade_id = filterGrade;
       if (filterClass !== "all") params.class_id = filterClass;
+      if (filterMonth !== "all") params.month = filterMonth;
+      if (debouncedSearchQuery) params.search = debouncedSearchQuery;
 
       const res = await API.get(`/fee/list/payments`, { params });
       setPayments(res.data.payments || []);
-      setFilteredPayments(res.data.payments || []);
+      setTotalPaymentsCount(res.data.total || 0);
+      setTotalPaymentsAmount(res.data.totalAmount || 0);
+      setUniqueStudentsCount(res.data.uniqueStudents || 0);
     } catch (err) {
       console.error("Failed to load payments", err);
       toast.error("Failed to load payments");
@@ -158,11 +136,12 @@ export default function PaymentHistory() {
         start_date: dateRange.start,
         end_date: dateRange.end,
         payment_method: filterMethod,
-        q: searchQuery
+        search: debouncedSearchQuery
       };
       if (filterAcademicYear !== "all") params.academic_year_id = filterAcademicYear;
       if (filterGrade !== "all") params.grade_id = filterGrade;
       if (filterClass !== "all") params.class_id = filterClass;
+      if (filterMonth !== "all") params.month = filterMonth;
 
       const res = await API.get(`/fee/export/payments`, {
         params,
@@ -227,11 +206,7 @@ export default function PaymentHistory() {
     return new Date(dateString).toLocaleDateString("en-GB");
   };
 
-  const calculateTotalPayments = () => {
-    return filteredPayments.reduce((sum, payment) =>
-      sum + parseFloat(payment.paid_amount || 0), 0
-    );
-  };
+
 
   return (
     <div className="p-3 space-y-6">
@@ -266,7 +241,7 @@ export default function PaymentHistory() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Payments</p>
-                <p className="text-2xl font-bold">{filteredPayments.length}</p>
+                <p className="text-2xl font-bold">{totalPaymentsCount}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
                 <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
@@ -280,7 +255,7 @@ export default function PaymentHistory() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold">{formatCurrency(calculateTotalPayments())}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalPaymentsAmount)}</p>
               </div>
               <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
                 <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
@@ -295,7 +270,7 @@ export default function PaymentHistory() {
               <div>
                 <p className="text-sm text-muted-foreground">Unique Students</p>
                 <p className="text-2xl font-bold">
-                  {[...new Set(filteredPayments.map(p => p.student_id))].length}
+                  {uniqueStudentsCount}
                 </p>
               </div>
               <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
@@ -359,7 +334,7 @@ export default function PaymentHistory() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div className="relative">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
@@ -381,6 +356,26 @@ export default function PaymentHistory() {
                 <SelectItem value="cheque">Cheque</SelectItem>
                 <SelectItem value="card">Card</SelectItem>
                 <SelectItem value="online">Online</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={filterMonth} onValueChange={setFilterMonth}>
+              <SelectTrigger>
+                <SelectValue placeholder="Month" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Months</SelectItem>
+                <SelectItem value="1">January</SelectItem>
+                <SelectItem value="2">February</SelectItem>
+                <SelectItem value="3">March</SelectItem>
+                <SelectItem value="4">April</SelectItem>
+                <SelectItem value="5">May</SelectItem>
+                <SelectItem value="6">June</SelectItem>
+                <SelectItem value="7">July</SelectItem>
+                <SelectItem value="8">August</SelectItem>
+                <SelectItem value="9">September</SelectItem>
+                <SelectItem value="10">October</SelectItem>
+                <SelectItem value="11">November</SelectItem>
+                <SelectItem value="12">December</SelectItem>
               </SelectContent>
             </Select>
             <div className="space-y-1.5 flex-1 min-w-[200px]">
@@ -406,7 +401,7 @@ export default function PaymentHistory() {
           </div>
           <div className="flex items-center justify-between space-y-2">
             <div className="text-sm text-muted-foreground">
-              Showing {filteredPayments.length} of {payments.length} payments
+              Showing {payments.length} of {totalPaymentsCount} payments
             </div>
 
             <div className="flex items-center gap-2">
@@ -426,6 +421,7 @@ export default function PaymentHistory() {
                   setSearchQuery("");
                   setFilterStatus("all");
                   setFilterMethod("all");
+                  setFilterMonth("all");
                   setFilterAcademicYear("all");
                   setFilterGrade("all");
                   setFilterClass("all");
@@ -456,7 +452,7 @@ export default function PaymentHistory() {
               <RefreshCw className="h-8 w-8 animate-spin text-muted-foreground mb-3" />
               <p className="text-muted-foreground">Loading payments...</p>
             </div>
-          ) : filteredPayments.length === 0 ? (
+          ) : payments.length === 0 ? (
             <div className="text-center py-12">
               <DollarSign className="h-12 w-12 mx-auto text-muted-foreground/50 mb-3" />
               <p className="text-muted-foreground">No payments found</p>
@@ -483,7 +479,7 @@ export default function PaymentHistory() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((payment) => (
+                    {payments.map((payment) => (
                       <TableRow key={payment.id}>
                         <TableCell>
                           <div className="font-medium">{formatDate(payment.payment_date)}</div>
@@ -519,22 +515,14 @@ export default function PaymentHistory() {
                         </TableCell>
                       </TableRow>
                     ))}
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-right font-bold">
-                        Total:
-                      </TableCell>
-                      <TableCell className="text-right font-mono text-lg font-bold">
-                        {formatCurrency(calculateTotalPayments())}
-                      </TableCell>
-                      <TableCell></TableCell>
-                    </TableRow>
+
                   </TableBody>
                 </Table>
               </div>
 
               {/* Mobile Card View */}
               <div className="grid grid-cols-1 gap-4 xl:hidden">
-                {filteredPayments.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((payment) => (
+                {payments.map((payment) => (
                   <Card key={payment.id} className="p-4 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
                       <div>
@@ -619,7 +607,7 @@ export default function PaymentHistory() {
                     <RefreshCw className="h-4 w-4" />
                   </Button>
                   <span className="text-sm text-muted-foreground">
-                    Page {currentPage} of {Math.ceil(filteredPayments.length / pageSize) || 1}
+                    Page {currentPage} of {Math.ceil(totalPaymentsCount / pageSize) || 1}
                   </span>
                   <div className="flex items-center gap-2">
                     <Button
@@ -633,8 +621,8 @@ export default function PaymentHistory() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(filteredPayments.length / pageSize), p + 1))}
-                      disabled={currentPage === Math.ceil(filteredPayments.length / pageSize) || filteredPayments.length === 0}
+                      onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalPaymentsCount / pageSize), p + 1))}
+                      disabled={currentPage === Math.ceil(totalPaymentsCount / pageSize) || totalPaymentsCount === 0}
                     >
                       Next
                     </Button>

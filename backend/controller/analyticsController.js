@@ -8,6 +8,7 @@ const getDashboardStats = async (req, res) => {
     try {
         const {
             financeFilter = 'monthly',
+            financeMonth,
             academicYear,
             admissionGradeId,
             attendanceClassId
@@ -118,11 +119,19 @@ const getDashboardStats = async (req, res) => {
         `);
 
         // Get total fees for summary (current year)
-        const [totalFeesRes] = await pool.execute(`
+        let feesQuery = `
             SELECT SUM(paid_amount) as total 
             FROM student_payments 
             WHERE YEAR(payment_date) = YEAR(CURDATE())
-        `);
+        `;
+        let feesParams = [];
+        
+        if (financeMonth && financeMonth !== 'all') {
+            feesQuery += ' AND MONTH(payment_date) = ?';
+            feesParams.push(Number(financeMonth));
+        }
+
+        const [totalFeesRes] = await pool.execute(feesQuery, feesParams);
 
         // --- TREND CALCULATIONS ---
 

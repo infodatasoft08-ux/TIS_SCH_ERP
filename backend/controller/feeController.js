@@ -1302,11 +1302,13 @@ const GetInvoices = async (req, res) => {
     const status = req.query.status || null;
     const from = req.query.from || null;
     const to = req.query.to || null;
-    let limit = parseInt(req.query.limit || '200', 10);
+    const search = req.query.search || null;
+    const month = req.query.month || 'all';
+    let limit = parseInt(req.query.limit || '20', 10);
     let offset = parseInt(req.query.offset || '0', 10);
-    if (!Number.isFinite(limit) || limit < 1) limit = 200;
+    if (!Number.isFinite(limit) || limit < 1) limit = 20;
     if (!Number.isFinite(offset) || offset < 0) offset = 0;
-    limit = Math.min(limit, 2000);
+    limit = Math.min(limit, 10000);
 
     const where = []; const params = [];
     if (studentId) { where.push('si.student_id = ?'); params.push(studentId); }
@@ -1314,9 +1316,18 @@ const GetInvoices = async (req, res) => {
     if (gradeId) { where.push('si.grade_id = ?'); params.push(gradeId); }
     if (classId) { where.push('si.class_id = ?'); params.push(classId); }
     if (status) { where.push('si.status = ?'); params.push(status); }
+    if (search) {
+      where.push('(u.name LIKE ? OR si.id LIKE ? OR c.name LIKE ?)');
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
     if (from && to) {
       if (!isDateString(from) || !isDateString(to)) return res.status(400).json({ error: 'from/to must be YYYY-MM-DD' });
       where.push('DATE(si.created_at) BETWEEN ? AND ?'); params.push(from, to);
+    }
+    if (month && month !== 'all') {
+      where.push('MONTH(si.period_start) = ?');
+      params.push(Number(month));
     }
 
     let baseSql = `
@@ -1330,9 +1341,10 @@ const GetInvoices = async (req, res) => {
         `;
     if (where.length) baseSql += ' WHERE ' + where.join(' AND ');
 
-    const countSql = `SELECT COUNT(*) AS total ${baseSql}`;
+    const countSql = `SELECT COUNT(*) AS total, SUM(CASE WHEN si.status != 'carried_forward' THEN GREATEST(IFNULL(si.amount_due, 0) - IFNULL(si.amount_paid, 0), 0) ELSE 0 END) AS total_due ${baseSql}`;
     const [cnt] = await pool.execute(countSql, params);
     const total = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total || 0) : 0;
+    const totalDue = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total_due || 0) : 0;
 
     const dataSql = `
         SELECT si.*, st.user_id AS student_user_id, u.name AS user_name, c.name AS class_name, g.name AS grade_name, ay.name AS academic_year_name
@@ -1351,7 +1363,7 @@ const GetInvoices = async (req, res) => {
       row.period = `${startMonth}`;
     }
 
-    return res.json({ total, limit, offset, invoices: rows });
+    return res.json({ total, totalDue, limit, offset, invoices: rows });
   } catch (err) {
     console.error('GET /api/fees/invoices error', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -1821,6 +1833,11 @@ const GetPayments = async (req, res) => {
     const classId = req.query.class_id ? Number(req.query.class_id) : null;
     const invoiceId = req.query.invoice_id ? Number(req.query.invoice_id) : null;
     const studentId = req.query.student_id ? Number(req.query.student_id) : null;
+    const search = req.query.search || null;
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+    const paymentMethod = req.query.payment_method || 'all';
+    const month = req.query.month || 'all';
     let limit = parseInt(req.query.limit || '200', 10);
     let offset = parseInt(req.query.offset || '0', 10);
     if (!Number.isFinite(limit) || limit < 1) limit = 200;
@@ -1833,6 +1850,15 @@ const GetPayments = async (req, res) => {
     if (academicYearId) { where.push('sar.academic_year_id = ?'); params.push(academicYearId); }
     if (gradeId) { where.push('si.grade_id = ?'); params.push(gradeId); }
     if (classId) { where.push('si.class_id = ?'); params.push(classId); }
+    if (paymentMethod && paymentMethod !== 'all') { where.push('sp.payment_method = ?'); params.push(paymentMethod); }
+    if (search) {
+      where.push('(u.name LIKE ? OR sp.reference LIKE ? OR sp.invoice_id LIKE ?)');
+      const searchTerm = `%${search}%`;
+      params.push(searchTerm, searchTerm, searchTerm);
+    }
+    if (startDate) { where.push('DATE(sp.payment_date) >= ?'); params.push(startDate); }
+    if (endDate) { where.push('DATE(sp.payment_date) <= ?'); params.push(endDate); }
+    if (month && month !== 'all') { where.push('MONTH(sp.payment_date) = ?'); params.push(Number(month)); }
 
     let baseSql = `
             FROM student_payments sp
@@ -1844,9 +1870,11 @@ const GetPayments = async (req, res) => {
         `;
     if (where.length) baseSql += ' WHERE ' + where.join(' AND ');
 
-    const countSql = `SELECT COUNT(*) AS total ${baseSql}`;
+    const countSql = `SELECT COUNT(*) AS total, SUM(sp.paid_amount) AS total_amount, COUNT(DISTINCT si.student_id) AS unique_students ${baseSql}`;
     const [cnt] = await pool.execute(countSql, params);
     const total = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total || 0) : 0;
+    const totalAmount = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total_amount || 0) : 0;
+    const uniqueStudents = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].unique_students || 0) : 0;
 
     const dataSql = `
             SELECT sp.*, si.student_id, st.user_id AS student_user_id, u.name AS student_name, ay.name AS academic_year
@@ -1856,7 +1884,7 @@ const GetPayments = async (req, res) => {
         `;
     const [rows] = await pool.execute(dataSql, params);
 
-    return res.json({ total, limit, offset, payments: rows });
+    return res.json({ total, totalAmount, uniqueStudents, limit, offset, payments: rows });
   } catch (err) {
     console.error('GET /api/fees/payments error', err);
     return res.status(500).json({ error: 'Internal server error' });

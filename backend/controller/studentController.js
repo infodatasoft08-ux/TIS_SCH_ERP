@@ -243,6 +243,57 @@ const GetStudent = async (req, res) => {
 };
 
 
+const GetStudentsForInvoice = async (req, res) => {
+  const classId = req.query.class_id;
+  const gradeId = req.query.grade_id;
+
+  try {
+    let whereClause = "";
+    let queryParams = [];
+
+    if (gradeId) {
+      whereClause = "WHERE ar.grade_id = ?";
+      queryParams.push(gradeId);
+    } else if (classId) {
+      whereClause = "WHERE ar.class_id = ?";
+      queryParams.push(classId);
+    }
+
+    const [students] = await db.execute(
+      `
+      SELECT
+        s.id,
+        u.name AS user_name,
+        ar.roll_no,
+        s.admission_no
+      FROM students s
+      INNER JOIN users u ON u.id = s.user_id
+      INNER JOIN student_academic_records ar ON ar.student_id = s.id
+      INNER JOIN (
+        SELECT student_id, MAX(id) latest_id
+        FROM student_academic_records
+        GROUP BY student_id
+      ) latest
+        ON latest.student_id = s.id
+       AND latest.latest_id = ar.id
+      ${whereClause}
+      ORDER BY u.name
+      `,
+      queryParams
+    );
+
+    res.json({
+      students
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({
+      error: "Internal server error"
+    });
+  }
+};
+
+
 /**
  * GET /api/students/:id
  * Returns student with user info, parents list, grade/class, invoices summary and attendance summary
@@ -901,6 +952,7 @@ const GetStudentSubjects = async (req, res) => {
 module.exports = {
   AddStudent,
   GetStudent,
+  GetStudentsForInvoice,
   GetStudentById,
   UpdateStudent,
   UpdateStudentPassword,
