@@ -158,7 +158,7 @@ const GetExamGroups = async (req, res) => {
 // Update Exam Group (Status / Details)
 const UpdateExamGroup = async (req, res) => {
     const id = toInt(req.params.id);
-    const { name, note, start_date, end_date, status, is_results_published } = req.body;
+    const { name, note, start_date, end_date, status, is_results_published, subjects } = req.body;
 
     const updates = []; const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
@@ -168,13 +168,85 @@ const UpdateExamGroup = async (req, res) => {
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
     if (is_results_published !== undefined) { updates.push('is_results_published = ?'); params.push(is_results_published ? 1 : 0); }
 
-    if (updates.length === 0) return res.status(400).json({ error: 'Nothing to update' });
+    if (updates.length === 0 && (!subjects || !Array.isArray(subjects))) return res.status(400).json({ error: 'Nothing to update' });
 
-    params.push(id);
+    const conn = await db.getConnection();
     try {
-        await db.execute(`UPDATE exam_groups SET ${updates.join(', ')} WHERE id = ?`, params);
+        await conn.beginTransaction();
+
+        if (updates.length > 0) {
+            const updateParams = [...params, id];
+            await conn.execute(`UPDATE exam_groups SET ${updates.join(', ')} WHERE id = ?`, updateParams);
+        }
+
+        if (subjects && Array.isArray(subjects)) {
+            const [existingSubjects] = await conn.execute(`SELECT id, subject_id FROM exam_group_subjects WHERE exam_group_id = ?`, [id]);
+            const existingSubjectMap = {};
+            for(let s of existingSubjects) {
+                existingSubjectMap[s.subject_id] = s.id;
+            }
+
+            const newSubjectIds = subjects.map(s => toInt(s.subject_id));
+            const subjectsToDelete = existingSubjects.filter(s => !newSubjectIds.includes(s.subject_id)).map(s => s.id);
+            
+            if (subjectsToDelete.length > 0) {
+                await conn.execute(`DELETE FROM exam_group_subjects WHERE id IN (${subjectsToDelete.join(',')})`);
+            }
+
+            for (const sub of subjects) {
+                const subId = toInt(sub.subject_id);
+                const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
+                const hasLab = sub.has_lab ? 1 : 0;
+                const hasOral = sub.has_oral ? 1 : 0;
+                
+                const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
+                const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
+                const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
+                
+                const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
+                const passMarks = toInt(sub.passing_marks) || 35;
+
+                if (existingSubjectMap[subId]) {
+                    await conn.execute(
+                        `UPDATE exam_group_subjects SET max_marks=?, passing_marks=?, has_theory=?, has_lab=?, has_oral=?, theory_max_marks=?, lab_max_marks=?, oral_max_marks=? WHERE id=?`,
+                        [
+                            calculatedMax,
+                            passMarks,
+                            hasTheory,
+                            hasLab,
+                            hasOral,
+                            hasTheory ? thMax : null,
+                            hasLab ? lbMax : null,
+                            hasOral ? orMax : null,
+                            existingSubjectMap[subId]
+                        ]
+                    );
+                } else {
+                    await conn.execute(
+                        `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                        [
+                            id, 
+                            subId, 
+                            calculatedMax, 
+                            passMarks,
+                            hasTheory,
+                            hasLab,
+                            hasOral,
+                            hasTheory ? thMax : null,
+                            hasLab ? lbMax : null,
+                            hasOral ? orMax : null
+                        ]
+                    );
+                }
+            }
+        }
+
+        await conn.commit();
+        conn.release();
         return res.json({ success: true });
     } catch (err) {
+        await conn.rollback();
+        conn.release();
         console.error('PUT /api/exam/groups/:id error', err);
         return res.status(500).json({ error: 'Internal server error' });
     }
@@ -277,8 +349,8 @@ const AddExamGroupMarks = async (req, res) => {
             }
 
             await conn.execute(`
-                INSERT INTO exam_group_results (exam_group_subject_id, student_id, student_academic_id, attendance_status, marks_obtained, theory_marks_obtained, lab_marks_obtained, oral_marks_obtained, grade, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                INSERT INTO exam_group_results (exam_group_subject_id, student_id, student_academic_id, attendance_status, marks_obtained, theory_marks_obtained, lab_marks_obtained, oral_marks_obtained, grade, teacher_remark, recorded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ON DUPLICATE KEY UPDATE
                     attendance_status = VALUES(attendance_status),
                     marks_obtained = VALUES(marks_obtained),
@@ -286,8 +358,9 @@ const AddExamGroupMarks = async (req, res) => {
                     lab_marks_obtained = VALUES(lab_marks_obtained),
                     oral_marks_obtained = VALUES(oral_marks_obtained),
                     grade = VALUES(grade),
+                    teacher_remark = VALUES(teacher_remark),
                     recorded_at = NOW()
-            `, [groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained, thMarks, lbMarks, orMarks, grade]);
+            `, [groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained, thMarks, lbMarks, orMarks, grade, m.teacher_remark || null]);
         }
 
         // Change status to Over
@@ -541,7 +614,7 @@ const GenerateMarksheetPDF = async (req, res) => {
                    egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
                    egs.has_theory, egs.has_lab, egs.has_oral,
                    egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
-                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained
+                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained, egr.teacher_remark
             FROM exam_group_results egr
             JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
             JOIN exam_groups eg ON eg.id = egs.exam_group_id
@@ -577,11 +650,13 @@ const GenerateMarksheetPDF = async (req, res) => {
 
         let totalMax = 0;
         let totalObtained = 0;
+        let serialNo = 1;
 
         rows.forEach(row => {
             exam.subjects.push({
+                serial_no: serialNo++,
                 subject_name: row.subject_name,
-                marks_obtained: row.marks_obtained,
+                marks_obtained: row.marks_obtained !== null && row.marks_obtained !== undefined ? Math.round(Number(row.marks_obtained)) : row.marks_obtained,
                 max_marks: row.max_marks,
                 grade: row.grade || '-',
                 attendance_status: row.attendance_status,
@@ -591,15 +666,17 @@ const GenerateMarksheetPDF = async (req, res) => {
                 theory_max_marks: row.theory_max_marks,
                 lab_max_marks: row.lab_max_marks,
                 oral_max_marks: row.oral_max_marks,
-                theory_marks_obtained: row.theory_marks_obtained,
-                lab_marks_obtained: row.lab_marks_obtained,
-                oral_marks_obtained: row.oral_marks_obtained
+                theory_marks_obtained: row.theory_marks_obtained !== null && row.theory_marks_obtained !== undefined ? Math.round(Number(row.theory_marks_obtained)) : row.theory_marks_obtained,
+                lab_marks_obtained: row.lab_marks_obtained !== null && row.lab_marks_obtained !== undefined ? Math.round(Number(row.lab_marks_obtained)) : row.lab_marks_obtained,
+                oral_marks_obtained: row.oral_marks_obtained !== null && row.oral_marks_obtained !== undefined ? Math.round(Number(row.oral_marks_obtained)) : row.oral_marks_obtained
             });
             totalMax += Number(row.max_marks || 0);
             if (row.attendance_status !== 'Absent') {
                 totalObtained += Number(row.marks_obtained || 0);
             }
         });
+
+        totalObtained = Math.round(totalObtained);
 
         const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
         const showTheory = exam.subjects.some(s => checkTrue(s.has_theory));
@@ -608,6 +685,28 @@ const GenerateMarksheetPDF = async (req, res) => {
 
         const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
         const currentDate = new Date().toLocaleDateString();
+
+        let hasFailed = false;
+        let dynamicTeacherRemark = null;
+        rows.forEach(row => {
+            if (row.grade === 'F' || row.attendance_status === 'Absent') {
+                hasFailed = true;
+            }
+            if (row.teacher_remark) {
+                dynamicTeacherRemark = row.teacher_remark;
+            }
+        });
+        const finalResult = hasFailed ? 'Fail' : 'Pass';
+        const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
+
+        let logoData = null;
+        try {
+            const logoPath = require('path').join(__dirname, '../assets/school_invoice_logo.png');
+            const fs = require('fs');
+            if (fs.existsSync(logoPath)) {
+                logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+            }
+        } catch (e) { }
 
         const templateData = {
             student,
@@ -620,7 +719,10 @@ const GenerateMarksheetPDF = async (req, res) => {
             totalMax,
             totalObtained,
             percentage,
-            currentDate
+            currentDate,
+            finalResult,
+            teacherRemark,
+            logoData
         };
 
         const templatePath = 'uploads/templates/student_marksheet.hbs';

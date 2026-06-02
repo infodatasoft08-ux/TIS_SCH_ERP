@@ -92,12 +92,14 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                           {!isOver && (
                             <>
                               <DropdownMenuItem onClick={() => onEditExam(exam)}>
-                                <Edit className="mr-2 h-4 w-4" /> Edit Details
+                                <Edit className="mr-2 h-4 w-4" /> Edit Exam Details
                               </DropdownMenuItem>
-                              <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
-                                {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
-                                {isPublished ? 'Unpublish' : 'Publish'}
-                              </DropdownMenuItem>
+                              {!isTeacher && (
+                                <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
+                                  {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
+                                  {isPublished ? 'Unpublish Exam' : 'Publish Exam'}
+                                </DropdownMenuItem>
+                              )}
                             </>
                           )}
                           <DropdownMenuItem onClick={() => onCreateRoutine(exam)}>
@@ -198,11 +200,11 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                       onClick={() => onEditExam(exam)}
                     >
                       <Edit className="mr-2 h-3.5 w-3.5 text-gray-500" />
-                      Edit Details
+                      Edit Exam Details
                     </Button>
                   )}
 
-                  {!isOver && (
+                  {!isOver || !isTeacher && (
                     <Button
                       variant="outline"
                       size="sm"

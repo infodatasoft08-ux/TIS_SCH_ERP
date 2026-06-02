@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMode = "add", onSuccess }) {
     const [students, setStudents] = useState([]);
     const [marksData, setMarksData] = useState({}); // { student_id: { subject_id: { attendance_status, marks_obtained, grade } } }
+    const [remarksData, setRemarksData] = useState({}); // { student_id: string }
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [mode, setMode] = useState(initialMode); // "add" or "update"
@@ -45,6 +46,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
             // Initialize marksData with stringified keys
             const initialMarks = {};
+            const initialRemarks = {};
             fetchedStudents.forEach(student => {
                 const sId = String(student.id);
                 initialMarks[sId] = {};
@@ -79,6 +81,10 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                     withMarks.add(sId);
                 }
 
+                if (res.teacher_remark) {
+                    initialRemarks[sId] = res.teacher_remark;
+                }
+
                 if (initialMarks[sId] && initialMarks[sId][subId]) {
                     initialMarks[sId][subId] = {
                         student_academic_id: res.student_academic_id,
@@ -111,6 +117,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             });
 
             setMarksData(initialMarks);
+            setRemarksData(initialRemarks);
         } catch (error) {
             console.error(error);
             toast.error("Failed to fetch students or results");
@@ -214,7 +221,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                         attendance_status: d.attendance_status,
                         theory_marks_obtained: d.attendance_status === 'Present' && groupSub.has_theory && d.theory_marks_obtained !== '' ? parseFloat(d.theory_marks_obtained) : null,
                         lab_marks_obtained: d.attendance_status === 'Present' && groupSub.has_lab && d.lab_marks_obtained !== '' ? parseFloat(d.lab_marks_obtained) : null,
-                        oral_marks_obtained: d.attendance_status === 'Present' && groupSub.has_oral && d.oral_marks_obtained !== '' ? parseFloat(d.oral_marks_obtained) : null
+                        oral_marks_obtained: d.attendance_status === 'Present' && groupSub.has_oral && d.oral_marks_obtained !== '' ? parseFloat(d.oral_marks_obtained) : null,
+                        teacher_remark: remarksData[studentId] || null
                     });
                 }
             });
@@ -421,6 +429,18 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                 })}
                                                             </TableBody>
                                                         </Table>
+                                                    </div>
+
+                                                    {/* Teacher Remark Input */}
+                                                    <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800">
+                                                        <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Teacher's Remark</label>
+                                                        <Input
+                                                            placeholder="Enter remark for this student's overall performance..."
+                                                            value={remarksData[String(student.id)] || ''}
+                                                            disabled={isDisabled}
+                                                            onChange={(e) => setRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                            className="max-w-2xl"
+                                                        />
                                                     </div>
                                                 </div>
                                             );

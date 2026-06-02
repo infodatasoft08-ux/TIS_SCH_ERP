@@ -934,7 +934,7 @@ export default function ExamDataTable() {
                     open={isDialogOpen}
                     onOpenChange={handleDialogClose}
                     examToEdit={selectedExam}
-                    onSuccess={loadExams}
+                    onSuccess={() => loadExams(true)}
                     classes={classes}
                     subjects={subjects}
                     grades={grades}
@@ -946,7 +946,7 @@ export default function ExamDataTable() {
                     onOpenChange={handleAddMarksDialogClose}
                     exam={selectedExam}
                     initialMode={marksDialogMode}
-                    onSuccess={loadExams}
+                    onSuccess={() => loadExams(true)}
                 />
 
                 <CreateRoutineDialog
@@ -954,7 +954,7 @@ export default function ExamDataTable() {
                     open={isRoutineDialogOpen}
                     onOpenChange={handleRoutineDialogClose}
                     exam={selectedExam}
-                    onSuccess={loadExams}
+                    onSuccess={() => loadExams(true)}
                 />
 
                 <StudentPerformanceReport

@@ -424,7 +424,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                             <Checkbox
                               id={`subject-${subject.id}`}
                               checked={isChecked}
-                              disabled={!!examToEdit}
                               onCheckedChange={(checked) => handleSubjectToggle(subject, checked)}
                             />
                             <label htmlFor={`subject-${subject.id}`} className="font-medium cursor-pointer text-slate-900 dark:text-slate-100">
@@ -439,7 +438,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                   <Checkbox
                                     id={`theory-${subject.id}`}
                                     checked={!!selectedSubjectsMap[subject.id].has_theory}
-                                    disabled={!!examToEdit}
                                     onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_theory', !!checked)}
                                   />
                                   <label htmlFor={`theory-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Theory</label>
@@ -449,7 +447,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                       className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
                                       placeholder="Max"
                                       value={selectedSubjectsMap[subject.id].theory_max_marks || ''}
-                                      disabled={!!examToEdit}
                                       onChange={(e) => handleMarksChange(subject.id, 'theory_max_marks', parseInt(e.target.value) || 0)}
                                       min="0"
                                     />
@@ -460,7 +457,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                   <Checkbox
                                     id={`lab-${subject.id}`}
                                     checked={!!selectedSubjectsMap[subject.id].has_lab}
-                                    disabled={!!examToEdit}
                                     onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_lab', !!checked)}
                                   />
                                   <label htmlFor={`lab-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Lab/Practical</label>
@@ -470,7 +466,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                       className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
                                       placeholder="Max"
                                       value={selectedSubjectsMap[subject.id].lab_max_marks || ''}
-                                      disabled={!!examToEdit}
                                       onChange={(e) => handleMarksChange(subject.id, 'lab_max_marks', parseInt(e.target.value) || 0)}
                                       min="0"
                                     />
@@ -481,7 +476,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                   <Checkbox
                                     id={`oral-${subject.id}`}
                                     checked={!!selectedSubjectsMap[subject.id].has_oral}
-                                    disabled={!!examToEdit}
                                     onCheckedChange={(checked) => handleMarksChange(subject.id, 'has_oral', !!checked)}
                                   />
                                   <label htmlFor={`oral-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">Oral</label>
@@ -491,7 +485,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                       className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
                                       placeholder="Max"
                                       value={selectedSubjectsMap[subject.id].oral_max_marks || ''}
-                                      disabled={!!examToEdit}
                                       onChange={(e) => handleMarksChange(subject.id, 'oral_max_marks', parseInt(e.target.value) || 0)}
                                       min="0"
                                     />
