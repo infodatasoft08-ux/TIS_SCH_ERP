@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import ImageCropUpload from "@/widgets/ImageCropUpload";
 
@@ -17,6 +18,7 @@ const createSubjectSchema = (isEditMode) => z.object({
   code: z.string().min(1, "Code required").trim(),
   name: z.string().min(1, "Name required").trim(),
   description: z.string().optional(),
+  subject_type: z.string().default("academic"),
 });
 
 export default function AddSubjectDialog({
@@ -35,7 +37,7 @@ export default function AddSubjectDialog({
   const form = useForm({
     resolver: zodResolver(subjectSchema),
     mode: "onChange", // Validate on change to see errors immediately
-    defaultValues: { code: "", name: "", description: "" },
+    defaultValues: { code: "", name: "", description: "", subject_type: "academic" },
   });
 
   // Reset form when studentToEdit changes or dialog opens
@@ -44,12 +46,13 @@ export default function AddSubjectDialog({
       setCroppedImage(null);
       setIsImageCleared(false);
       if (subjectToEdit) {
-        console.log("Setting form values for edit:", subjectToEdit);
+        // console.log("Setting form values for edit:", subjectToEdit);
 
         form.reset({
           code: subjectToEdit?.code || "",
           name: subjectToEdit?.name || "",
           description: subjectToEdit?.description || "",
+          subject_type: subjectToEdit?.subject_type || "academic",
         });
       } else {
         // Reset for new subject
@@ -57,13 +60,14 @@ export default function AddSubjectDialog({
           code: "",
           name: "",
           description: "",
+          subject_type: "academic",
         });
       }
     }
   }, [open, subjectToEdit, form]);
 
   async function onSubmit(values) {
-    console.log("Form submitted with values:", values);
+    // console.log("Form submitted with values:", values);
     setIsSubmitting(true);
 
     try {
@@ -81,7 +85,7 @@ export default function AddSubjectDialog({
         formData.append("image_url", "");
       }
 
-      console.log("Submitting form data:", Object.fromEntries(formData));
+      // console.log("Submitting form data:", Object.fromEntries(formData));
 
       if (isEditMode) {
         await API.put(`admin/update/subjects/${subjectToEdit.id}`, formData);
@@ -106,13 +110,13 @@ export default function AddSubjectDialog({
   // Add error logging
   useEffect(() => {
     const subscription = form.watch((value, { name, type }) => {
-      console.log("Form values changed:", value);
+      // console.log("Form values changed:", value);
     });
     return () => subscription.unsubscribe();
   }, [form.watch]);
 
   useEffect(() => {
-    console.log("Form errors:", form.formState.errors);
+    // console.log("Form errors:", form.formState.errors);
   }, [form.formState.errors]);
 
   return (
@@ -143,7 +147,7 @@ export default function AddSubjectDialog({
               )}
 
               {/* First Row - Subject Code, Name, Description */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <FormField
                   control={form.control}
                   name="code"
@@ -177,10 +181,33 @@ export default function AddSubjectDialog({
                   name="description"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Description *</FormLabel>
+                      <FormLabel>Description</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Enter description" />
                       </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="subject_type"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Subject Type</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select type" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="academic">Academic</SelectItem>
+                          <SelectItem value="co-scholastic">Co-Scholastic Area</SelectItem>
+                          <SelectItem value="skill-based">Skill Based Education</SelectItem>
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}

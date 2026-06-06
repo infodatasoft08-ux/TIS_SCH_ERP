@@ -5,8 +5,9 @@ import { CalendarIcon, BookOpen, Layers, Edit, PlusCircle, CheckCircle, Loader2,
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/auth/AuthContext";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh }) {
+export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh, limit = 10, setLimit, total = 0, offset = 0 }) {
   const { user } = useAuth();
   const isTeacher = user?.role_id === 2;
 
@@ -296,31 +297,61 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
       )}
 
       {exams.length > 0 && !isLoading && (
-        <div className="flex items-center justify-end gap-4 mt-8">
-          {/* Refresh */}
-          <Button
-            variant="outline"
-            onClick={onRefresh}
-          >
-            <RefreshCw className="h-3.5 w-3.5 text-gray-500" />
-          </Button>
-          <Button
-            variant="outline"
-            onClick={onPrevPage}
-            disabled={currentPage === 1}
-          >
-            Previous
-          </Button>
-          <div className="text-sm font-medium">
-            Page {currentPage}
+        <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-muted-foreground font-medium">
+              Showing {offset + 1} to {Math.min(offset + limit, total)} of {total} records
+            </p>
+            {setLimit && (
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <Select
+                  value={limit.toString()}
+                  onValueChange={(val) => setLimit(Number(val))}
+                >
+                  <SelectTrigger className="h-8 w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="10">10</SelectItem>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
           </div>
-          <Button
-            variant="outline"
-            onClick={onNextPage}
-            disabled={!hasMore}
-          >
-            Next
-          </Button>
+          <div className="flex items-center justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRefresh}
+            >
+              <RefreshCw className="h-3.5 w-3.5 text-gray-500" />
+            </Button>
+            <p className="text-sm text-muted-foreground font-medium mx-2">
+              Page {currentPage}
+            </p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onPrevPage}
+              disabled={currentPage === 1}
+              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Previous
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onNextPage}
+              disabled={!hasMore}
+              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+            >
+              Next
+            </Button>
+          </div>
         </div>
       )}
     </div>

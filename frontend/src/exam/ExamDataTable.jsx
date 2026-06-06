@@ -49,9 +49,17 @@ export default function ExamDataTable() {
     const [filterExamsSearch, setFilterExamsSearch] = useState("");
 
     // Pagination states
-    const [limit] = useState(10);
+    const [limit, setLimit] = useState(10);
     const [offset, setOffset] = useState(0);
     const [hasMore, setHasMore] = useState(true);
+    const [examsTotal, setExamsTotal] = useState(0);
+
+    // Pagination states for summaries
+    const [summariesLimit, setSummariesLimit] = useState(10);
+    const [summariesOffset, setSummariesOffset] = useState(0);
+    const [summariesHasMore, setSummariesHasMore] = useState(true);
+    const [isSummariesLoading, setIsSummariesLoading] = useState(true);
+    const [summariesTotal, setSummariesTotal] = useState(0);
 
     async function loadExams(reset = false, newOffset = offset) {
         if (reset) {
@@ -78,7 +86,6 @@ export default function ExamDataTable() {
                 promises.push(API.get("/admin/get/grades"));
                 promises.push(API.get("/admin/get/subjects"));
                 promises.push(API.get("/admin/get/academic-years"));
-                promises.push(API.get("/exam/list/all-student-summaries"));
             }
 
             const results = await Promise.all(promises);
@@ -86,6 +93,7 @@ export default function ExamDataTable() {
             const newExams = examsRes.data.exams || [];
 
             setExams(newExams);
+            setExamsTotal(examsRes.data.total || 0);
 
             if (reset) {
                 setStudents(results[1].data.students || []);
@@ -96,8 +104,6 @@ export default function ExamDataTable() {
                 // Fix: Get academic years from academic_years or years or academicYears
                 const ayData = results[5].data.academic_years || results[5].data.years || results[5].data.academicYears || [];
                 setAcademicYears(ayData);
-
-                setStudentSummaries(results[6].data.studentSummaries || []);
             }
 
             setHasMore(newExams.length === limit);
@@ -121,9 +127,52 @@ export default function ExamDataTable() {
 
     const currentPage = Math.floor(offset / limit) + 1;
 
+    async function loadStudentSummaries(reset = false, newOffset = summariesOffset) {
+        if (reset) {
+            setIsSummariesLoading(true);
+            newOffset = 0;
+            setSummariesHasMore(true);
+        } else {
+            setIsSummariesLoading(true);
+        }
+
+        try {
+            let url = `/exam/list/all-student-summaries?limit=${summariesLimit}&offset=${newOffset}`;
+            if (filterGrade !== "all") url += `&grade_id=${filterGrade}`;
+            if (filterAcademicYear !== "all") url += `&academic_year_id=${filterAcademicYear}`;
+            if (filterSearch) url += `&q=${encodeURIComponent(filterSearch)}`;
+
+            const res = await API.get(url);
+            const data = res.data.studentSummaries || [];
+
+            setStudentSummaries(data);
+            setSummariesTotal(res.data.total || 0);
+            setSummariesHasMore(data.length === summariesLimit);
+            setSummariesOffset(newOffset);
+        } catch (err) {
+            toast.error("Failed to load student summaries");
+        } finally {
+            setIsSummariesLoading(false);
+        }
+    }
+
+    const handleNextSummariesPage = () => {
+        if (summariesHasMore) loadStudentSummaries(false, summariesOffset + summariesLimit);
+    };
+
+    const handlePrevSummariesPage = () => {
+        if (summariesOffset >= summariesLimit) loadStudentSummaries(false, summariesOffset - summariesLimit);
+    };
+
+    const summariesCurrentPage = Math.floor(summariesOffset / summariesLimit) + 1;
+
     useEffect(() => {
         loadExams(true);
-    }, [filterExamsGrade, filterExamsAcademicYear, filterExamsSearch]);
+    }, [filterExamsGrade, filterExamsAcademicYear, filterExamsSearch, limit]);
+
+    useEffect(() => {
+        loadStudentSummaries(true);
+    }, [filterGrade, filterAcademicYear, filterSearch, summariesLimit]);
 
     async function deleteExam(id) {
         if (!confirm("Are you sure you want to delete this exam?")) return;
@@ -208,13 +257,7 @@ export default function ExamDataTable() {
         setTimeout(() => setSelectedExam(null), 100);
     }
 
-    const filteredSummaries = studentSummaries.filter(s => {
-        const matchesGrade = filterGrade === "all" || s.grade_id?.toString() === filterGrade;
-        const matchesYear = filterAcademicYear === "all" || s.academic_year_id?.toString() === filterAcademicYear;
-        const matchesSearch = s.name?.toLowerCase().includes(filterSearch.toLowerCase()) ||
-            s.roll_no?.toString().includes(filterSearch);
-        return matchesGrade && matchesYear && matchesSearch;
-    });
+    const filteredSummaries = studentSummaries;
 
     const openPerformanceReport = (student) => {
         setSelectedStudent(student);
@@ -426,6 +469,87 @@ export default function ExamDataTable() {
         }
     };
 
+    const handleCombinedMarksheetAction = async (student, type, action) => {
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating combined marksheet for ${student.name}...`);
+        try {
+            const res = await API.post('/exam/generate-combined-marksheet', {
+                student_id: student.id,
+                type: type,
+                academic_year_id: student.academic_year_id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: "application/pdf" });
+
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action,
+                                fileName: `CombinedMarksheet_${student.name}_${type}.pdf`,
+                                payload: { base64 }
+                            })
+                        );
+                        toast.success(`Combined marksheet sent to mobile app for ${action}.`);
+                    } catch (e) {
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+                reader.readAsDataURL(blob);
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate combined marksheet.");
+                return;
+            }
+
+            if (res.data) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `CombinedMarksheet_${student.name}_${type}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                }
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const generatePerformanceReportPDF = (student) => {
         const doc = new jsPDF();
 
@@ -561,6 +685,10 @@ export default function ExamDataTable() {
                                     onNextPage={handleNextPage}
                                     onPrevPage={handlePrevPage}
                                     onRefresh={() => loadExams(true)}
+                                    limit={limit}
+                                    setLimit={setLimit}
+                                    total={examsTotal}
+                                    offset={offset}
                                 />
                             </CardContent>
                         </Card>
@@ -631,7 +759,7 @@ export default function ExamDataTable() {
                                             </TableRow>
                                         </TableHeader>
                                         <TableBody>
-                                            {isLoading ? (
+                                            {isSummariesLoading ? (
                                                 <TableRow>
                                                     <TableCell colSpan={5} className="h-32 text-center text-muted-foreground">
                                                         Loading summaries...
@@ -668,7 +796,7 @@ export default function ExamDataTable() {
                                                                     </PopoverTrigger>
                                                                     <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                         <div className="space-y-1">
-                                                                            <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam Action</p>
+                                                                            <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Single Exam Marksheets</p>
                                                                             {student.exams.map(ex => (
                                                                                 <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
                                                                                     <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
@@ -696,6 +824,42 @@ export default function ExamDataTable() {
                                                                                     </div>
                                                                                 </div>
                                                                             ))}
+
+                                                                            <p className="text-xs font-semibold px-2 py-1.5 border-b border-t mt-2 mb-1.5 text-muted-foreground uppercase tracking-wider">Combined Marksheets</p>
+
+                                                                            {/* Unit Test Combined */}
+                                                                            <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                <span className={`text-sm font-medium pl-1 ${student.exams.some(e => e.exam_type === 'UNIT_TEST_1') && student.exams.some(e => e.exam_type === 'UNIT_TEST_2') ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Unit Test Combined</span>
+                                                                                {(student.exams.some(e => e.exam_type === 'UNIT_TEST_1') && student.exams.some(e => e.exam_type === 'UNIT_TEST_2')) ? (
+                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'download')} disabled={isGenerating}>
+                                                                                            <Download className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'print')} disabled={isGenerating}>
+                                                                                            <Printer className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-gray-400">Missing UT1/UT2</span>
+                                                                                )}
+                                                                            </div>
+
+                                                                            {/* Final Term Combined */}
+                                                                            <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                <span className={`text-sm font-medium pl-1 ${student.exams.some(e => e.exam_type === 'TERM_1') && student.exams.some(e => e.exam_type === 'TERM_2') ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Final Term Combined</span>
+                                                                                {(student.exams.some(e => e.exam_type === 'TERM_1') && student.exams.some(e => e.exam_type === 'TERM_2')) ? (
+                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'download')} disabled={isGenerating}>
+                                                                                            <Download className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'print')} disabled={isGenerating}>
+                                                                                            <Printer className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-gray-400">Missing Term1/2</span>
+                                                                                )}
+                                                                            </div>
                                                                         </div>
                                                                     </PopoverContent>
                                                                 </Popover>
@@ -772,7 +936,7 @@ export default function ExamDataTable() {
 
                                 {/* Mobile View: List of Cards */}
                                 <div className="block md:hidden space-y-4">
-                                    {isLoading ? (
+                                    {isSummariesLoading ? (
                                         <div className="text-center py-12 text-muted-foreground bg-gray-50/50 dark:bg-gray-950/20 rounded-2xl border-2 border-dashed border-gray-100 dark:border-gray-800">
                                             Loading summaries...
                                         </div>
@@ -924,6 +1088,57 @@ export default function ExamDataTable() {
                                         ))
                                     )}
                                 </div>
+
+                                {/* Pagination Controls for Summaries */}
+                                {(!isSummariesLoading && studentSummaries.length > 0) && (
+                                    <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
+                                        <div className="flex items-center gap-4">
+                                            <p className="text-sm text-muted-foreground font-medium">
+                                                Showing {summariesOffset + 1} to {Math.min(summariesOffset + summariesLimit, summariesTotal)} of {summariesTotal} records
+                                            </p>
+                                            <div className="flex items-center gap-2">
+                                                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                                                <Select
+                                                    value={summariesLimit.toString()}
+                                                    onValueChange={(val) => setSummariesLimit(Number(val))}
+                                                >
+                                                    <SelectTrigger className="h-8 w-[70px]">
+                                                        <SelectValue />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="10">10</SelectItem>
+                                                        <SelectItem value="25">25</SelectItem>
+                                                        <SelectItem value="50">50</SelectItem>
+                                                        <SelectItem value="100">100</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        </div>
+                                        <div className="flex gap-2 items-center">
+                                            <p className="text-sm text-muted-foreground font-medium mr-2">
+                                                Page {summariesCurrentPage}
+                                            </p>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handlePrevSummariesPage}
+                                                disabled={summariesOffset === 0 || isSummariesLoading}
+                                                className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                            >
+                                                Previous
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                onClick={handleNextSummariesPage}
+                                                disabled={!summariesHasMore || isSummariesLoading}
+                                                className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+                                            >
+                                                Next
+                                            </Button>
+                                        </div>
+                                    </div>
+                                )}
                             </CardContent>
                         </Card>
                     </TabsContent>

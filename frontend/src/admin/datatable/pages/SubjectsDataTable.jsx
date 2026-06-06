@@ -101,7 +101,14 @@ export default function SubjectDataTable() {
       cell: ({ row }) => (
         <div className="flex flex-col">
           <span className="font-semibold text-foreground">{row.getValue("name")}</span>
-          <span className="text-xs text-muted-foreground font-mono">{row.original.code}</span>
+          <div className="flex gap-2 text-xs">
+            <span className="text-muted-foreground font-mono">{row.original.code}</span>
+            {row.original.subject_type && row.original.subject_type !== 'academic' && (
+              <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-[10px] font-semibold uppercase tracking-wider">
+                {row.original.subject_type.replace('-', ' ')}
+              </span>
+            )}
+          </div>
         </div>
       )
     },

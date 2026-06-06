@@ -15,7 +15,8 @@ const {
     GetSupervisedClassExamTrends,
     GenerateMarksheetPDF,
     GenerateAdmitCardPDF,
-    GenerateExamRoutinePDF
+    GenerateExamRoutinePDF,
+    GenerateCombinedMarksheetPDF
 } = require('../controller/examController');
 
 // Exam Groups
@@ -34,6 +35,7 @@ router.get('/list/all-student-summaries', auth, GetAllStudentExamSummaries);
 router.post('/generate-marksheet', auth, GenerateMarksheetPDF);
 router.post('/generate-admit-card', auth, GenerateAdmitCardPDF);
 router.post('/generate-exam-routine', auth, GenerateExamRoutinePDF);
+router.post('/generate-combined-marksheet', auth, GenerateCombinedMarksheetPDF);
 
 // Student View
 router.get('/student/exams', auth, GetExamsForStudent);

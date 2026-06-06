@@ -18,6 +18,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
+  exam_type: z.string().min(1, "Exam type is required"),
+  custom_exam_name: z.string().optional(),
   class_id: z.coerce.string().optional(),
   grade_id: z.coerce.string().min(1, "Grade is required"),
   academic_year_id: z.coerce.string().min(1, "Academic Year is required"),
@@ -47,6 +49,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
+      exam_type: "UNIT_TEST_1",
+      custom_exam_name: "",
       class_id: "",
       grade_id: "",
       academic_year_id: "",
@@ -58,6 +62,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
   });
 
   const selectedGradeId = form.watch("grade_id");
+  const selectedExamType = form.watch("exam_type");
 
   useEffect(() => {
     if (selectedGradeId) {
@@ -81,6 +86,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       if (examToEdit) {
         form.reset({
           name: examToEdit.name || "",
+          exam_type: examToEdit.exam_type || "OTHER",
+          custom_exam_name: examToEdit.custom_exam_name || "",
           class_id: examToEdit.class_id ? examToEdit.class_id.toString() : "",
           grade_id: examToEdit.grade_id ? examToEdit.grade_id.toString() : "",
           academic_year_id: examToEdit.academic_year_id ? examToEdit.academic_year_id.toString() : "",
@@ -128,6 +135,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       } else {
         form.reset({
           name: "",
+          exam_type: "UNIT_TEST_1",
+          custom_exam_name: "",
           class_id: "",
           grade_id: "",
           academic_year_id: "",
@@ -173,20 +182,39 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     }
   }, [form.formState.errors]);
 
+  const isNonAcademic = (subject) => {
+    const type = subject.subject_type?.toLowerCase() || '';
+    return type === 'co-scholastic' || type === 'skill-based';
+  };
+
   const handleSubjectToggle = (subject, checked) => {
     const updatedMap = { ...selectedSubjectsMap };
     if (checked) {
-      updatedMap[subject.id] = {
-        checked: true,
-        max_marks: 100,
-        passing_marks: 35,
-        has_theory: true,
-        has_lab: false,
-        has_oral: false,
-        theory_max_marks: 100,
-        lab_max_marks: 0,
-        oral_max_marks: 0
-      };
+      if (isNonAcademic(subject)) {
+        updatedMap[subject.id] = {
+          checked: true,
+          max_marks: 0,
+          passing_marks: 0,
+          has_theory: false,
+          has_lab: false,
+          has_oral: false,
+          theory_max_marks: 0,
+          lab_max_marks: 0,
+          oral_max_marks: 0
+        };
+      } else {
+        updatedMap[subject.id] = {
+          checked: true,
+          max_marks: 100,
+          passing_marks: 35,
+          has_theory: true,
+          has_lab: false,
+          has_oral: false,
+          theory_max_marks: 100,
+          lab_max_marks: 0,
+          oral_max_marks: 0
+        };
+      }
     } else {
       delete updatedMap[subject.id];
     }
@@ -240,6 +268,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       data.end_date = formattedEndDate;
     }
 
+    // Note: Non-academic subjects are no longer auto-appended, they are selected explicitly by the user
+
     setIsSubmitting(true);
     try {
       if (examToEdit) {
@@ -270,15 +300,59 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           <DialogTitle>{examToEdit ? "Edit Exam" : "Create New Exam"}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <ScrollArea className="overflow-y-auto h-[calc(100vh-200px)]">
+          <ScrollArea className="max-h-[calc(100vh-200px)] pr-4">
             <form onSubmit={form.handleSubmit(submit)} className="space-y-4 pt-4 px-2">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <FormField
+                  name="exam_type"
+                  control={form.control}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Exam Type *</FormLabel>
+                      <FormControl>
+                        {field.value === 'OTHER' ? (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter custom exam name"
+                              value={form.watch('custom_exam_name')}
+                              onChange={(e) => form.setValue('custom_exam_name', e.target.value)}
+                            />
+                            <Button
+                              type="button"
+                              variant="outline"
+                              onClick={() => {
+                                form.setValue('exam_type', 'UNIT_TEST_1');
+                                form.setValue('custom_exam_name', '');
+                              }}
+                            >
+                              Cancel
+                            </Button>
+                          </div>
+                        ) : (
+                          <Select onValueChange={field.onChange} value={field.value}>
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Exam Type" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="UNIT_TEST_1">Unit Test 1</SelectItem>
+                              <SelectItem value="UNIT_TEST_2">Unit Test 2</SelectItem>
+                              <SelectItem value="TERM_1">Term 1</SelectItem>
+                              <SelectItem value="TERM_2">Term 2</SelectItem>
+                              <SelectItem value="OTHER">Other</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <FormField
                   name="name"
                   control={form.control}
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Exam Name *</FormLabel>
+                      <FormLabel>Exam Name (Title) *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="e.g. Unit Test 1" />
                       </FormControl>
@@ -286,6 +360,9 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                     </FormItem>
                   )}
                 />
+              </div>
+              {/* <div className="grid grid-cols-1 gap-4"> */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
                   name="academic_year_id"
@@ -415,7 +492,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                   <div className="space-y-4">
                     {filteredSubjects.filter(s => {
                       const n = s.name?.toLowerCase().trim();
-                      return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                      return !isNonAcademic(s) && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
                     }).map(subject => {
                       const isChecked = !!selectedSubjectsMap[subject.id];
                       return (
@@ -515,6 +592,31 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                               </div>
                             </div>
                           )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {filteredSubjects.filter(s => isNonAcademic(s)).length > 0 && (
+                <div className="mt-6 border-t pt-4">
+                  <FormLabel className="text-lg font-semibold mb-2 block">Select Co-Scholastic / Skill-Based Subjects</FormLabel>
+                  <div className="space-y-4">
+                    {filteredSubjects.filter(s => isNonAcademic(s)).map(subject => {
+                      const isChecked = !!selectedSubjectsMap[subject.id];
+                      return (
+                        <div key={subject.id} className="flex flex-col md:flex-row items-start md:items-center justify-between border p-3 rounded-lg bg-slate-50 dark:bg-slate-900">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`subject-${subject.id}`}
+                              checked={isChecked}
+                              onCheckedChange={(checked) => handleSubjectToggle(subject, checked)}
+                            />
+                            <label htmlFor={`subject-${subject.id}`} className="font-medium cursor-pointer text-slate-900 dark:text-slate-100">
+                              {subject.name} <span className="text-xs text-muted-foreground ml-2 uppercase tracking-wider">({subject.subject_type})</span>
+                            </label>
+                          </div>
                         </div>
                       )
                     })}

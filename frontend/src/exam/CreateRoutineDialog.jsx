@@ -19,6 +19,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
             setRoutine(exam.subjects.map(s => ({
                 id: s.id,
                 subject_name: s.subject_name,
+                subject_type: s.subject_type,
                 exam_date: s.exam_date ? new Date(s.exam_date) : null,
                 start_time: s.start_time || "",
                 end_time: s.end_time || ""
@@ -123,13 +124,17 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                 <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto px-2">
                     {routine.filter(s => {
                         const n = s.subject_name?.toLowerCase().trim();
-                        return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                        const type = s.subject_type?.toLowerCase() || '';
+                        const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
+                        return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
                     }).length === 0 ? (
                         <p className="text-center text-gray-500">No subjects found for this exam.</p>
                     ) : (
                         routine.filter(s => {
                             const n = s.subject_name?.toLowerCase().trim();
-                            return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                            const type = s.subject_type?.toLowerCase() || '';
+                            const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
+                            return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
                         }).map(item => (
                             <div key={item.id} className="p-4 border rounded-lg space-y-4">
                                 <h4 className="font-semibold text-lg">{item.subject_name}</h4>

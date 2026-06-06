@@ -265,6 +265,11 @@ export default function AssignSubjectOnClass() {
                                                                                                     Code: {subject.code}
                                                                                                 </div>
                                                                                             )}
+                                                                                            {subject.subject_type && subject.subject_type !== 'academic' && (
+                                                                                                <div className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded inline-block uppercase font-semibold mt-1">
+                                                                                                    {subject.subject_type.replace('-', ' ')}
+                                                                                                </div>
+                                                                                            )}
                                                                                         </div>
                                                                                     </FormItem>
                                                                                 )
@@ -322,6 +327,11 @@ export default function AssignSubjectOnClass() {
                                                         <div className="font-medium truncate">{subject.name}</div>
                                                         {subject.code && (
                                                             <div className="text-xs text-muted-foreground truncate">{subject.code}</div>
+                                                        )}
+                                                        {subject.subject_type && subject.subject_type !== 'academic' && (
+                                                            <div className="text-[10px] bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded inline-block uppercase font-semibold mt-1">
+                                                                {subject.subject_type.replace('-', ' ')}
+                                                            </div>
                                                         )}
                                                     </div>
                                                     <Button

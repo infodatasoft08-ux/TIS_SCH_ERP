@@ -862,7 +862,7 @@ export default function Invoices() {
                   Create invoice for a student
                 </DialogDescription>
               </DialogHeader>
-              <ScrollArea className="overflow-y-auto h-[calc(60vh)]">
+              <ScrollArea className="max-h-[75vh] pr-4">
                 <form id="invoice-generation-form" onSubmit={handleSubmit}>
                   <div className="space-y-4 py-4">
                     {/* <div className="grid grid-cols-1 sm:grid-cols-3 gap-4"> */}
@@ -891,7 +891,7 @@ export default function Invoices() {
 
                       <div className="space-y-2 flex flex-col">
                         <label className="text-sm font-medium">Students *</label>
-                        <Popover>
+                        <Popover modal={true}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
@@ -910,7 +910,7 @@ export default function Invoices() {
                             </Button>
                           </PopoverTrigger>
 
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent className="p-0" style={{ width: 'var(--radix-popover-trigger-width)' }} onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
                             <Command>
                               <CommandInput className={"focus:outline-none"} placeholder="Search student..." />
                               <CommandList>
@@ -974,7 +974,7 @@ export default function Invoices() {
 
                       <div className="space-y-2 flex flex-col">
                         <label className="text-sm font-medium">Fee Types *</label>
-                        <Popover>
+                        <Popover modal={true}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
@@ -987,7 +987,7 @@ export default function Invoices() {
                               <ChevronsUpDown className="ml-2 h-4 w-4 opacity-50" />
                             </Button>
                           </PopoverTrigger>
-                          <PopoverContent className="w-full p-0">
+                          <PopoverContent className="p-0" style={{ width: 'var(--radix-popover-trigger-width)' }} onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}>
                             <Command>
                               <CommandInput className="focus:outline-none" placeholder="Search fee type..." />
                               <CommandList>

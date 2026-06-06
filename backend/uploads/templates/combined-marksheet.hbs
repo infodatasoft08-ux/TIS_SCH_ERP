@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Combined Marksheet</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cinzel:wght@600;700&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 0;
+            width: 794px;
+            /* A4 width */
+            height: 1123px;
+            /* A4 height */
+            background-color: #fff;
+            color: #333;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            height: 100%;
+            padding: 40px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .border-outer {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            bottom: 20px;
+            border: 2px solid #2c3e50;
+            pointer-events: none;
+        }
+
+        .border-inner {
+            position: absolute;
+            top: 26px;
+            left: 26px;
+            right: 26px;
+            bottom: 26px;
+            border: 1px solid #34495e;
+            pointer-events: none;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            margin-top: 10px;
+            position: relative;
+        }
+
+        .school-name {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #1a252f;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 10px 0;
+        }
+
+        .marksheet-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #2c3e50;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin: 0;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e2e8f0;
+            display: inline-block;
+            width: 60%;
+        }
+
+        .details-section {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 25px;
+            padding: 0 20px;
+        }
+
+        .details-col {
+            width: 48%;
+        }
+
+        .detail-row {
+            display: flex;
+            margin-bottom: 8px;
+            font-size: 12px;
+        }
+
+        .detail-label {
+            font-weight: 600;
+            width: 120px;
+            color: #475569;
+        }
+
+        .detail-value {
+            font-weight: 500;
+            color: #1e293b;
+        }
+
+        .table-container {
+            margin-bottom: 20px;
+            padding: 0 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+        }
+
+        th,
+        td {
+            border: 1px solid #cbd5e1;
+            padding: 8px;
+            text-align: center;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #334155;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 11px;
+        }
+
+        th:first-child,
+        td:first-child {
+            text-align: left;
+        }
+
+        tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .table-wide {
+            font-size: 10px;
+        }
+
+        .table-wide th,
+        .table-wide td {
+            padding: 4px 2px;
+            letter-spacing: -0.2px;
+        }
+
+        .table-wide th {
+            font-size: 9px;
+            letter-spacing: -0.5px;
+        }
+
+        .summary-section {
+            padding: 0 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+        }
+
+        .result-box {
+            border: 1px solid #cbd5e1;
+            padding: 15px;
+            width: 250px;
+            background-color: #fff;
+        }
+
+        .summary-box {
+            border: 1px solid #cbd5e1;
+            padding: 15px 20px;
+            background-color: #f8fafc;
+            width: 300px;
+        }
+
+        .summary-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+
+        .summary-row:last-child {
+            margin-bottom: 0;
+            padding-top: 8px;
+            border-top: 1px solid #cbd5e1;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .summary-label {
+            font-weight: 600;
+            color: #475569;
+        }
+
+        .summary-value {
+            font-weight: 600;
+            color: #1e293b;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 60px;
+            left: 60px;
+            right: 60px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 150px;
+        }
+
+        .signature-line {
+            border-top: 1px solid #333;
+            margin-bottom: 5px;
+        }
+
+        .signature-title {
+            font-size: 11px;
+            font-weight: 500;
+            color: #475569;
+        }
+
+        .print-date {
+            font-size: 10px;
+            color: #94a3b8;
+            position: absolute;
+            bottom: 20px;
+            right: 40px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="border-outer"></div>
+        <div class="border-inner"></div>
+
+        <div class="header">
+            <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
+            <h2 class="marksheet-title">{{reportTitle}}</h2>
+        </div>
+
+        <div class="details-section">
+            <div class="details-col">
+                <div class="detail-row">
+                    <span class="detail-label">Student Name:</span>
+                    <span class="detail-value">{{student.name}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Roll Number:</span>
+                    <span class="detail-value">{{student.roll_no}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="detail-label">Class/Grade:</span>
+                    <span class="detail-value">{{student.grade_name}}</span>
+                </div>
+            </div>
+            <div class="details-col">
+                <div class="detail-row">
+                    <span class="detail-label">Academic Year:</span>
+                    <span class="detail-value">{{student.academic_year_name}}</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="table-container">
+            {{#if showFinalResult}}
+            <table>
+                <thead>
+                    <tr>
+                        <th rowspan="2">SUBJECTS</th>
+                        <th colspan="3">{{exam1Name}}</th>
+                        <th colspan="3">{{exam2Name}}</th>
+                        <th colspan="3">FINAL RESULT ({{exam1Name}} + {{exam2Name}})</th>
+                        <th rowspan="2">Yearly<br>Avg<br>(%)</th>
+                        <th rowspan="2">Overall<br>Grade</th>
+                    </tr>
+                    <tr>
+                        <th>Max Marks</th>
+                        <th>Marks Obtained</th>
+                        <th>Grade</th>
+
+                        <th>Max Marks</th>
+                        <th>Marks Obtained</th>
+                        <th>Grade</th>
+
+                        <th>Total Marks</th>
+                        <th>Marks Obtained</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each subjects}}
+                    <tr>
+                        <td style="text-align: left; font-weight: 600;">{{this.subject_name}}</td>
+
+                        <td>{{this.exam1_max}}</td>
+                        <td>{{this.exam1_marks}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.exam1_grade}}</span>
+                        </td>
+
+                        <td>{{this.exam2_max}}</td>
+                        <td>{{this.exam2_marks}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.exam2_grade}}</span>
+                        </td>
+
+                        <td>{{this.max}}</td>
+                        <td>{{this.total}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.grade}}</span>
+                        </td>
+                        <td>{{this.yearly_avg}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.overall_grade}}</span>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+            {{else}}
+            <table class="table-wide">
+                <thead>
+                    <tr>
+                        <th rowspan="2">SUBJECTS</th>
+                        <th colspan="{{examColSpan}}">{{exam1Name}}</th>
+                        <th colspan="{{examColSpan}}">{{exam2Name}}</th>
+                        <th rowspan="2">Yearly<br>Avg<br>(%)</th>
+                        <th rowspan="2">Overall<br>Grade</th>
+                    </tr>
+                    <tr>
+                        <!-- Exam 1 -->
+                        {{#if showTheory}}<th>Theory</th>{{/if}}
+                        {{#if showLab}}<th>Lab</th>{{/if}}
+                        {{#if showOral}}<th>Oral</th>{{/if}}
+                        <th>Total Max</th>
+                        <th>Marks Obt.</th>
+                        <th>Grade</th>
+                        <!-- Exam 2 -->
+                        {{#if showTheory}}<th>Theory</th>{{/if}}
+                        {{#if showLab}}<th>Lab</th>{{/if}}
+                        {{#if showOral}}<th>Oral</th>{{/if}}
+                        <th>Total Max</th>
+                        <th>Marks Obt.</th>
+                        <th>Grade</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#each subjects}}
+                    <tr>
+                        <td style="text-align: left; font-weight: 600;">{{this.subject_name}}</td>
+
+                        {{#if ../showTheory}}<td>{{this.exam1_theory}}</td>{{/if}}
+                        {{#if ../showLab}}<td>{{this.exam1_lab}}</td>{{/if}}
+                        {{#if ../showOral}}<td>{{this.exam1_oral}}</td>{{/if}}
+                        <td>{{this.exam1_max}}</td>
+                        <td>{{this.exam1_marks}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.exam1_grade}}</span>
+                        </td>
+
+                        {{#if ../showTheory}}<td>{{this.exam2_theory}}</td>{{/if}}
+                        {{#if ../showLab}}<td>{{this.exam2_lab}}</td>{{/if}}
+                        {{#if ../showOral}}<td>{{this.exam2_oral}}</td>{{/if}}
+                        <td>{{this.exam2_max}}</td>
+                        <td>{{this.exam2_marks}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.exam2_grade}}</span>
+                        </td>
+                        <td>{{this.yearly_avg}}</td>
+                        <td><span
+                                style="font-weight: 600; padding: 2px 6px; background-color: #3b82f6; color: white; border-radius: 4px;">{{this.overall_grade}}</span>
+                        </td>
+                    </tr>
+                    {{/each}}
+                </tbody>
+            </table>
+            {{/if}}
+        </div>
+
+        <div class="summary-section" style="display: block; padding-top: 10px;">
+            <!-- Grading scale -->
+            <div style="text-align: center; font-size: 11px; margin-bottom: 10px; font-weight: 600; color: #1e293b;">
+                8 Point Grading Scale : A1(91 - 100), A2(81 - 90), B1(71 - 80), B2(61 - 70), C1(51 - 60), C2(41 - 50),
+                D(33 - 40), E(0 - 32)
+            </div>
+
+            <!-- Stats Grid -->
+            <table
+                style="width: 100%; border-collapse: collapse; margin-bottom: 10px; border: 1.5px solid #1e40af; font-size: 11px;">
+                <tr>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left; width: 16%;">
+                        Height(cm)</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 600; width: 17%;">
+                        {{physicalStats.height}}</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left; width: 16%;">
+                        Weight(kg)</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 600; width: 17%;">
+                        {{physicalStats.weight}}</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left; width: 17%;">
+                        Overall Marks</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 600; width: 17%;">
+                        {{totalObtained}} / {{totalMax}}</td>
+                </tr>
+                <tr>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left;">
+                        Overall Percentage</td>
+                    <td style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 600;">
+                        {{percentage}} %</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left;">
+                        Overall Attendance</td>
+                    <td style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 600;">
+                        {{physicalStats.attendance}}</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; font-weight: 600; color: #1e40af; text-align: left;">
+                        Result</td>
+                    <td
+                        style="border: 1px solid #93c5fd; padding: 6px 10px; text-align: center; font-weight: 700; color: {{#if (eq finalResult 'Pass')}}#16a34a{{else}}#dc2626{{/if}};">
+                        {{finalResult}}</td>
+                </tr>
+            </table>
+
+            <!-- Bottom Flex Container -->
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px; align-items: stretch;">
+                <!-- Left Column -->
+                <div style="width: 48.5%; display: flex; flex-direction: column; justify-content: space-between;">
+                    <!-- Co-Scholastic Areas -->
+                    <table
+                        style="width: 100%; border-collapse: collapse; border: 1.5px solid #1e40af; font-size: 11px; height: 110px;">
+                        <tr>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 8px; font-weight: 600; color: #1e40af; text-align: left;">
+                                CO-SCHOLASTIC AREAS</td>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 2px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 10px; width: 45px;">
+                                Term - I</td>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 2px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 10px; width: 45px;">
+                                Term - II</td>
+                        </tr>
+                        {{#each coScholastic}}
+                        <tr>
+                            <td
+                                style="padding: 4px 8px; font-weight: 600; text-align: left; border-bottom: 1px dashed #93c5fd;">
+                                {{this.name}}</td>
+                            <td style="padding: 4px 2px; text-align: center; border-bottom: 1px dashed #93c5fd;"><span
+                                    style="display: inline-block; width: 16px; height: 16px; background-color: {{gradeColor this.term1}}; color: white; text-align: center; line-height: 16px; border-radius: 2px;">{{this.term1}}</span>
+                            </td>
+                            <td style="padding: 4px 2px; text-align: center; border-bottom: 1px dashed #93c5fd;"><span
+                                    style="display: inline-block; width: 16px; height: 16px; background-color: {{gradeColor this.term2}}; color: white; text-align: center; line-height: 16px; border-radius: 2px;">{{this.term2}}</span>
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </table>
+
+                    <!-- Skill Based Education -->
+                    <table
+                        style="width: 100%; border-collapse: collapse; border: 1.5px solid #1e40af; font-size: 11px; height: 90px; margin-top: 10px;">
+                        <tr>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 8px; font-weight: 600; color: #1e40af; text-align: left; text-transform: uppercase;">
+                                SKILL BASED EDUCATION GRADE SCALE</td>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 2px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 10px; width: 45px;">
+                                Term - I</td>
+                            <td
+                                style="border-bottom: 1.5px solid #1e40af; padding: 5px 2px; text-align: center; color: #3b82f6; font-weight: 600; font-size: 10px; width: 45px;">
+                                Term - II</td>
+                        </tr>
+                        {{#each skillBased}}
+                        <tr>
+                            <td
+                                style="padding: 4px 8px; font-weight: 600; text-align: left; border-bottom: 1px dashed #93c5fd;">
+                                {{this.name}}</td>
+                            <td style="padding: 4px 2px; text-align: center; border-bottom: 1px dashed #93c5fd;"><span
+                                    style="display: inline-block; width: 16px; height: 16px; background-color: {{gradeColor this.term1}}; color: white; text-align: center; line-height: 16px; border-radius: 2px; font-size: {{#if (eq this.term1 'A+')}}9px{{else}}11px{{/if}};">{{this.term1}}</span>
+                            </td>
+                            <td style="padding: 4px 2px; text-align: center; border-bottom: 1px dashed #93c5fd;"><span
+                                    style="display: inline-block; width: 16px; height: 16px; background-color: {{gradeColor this.term2}}; color: white; text-align: center; line-height: 16px; border-radius: 2px; font-size: {{#if (eq this.term2 'A+')}}9px{{else}}11px{{/if}};">{{this.term2}}</span>
+                            </td>
+                        </tr>
+                        {{/each}}
+                    </table>
+                </div>
+
+                <!-- Right Column (Chart) -->
+                <div
+                    style="width: 48.5%; border: 1.5px solid #1e40af; position: relative; display: flex; flex-direction: column;">
+                    <h4
+                        style="text-align: center; margin-top: 10px; margin-bottom: 5px; color: #1e40af; font-size: 13px;">
+                        SUBJECT WISE POSITION</h4>
+                    <div style="text-align: center; position: relative; flex-grow: 1;">
+                        <!-- Using 100% width on SVG and letting it scale naturally to fit parent -->
+                        <svg width="100%" height="100%" viewBox="0 0 {{chartData.width}} {{chartData.height}}"
+                            preserveAspectRatio="xMidYMid meet" xmlns="http://www.w3.org/2000/svg"
+                            style="overflow: visible;">
+                            <!-- Y-axis lines -->
+                            <line x1="25" y1="30" x2="{{chartData.width}}" y2="30" stroke="#e2e8f0" stroke-width="1" />
+                            <line x1="25" y1="52.5" x2="{{chartData.width}}" y2="52.5" stroke="#e2e8f0"
+                                stroke-width="1" />
+                            <line x1="25" y1="75" x2="{{chartData.width}}" y2="75" stroke="#e2e8f0" stroke-width="1" />
+                            <line x1="25" y1="97.5" x2="{{chartData.width}}" y2="97.5" stroke="#e2e8f0"
+                                stroke-width="1" />
+                            <line x1="25" y1="120" x2="{{chartData.width}}" y2="120" stroke="#cbd5e1"
+                                stroke-width="1" />
+
+                            <!-- Y-axis labels -->
+                            <text x="20" y="34" font-size="10" text-anchor="end" fill="#1e293b"
+                                font-weight="600">100</text>
+                            <text x="20" y="56.5" font-size="10" text-anchor="end" fill="#1e293b"
+                                font-weight="600">75</text>
+                            <text x="20" y="79" font-size="10" text-anchor="end" fill="#1e293b"
+                                font-weight="600">50</text>
+                            <text x="20" y="101.5" font-size="10" text-anchor="end" fill="#1e293b"
+                                font-weight="600">25</text>
+                            <text x="20" y="124" font-size="10" text-anchor="end" fill="#1e293b"
+                                font-weight="600">0</text>
+
+                            <!-- Y-axis Title -->
+                            <text x="-75" y="8" font-size="10" fill="#1e293b" transform="rotate(-90)"
+                                font-weight="600">Marks Position</text>
+
+                            <!-- X-axis labels (vertical) -->
+                            {{#each chartData.labels}}
+                            <text x="{{this.x}}" y="130" font-size="10" fill="#1e293b"
+                                transform="rotate(-90, {{this.x}}, 130)" text-anchor="end">{{this.name}}</text>
+                            {{/each}}
+
+                            <!-- Data lines -->
+                            <polyline points="{{chartData.t1Path}}" fill="none" stroke="#3b82f6" stroke-width="2" />
+                            <polyline points="{{chartData.t2Path}}" fill="none" stroke="#a855f7" stroke-width="2" />
+
+                            <!-- Data points -->
+                            {{#each chartData.points1}}
+                            <circle cx="{{this.x}}" cy="{{this.y}}" r="3" fill="white" stroke="#3b82f6"
+                                stroke-width="2" />
+                            {{/each}}
+                            {{#each chartData.points2}}
+                            <circle cx="{{this.x}}" cy="{{this.y}}" r="3" fill="white" stroke="#a855f7"
+                                stroke-width="2" />
+                            {{/each}}
+                        </svg>
+
+                        <div
+                            style="position: absolute; bottom: 5px; width: 100%; font-size: 11px; display: flex; justify-content: center; gap: 20px;">
+                            <span
+                                style="display: flex; align-items: center; gap: 5px; font-weight: 600; color: #1e40af;">
+                                <svg width="24" height="10">
+                                    <line x1="0" y1="5" x2="24" y2="5" stroke="#3b82f6" stroke-width="2" />
+                                    <circle cx="12" cy="5" r="3" fill="white" stroke="#3b82f6" stroke-width="2" />
+                                </svg>
+                                Term - I Position
+                            </span>
+                            <span
+                                style="display: flex; align-items: center; gap: 5px; font-weight: 600; color: #1e40af;">
+                                <svg width="24" height="10">
+                                    <line x1="0" y1="5" x2="24" y2="5" stroke="#a855f7" stroke-width="2" />
+                                    <circle cx="12" cy="5" r="3" fill="white" stroke="#a855f7" stroke-width="2" />
+                                </svg>
+                                Term - II Position
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div style="font-size: 11px; margin-bottom: 5px;">
+                Skill Based Education - A+ (45 marks to 50 marks), A (40 to 44 marks),
+            </div>
+            <div style="font-size: 11px; padding-left: 20px;">
+                B (30 to 39 marks), C (20 to 29 marks), D (19 marks & below)
+            </div>
+
+            <div style="margin-top: 15px;">
+                <p style="margin: 0;"><strong>Remarks :</strong> <span
+                        style="font-size: 16px; color: #1e40af; font-style: italic; font-family: 'Dancing Script', 'Montserrat', cursive;">{{teacherRemark}}</span>
+                </p>
+                {{#if promotionStatus}}
+                <p style="margin: 5px 0 0 0;"><strong>Promotion Status :</strong> <span
+                        style="color: {{#if (eq promotionStatus 'Promoted')}}#16a34a{{else}}#dc2626{{/if}}; font-weight: 600;">{{promotionStatus}}</span>
+                </p>
+                {{/if}}
+            </div>
+        </div>
+
+        <div class="footer">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-title">Class Teacher</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-title">Principal</div>
+            </div>
+        </div>
+
+        <div class="print-date">Generated on: {{currentDate}}</div>
+    </div>
+</body>
+
+</html>

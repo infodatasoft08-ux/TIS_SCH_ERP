@@ -11,7 +11,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
-    const { name, class_id, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
 
     if (!isNonEmptyString(name) || !grade_id || !academic_year_id) {
@@ -28,8 +28,8 @@ const AddExamGroup = async (req, res) => {
 
         // insert exam_groups
         const [egRes] = await conn.execute(
-            `INSERT INTO exam_groups (name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'Draft', NOW())`,
-            [name.trim(), toInt(class_id) || null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null]
+            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW())`,
+            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, toInt(class_id) || null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null]
         );
         const examGroupId = egRes.insertId;
 
@@ -130,7 +130,7 @@ const GetExamGroups = async (req, res) => {
         if (rows.length > 0) {
             const groupIds = rows.map(r => r.id);
             const [subjectRows] = await db.query(`
-                SELECT egs.*, s.name AS subject_name 
+                SELECT egs.*, s.name AS subject_name, s.subject_type 
                 FROM exam_group_subjects egs
                 JOIN subjects s ON s.id = egs.subject_id
                 WHERE egs.exam_group_id IN (?)
@@ -158,10 +158,12 @@ const GetExamGroups = async (req, res) => {
 // Update Exam Group (Status / Details)
 const UpdateExamGroup = async (req, res) => {
     const id = toInt(req.params.id);
-    const { name, note, start_date, end_date, status, is_results_published, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, note, start_date, end_date, status, is_results_published, subjects } = req.body;
 
     const updates = []; const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
+    if (exam_type !== undefined) { updates.push('exam_type = ?'); params.push(exam_type); }
+    if (custom_exam_name !== undefined) { updates.push('custom_exam_name = ?'); params.push(custom_exam_name); }
     if (note !== undefined) { updates.push('note = ?'); params.push(note); }
     if (start_date !== undefined) { updates.push('start_date = ?'); params.push(start_date || null); }
     if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
@@ -307,8 +309,13 @@ const AddExamGroupMarks = async (req, res) => {
         }
 
         // Get subjects for this group
-        const [subRows] = await conn.execute(`SELECT id, subject_id, passing_marks, max_marks, has_theory, has_lab, has_oral FROM exam_group_subjects WHERE exam_group_id = ?`, [exam_group_id]);
-        const subjectMap = {}; // subject_id -> { id, max_marks, has_theory, has_lab, has_oral }
+        const [subRows] = await conn.execute(`
+            SELECT egs.id, egs.subject_id, egs.passing_marks, egs.max_marks, egs.has_theory, egs.has_lab, egs.has_oral, s.subject_type 
+            FROM exam_group_subjects egs
+            JOIN subjects s ON s.id = egs.subject_id
+            WHERE egs.exam_group_id = ?
+        `, [exam_group_id]);
+        const subjectMap = {}; // subject_id -> { id, max_marks, has_theory, has_lab, has_oral, subject_type }
         subRows.forEach(s => subjectMap[s.subject_id] = s);
 
         for (const m of marks) {
@@ -325,27 +332,41 @@ const AddExamGroupMarks = async (req, res) => {
             let totalObtained = null;
 
             if (m.attendance_status === 'Present') {
-                thMarks = hasTheory && m.theory_marks_obtained !== undefined && m.theory_marks_obtained !== null && m.theory_marks_obtained !== '' ? parseFloat(m.theory_marks_obtained) : 0;
-                lbMarks = hasLab && m.lab_marks_obtained !== undefined && m.lab_marks_obtained !== null && m.lab_marks_obtained !== '' ? parseFloat(m.lab_marks_obtained) : 0;
-                orMarks = hasOral && m.oral_marks_obtained !== undefined && m.oral_marks_obtained !== null && m.oral_marks_obtained !== '' ? parseFloat(m.oral_marks_obtained) : 0;
-                totalObtained = thMarks + lbMarks + orMarks;
+                thMarks = hasTheory && m.theory_marks_obtained !== undefined && m.theory_marks_obtained !== null && m.theory_marks_obtained !== '' ? parseFloat(m.theory_marks_obtained) : null;
+                lbMarks = hasLab && m.lab_marks_obtained !== undefined && m.lab_marks_obtained !== null && m.lab_marks_obtained !== '' ? parseFloat(m.lab_marks_obtained) : null;
+                orMarks = hasOral && m.oral_marks_obtained !== undefined && m.oral_marks_obtained !== null && m.oral_marks_obtained !== '' ? parseFloat(m.oral_marks_obtained) : null;
+                
+                if (thMarks === null && lbMarks === null && orMarks === null) {
+                    totalObtained = null;
+                } else {
+                    totalObtained = (thMarks || 0) + (lbMarks || 0) + (orMarks || 0);
+                }
             }
 
-            // Simple grade calculation based on percentage
+            // Simple grade calculation based on percentage (if academic) or use provided grade (if non-academic)
             let grade = 'F';
-            if (m.attendance_status === 'Present' && totalObtained !== null) {
-                if (totalObtained >= groupSub.passing_marks) {
-                    const percentage = (totalObtained / groupSub.max_marks) * 100;
-                    if (percentage >= 90) grade = 'A+';
-                    else if (percentage >= 80) grade = 'A';
-                    else if (percentage >= 70) grade = 'B';
-                    else if (percentage >= 60) grade = 'C';
-                    else grade = 'P';
-                } else {
-                    grade = 'F';
+            if (groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based') {
+                grade = m.grade || null; // Accept direct grade from frontend, allow null to clear
+                totalObtained = null; // No numeric marks
+            } else {
+                if (m.attendance_status === 'Present' && totalObtained !== null) {
+                    if (totalObtained >= groupSub.passing_marks) {
+                        const percentage = (totalObtained / groupSub.max_marks) * 100;
+                        if (percentage >= 91) grade = 'A+';
+                        else if (percentage >= 81) grade = 'A';
+                        else if (percentage >= 71) grade = 'B+';
+                        else if (percentage >= 61) grade = 'B';
+                        else if (percentage >= 51) grade = 'C';
+                        else if (percentage >= 41) grade = 'D';
+                        else grade = 'P';
+                    } else {
+                        grade = 'F';
+                    }
+                } else if (m.attendance_status === 'Absent') {
+                    grade = 'AB';
+                } else if (m.attendance_status === 'Present' && totalObtained === null) {
+                    grade = null;
                 }
-            } else if (m.attendance_status === 'Absent') {
-                grade = 'AB';
             }
 
             await conn.execute(`
@@ -477,7 +498,7 @@ const GetStudentExamHistory = async (req, res) => {
     const studentId = toInt(req.params.student_id);
     try {
         const [rows] = await db.execute(`
-            SELECT eg.id as exam_group_id, eg.name as exam_name, eg.is_results_published, 
+            SELECT eg.id as exam_group_id, eg.name as exam_name, eg.exam_type, eg.custom_exam_name, eg.is_results_published, 
                    egs.subject_id, s.name as subject_name, 
                    egr.marks_obtained, egr.grade, egr.attendance_status, 
                    egs.max_marks, eg.created_at
@@ -498,13 +519,75 @@ const GetStudentExamHistory = async (req, res) => {
 
 const GetAllStudentExamSummaries = async (req, res) => {
     try {
-        const [rows] = await db.execute(`
+        const limit = Math.min(parseInt(req.query.limit || '10', 10), 500);
+        const offset = Math.max(parseInt(req.query.offset || '0', 10), 0);
+        const gradeId = req.query.grade_id && req.query.grade_id !== 'all' ? toInt(req.query.grade_id) : null;
+        const academicYearId = req.query.academic_year_id && req.query.academic_year_id !== 'all' ? toInt(req.query.academic_year_id) : null;
+        const search = req.query.q ? `%${req.query.q}%` : null;
+
+        let studentBaseSql = `
+            FROM students st
+            JOIN users u ON u.id = st.user_id
+            JOIN student_academic_records sar ON sar.student_id = st.id
+            JOIN (
+                SELECT student_id, MAX(id) latest_id
+                FROM student_academic_records
+                GROUP BY student_id
+            ) latest ON latest.student_id = st.id AND latest.latest_id = sar.id
+            WHERE EXISTS (
+                SELECT 1 FROM exam_group_results egr WHERE egr.student_id = st.id
+            )
+        `;
+
+        let whereClause = [];
+        let params = [];
+
+        if (gradeId) {
+            whereClause.push('sar.grade_id = ?');
+            params.push(gradeId);
+        }
+        if (academicYearId) {
+            whereClause.push('sar.academic_year_id = ?');
+            params.push(academicYearId);
+        }
+        if (search) {
+            whereClause.push(`(
+                u.name LIKE ? OR 
+                sar.roll_no LIKE ? OR 
+                EXISTS (
+                    SELECT 1 
+                    FROM exam_group_results egr2 
+                    JOIN exam_group_subjects egs2 ON egs2.id = egr2.exam_group_subject_id
+                    JOIN exam_groups eg2 ON eg2.id = egs2.exam_group_id
+                    WHERE egr2.student_id = st.id 
+                    AND (eg2.name LIKE ? OR eg2.exam_type LIKE ?)
+                )
+            )`);
+            params.push(search, search, search, search);
+        }
+
+        if (whereClause.length > 0) {
+            studentBaseSql += ' AND ' + whereClause.join(' AND ');
+        }
+
+        const [countRows] = await db.execute(`SELECT COUNT(st.id) AS total ${studentBaseSql}`, params);
+        const total = countRows[0].total;
+
+        const [studentRows] = await db.execute(`SELECT st.id ${studentBaseSql} ORDER BY u.name ASC LIMIT ${limit} OFFSET ${offset}`, params);
+        
+        if (studentRows.length === 0) {
+            return res.json({ studentSummaries: [], total, limit, offset });
+        }
+
+        const studentIds = studentRows.map(r => r.id);
+
+        const [rows] = await db.query(`
             SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
                    COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
                    COALESCE(g.name, eg_g.name) as grade_name, 
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
                    COALESCE(ay.name, eg_ay.name) as academic_year_name,
-                   eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
+                   eg.id as exam_id, eg.name as exam_name, eg.exam_type, eg.custom_exam_name, eg.start_date, eg.is_results_published,
                    egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
                    egs.has_theory, egs.has_lab, egs.has_oral,
                    egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
@@ -529,8 +612,9 @@ const GetAllStudentExamSummaries = async (req, res) => {
             LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
             LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
             LEFT JOIN subjects s ON s.id = egs.subject_id
-            ORDER BY st.id, eg.start_date DESC
-        `);
+            WHERE st.id IN (?)
+            ORDER BY u.name ASC, eg.start_date DESC
+        `, [studentIds]);
 
         // Group by student
         const studentMap = {};
@@ -553,6 +637,8 @@ const GetAllStudentExamSummaries = async (req, res) => {
                 studentMap[row.student_id].exams[row.exam_id] = {
                     id: row.exam_id,
                     name: row.exam_name,
+                    exam_type: row.exam_type,
+                    custom_exam_name: row.custom_exam_name,
                     date: row.start_date,
                     is_results_published: row.is_results_published,
                     subjects: []
@@ -583,7 +669,14 @@ const GetAllStudentExamSummaries = async (req, res) => {
             exams: Object.values(s.exams)
         }));
 
-        return res.json({ studentSummaries: result });
+        // Sort results to match student order
+        const sortedResult = [];
+        studentIds.forEach(sid => {
+            const stu = result.find(r => r.id === sid);
+            if (stu) sortedResult.push(stu);
+        });
+
+        return res.json({ studentSummaries: sortedResult, total, limit, offset });
     } catch (err) {
         console.error('GET /api/exam/all-student-summaries error', err);
         return res.status(500).json({ error: 'Internal server error' });
@@ -626,7 +719,8 @@ const GenerateMarksheetPDF = async (req, res) => {
             LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
             LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
             LEFT JOIN subjects s ON s.id = egs.subject_id
-            WHERE st.id = ? AND eg.id = ?
+            WHERE st.id = ? AND eg.id = ? 
+              AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
         `, [student_id, exam_id]);
 
         if (rows.length === 0) {
@@ -653,6 +747,10 @@ const GenerateMarksheetPDF = async (req, res) => {
         let serialNo = 1;
 
         rows.forEach(row => {
+            if (row.marks_obtained === null && row.attendance_status !== 'Absent') {
+                return; // Skip subject if no marks have been recorded
+            }
+
             exam.subjects.push({
                 serial_no: serialNo++,
                 subject_name: row.subject_name,
@@ -793,7 +891,8 @@ const GenerateAdmitCardPDF = async (req, res) => {
             SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
             FROM exam_group_subjects egs
             JOIN subjects s ON s.id = egs.subject_id
-            WHERE egs.exam_group_id = ?
+            WHERE egs.exam_group_id = ? 
+              AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
             ORDER BY egs.exam_date ASC, egs.start_time ASC
         `, [exam_id]);
 
@@ -813,7 +912,6 @@ const GenerateAdmitCardPDF = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     }
 };
-
 
 const GenerateExamRoutinePDF = async (req, res) => {
     const { exam_id } = req.body;
@@ -839,7 +937,8 @@ const GenerateExamRoutinePDF = async (req, res) => {
             SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
             FROM exam_group_subjects egs
             JOIN subjects s ON s.id = egs.subject_id
-            WHERE egs.exam_group_id = ?
+            WHERE egs.exam_group_id = ? 
+              AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
             ORDER BY egs.exam_date ASC, egs.start_time ASC
         `, [exam_id]);
 
@@ -859,6 +958,315 @@ const GenerateExamRoutinePDF = async (req, res) => {
     }
 };
 
+const GenerateCombinedMarksheetPDF = async (req, res) => {
+    const { student_id, type, academic_year_id } = req.body;
+    
+    if (!student_id || !type || !academic_year_id) {
+        return res.status(400).json({ error: 'student_id, type, and academic_year_id are required' });
+    }
+
+    try {
+        let examTypes = [];
+        let reportTitle = '';
+        if (type === 'UNIT_TEST_COMBINED') {
+            examTypes = ['UNIT_TEST_1', 'UNIT_TEST_2'];
+            reportTitle = 'Combined Unit Test Marksheet';
+        } else if (type === 'FINAL_TERM_COMBINED') {
+            examTypes = ['TERM_1', 'TERM_2'];
+            reportTitle = 'Final Term Marksheet';
+        } else {
+            return res.status(400).json({ error: 'Invalid combine type' });
+        }
+
+        const [rows] = await db.execute(`
+            SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+                   COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
+                   COALESCE(g.name, eg_g.name) as grade_name, 
+                   COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
+                   COALESCE(ay.name, eg_ay.name) as academic_year_name,
+                   eg.id as exam_id, eg.name as exam_name, eg.exam_type, eg.start_date, eg.is_results_published,
+                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+                   egr.teacher_remark, egs.has_theory, egs.has_lab, egs.has_oral,
+                   egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
+                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
+                   s.subject_type
+            FROM exam_group_results egr
+            JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+            JOIN exam_groups eg ON eg.id = egs.exam_group_id
+            JOIN students st ON st.id = egr.student_id
+            JOIN users u ON u.id = st.user_id
+            LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
+            LEFT JOIN grades g ON g.id = sar.grade_id
+            LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+            LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
+            LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
+            LEFT JOIN subjects s ON s.id = egs.subject_id
+            WHERE st.id = ? AND eg.exam_type IN (?, ?) AND eg.academic_year_id = ?
+        `, [student_id, examTypes[0], examTypes[1], academic_year_id]);
+
+        if (rows.length === 0) {
+            return res.status(404).json({ error: 'No data found for the combined marksheet' });
+        }
+
+        const student = {
+            id: rows[0].student_id,
+            name: rows[0].student_name,
+            roll_no: rows[0].roll_no || 'N/A',
+            grade_name: rows[0].grade_name || 'N/A',
+            academic_year_name: rows[0].academic_year_name || 'N/A'
+        };
+
+        const subjectsMap = {};
+        const examNames = {};
+        let totalMax = 0;
+        let totalObtained = 0;
+
+        rows.forEach(row => {
+            if (!examNames[row.exam_type]) {
+                examNames[row.exam_type] = row.exam_name;
+            }
+            if (!subjectsMap[row.subject_name]) {
+                subjectsMap[row.subject_name] = {
+                    subject_name: row.subject_name,
+                    exam1_marks: '-',
+                    exam2_marks: '-',
+                    exam1_grade: '-',
+                    exam2_grade: '-',
+                    exam1_max: 0,
+                    exam2_max: 0,
+                    exam1_theory: '-', exam1_lab: '-', exam1_oral: '-',
+                    exam2_theory: '-', exam2_lab: '-', exam2_oral: '-',
+                    has_theory: false,
+                    has_lab: false,
+                    has_oral: false,
+                    total: 0,
+                    max: 0,
+                    hasFailedSubject: false,
+                    subject_type: row.subject_type || 'academic'
+                };
+            }
+
+            const sub = subjectsMap[row.subject_name];
+            const isAcademic = row.subject_type === 'academic' || !row.subject_type;
+
+            if (isAcademic) {
+                sub.max += Number(row.max_marks || 0);
+                totalMax += Number(row.max_marks || 0);
+            }
+
+            let obtained = 0;
+            if (row.attendance_status !== 'Absent' && row.marks_obtained !== null && row.marks_obtained !== '') {
+                obtained = Number(row.marks_obtained);
+                if (isAcademic) {
+                    totalObtained += obtained;
+                }
+            }
+
+            if (isAcademic && (row.grade === 'F' || row.attendance_status === 'Absent')) {
+                sub.hasFailedSubject = true;
+            }
+
+            const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+            if (checkTrue(row.has_theory)) sub.has_theory = true;
+            if (checkTrue(row.has_lab)) sub.has_lab = true;
+            if (checkTrue(row.has_oral)) sub.has_oral = true;
+
+            const formatMarks = (obtained, has) => {
+                if (!has) return '-';
+                if (row.attendance_status === 'Absent') return 'AB';
+                return `${Math.round(Number(obtained || 0))}`;
+            };
+
+            if (row.exam_type === examTypes[0]) {
+                sub.exam1_marks = row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained);
+                sub.exam1_grade = row.grade || '-';
+                sub.exam1_max = row.max_marks || 0;
+                sub.exam1_theory = formatMarks(row.theory_marks_obtained, checkTrue(row.has_theory));
+                sub.exam1_lab = formatMarks(row.lab_marks_obtained, checkTrue(row.has_lab));
+                sub.exam1_oral = formatMarks(row.oral_marks_obtained, checkTrue(row.has_oral));
+            } else if (row.exam_type === examTypes[1]) {
+                sub.exam2_marks = row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained);
+                sub.exam2_grade = row.grade || '-';
+                sub.exam2_max = row.max_marks || 0;
+                sub.exam2_theory = formatMarks(row.theory_marks_obtained, checkTrue(row.has_theory));
+                sub.exam2_lab = formatMarks(row.lab_marks_obtained, checkTrue(row.has_lab));
+                sub.exam2_oral = formatMarks(row.oral_marks_obtained, checkTrue(row.has_oral));
+            }
+            sub.total += obtained;
+        });
+
+        const subjects = Object.values(subjectsMap).map((sub, idx) => {
+            const isAcademic = sub.subject_type === 'academic' || !sub.subject_type;
+            let grade = 'F';
+            let percentage = '-';
+            let yearly_avg = '-';
+            let t1_pct = 0;
+            let t2_pct = 0;
+
+            if (isAcademic) {
+                const percentageVal = sub.max > 0 ? (sub.total / sub.max) * 100 : 0;
+                percentage = sub.max > 0 ? percentageVal.toFixed(2) : '-';
+                yearly_avg = sub.max > 0 ? Math.round(percentageVal) : '-';
+                
+                if (percentageVal >= 90) grade = 'A+';
+                else if (percentageVal >= 80) grade = 'A';
+                else if (percentageVal >= 70) grade = 'B';
+                else if (percentageVal >= 60) grade = 'C';
+                else if (percentageVal >= 35) grade = 'P'; // assuming 35% passing
+                else grade = 'F';
+                
+                if (sub.hasFailedSubject) grade = 'F';
+
+                t1_pct = sub.exam1_max > 0 ? ((sub.exam1_marks === 'AB' || sub.exam1_marks === '-' ? 0 : sub.exam1_marks) / sub.exam1_max) * 100 : 0;
+                t2_pct = sub.exam2_max > 0 ? ((sub.exam2_marks === 'AB' || sub.exam2_marks === '-' ? 0 : sub.exam2_marks) / sub.exam2_max) * 100 : 0;
+            } else {
+                if (sub.exam2_grade && sub.exam2_grade !== '-') grade = sub.exam2_grade;
+                else if (sub.exam1_grade && sub.exam1_grade !== '-') grade = sub.exam1_grade;
+                else grade = '-';
+            }
+
+            const overall_grade = grade;
+
+            return {
+                serial_no: idx + 1,
+                ...sub,
+                percentage,
+                yearly_avg,
+                overall_grade,
+                grade,
+                t1_pct,
+                t2_pct
+            };
+        });
+
+        const academicSubjects = subjects.filter(s => s.subject_type === 'academic' || !s.subject_type);
+
+        // Generate SVG chart data (only for academic subjects)
+        const svgWidth = 450;
+        const svgHeight = 150;
+        const padding = 30;
+        
+        let t1Points = [];
+        let t2Points = [];
+        let xLabels = [];
+        
+        if (academicSubjects.length > 0) {
+            const xStep = (svgWidth - padding * 2) / Math.max(1, (academicSubjects.length - 1));
+            academicSubjects.forEach((sub, idx) => {
+                const x = padding + (idx * xStep);
+                const y1 = svgHeight - padding - (sub.t1_pct / 100) * (svgHeight - padding * 2);
+                const y2 = svgHeight - padding - (sub.t2_pct / 100) * (svgHeight - padding * 2);
+                
+                t1Points.push(`${x},${y1}`);
+                t2Points.push(`${x},${y2}`);
+                xLabels.push({ x, name: sub.subject_name.substring(0, 10) }); // truncate long names
+            });
+        }
+        
+        const chartData = {
+            t1Path: t1Points.join(' '),
+            t2Path: t2Points.join(' '),
+            points1: t1Points.map(p => { const [x, y] = p.split(','); return {x, y}; }),
+            points2: t2Points.map(p => { const [x, y] = p.split(','); return {x, y}; }),
+            labels: xLabels,
+            width: svgWidth,
+            height: svgHeight
+        };
+
+        totalObtained = Math.round(totalObtained);
+        const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+        const currentDate = new Date().toLocaleDateString();
+
+
+        // Promotion logic
+        let hasFailed = academicSubjects.some(s => s.hasFailedSubject || s.grade === 'F');
+        // Passing rule based on percentage >= 35
+        let isPassingTotal = percentage >= 35;
+        let finalResult = 'Pass';
+        if (hasFailed || !isPassingTotal) {
+            finalResult = 'Fail';
+        }
+        
+        let promotionStatus = type === 'FINAL_TERM_COMBINED' 
+            ? (finalResult === 'Pass' ? 'Promoted' : 'Not Promoted') 
+            : null;
+
+        let logoData = null;
+        try {
+            const logoPath = require('path').join(__dirname, '../assets/school_invoice_logo.png');
+            const fs = require('fs');
+            if (fs.existsSync(logoPath)) {
+                logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+            }
+        } catch (e) { }
+
+        const showTheory = academicSubjects.some(s => s.has_theory);
+        const showLab = academicSubjects.some(s => s.has_lab);
+        const showOral = academicSubjects.some(s => s.has_oral);
+        const showFinalResult = !(showTheory || showLab || showOral);
+        let examColSpan = 3; // Max, Obtained, Grade
+        if (showTheory) examColSpan++;
+        if (showLab) examColSpan++;
+        if (showOral) examColSpan++;
+
+        const coScholastic = subjects.filter(s => s.subject_type === 'co-scholastic').map(s => ({
+            name: s.subject_name,
+            term1: s.exam1_grade !== '-' ? s.exam1_grade : (s.exam1_marks !== '-' ? s.exam1_marks : ''),
+            term2: s.exam2_grade !== '-' ? s.exam2_grade : (s.exam2_marks !== '-' ? s.exam2_marks : '')
+        }));
+
+        const skillBased = subjects.filter(s => s.subject_type === 'skill-based').map(s => ({
+            name: s.subject_name,
+            term1: s.exam1_grade !== '-' ? s.exam1_grade : (s.exam1_marks !== '-' ? s.exam1_marks : ''),
+            term2: s.exam2_grade !== '-' ? s.exam2_grade : (s.exam2_marks !== '-' ? s.exam2_marks : '')
+        }));
+
+        const physicalStats = {
+            height: student.height || "166 cm",
+            weight: student.weight || "44 kg",
+            attendance: student.attendance || "196/230"
+        };
+
+        const templateData = {
+            student,
+            reportTitle,
+            exam1Name: examNames[examTypes[0]] || examTypes[0].replace(/_/g, ' '),
+            exam2Name: examNames[examTypes[1]] || examTypes[1].replace(/_/g, ' '),
+            subjects: academicSubjects,
+            showTheory,
+            showLab,
+            showOral,
+            showFinalResult,
+            examColSpan,
+            totalMax,
+            totalObtained,
+            percentage,
+            currentDate,
+            finalResult,
+            promotionStatus,
+            logoData,
+            chartData,
+            coScholastic,
+            skillBased,
+            physicalStats
+        };
+
+        const templatePath = 'uploads/templates/combined-marksheet.hbs';
+
+        const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
+            width: 794,
+            height: 1123
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=CombinedMarksheet_${student_id}_${type}.pdf`);
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('POST /api/exam/generate-combined-marksheet error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     AddExamGroup,
     GetExamGroups,
@@ -873,5 +1281,6 @@ module.exports = {
     GetSupervisedClassExamTrends,
     GenerateMarksheetPDF,
     GenerateAdmitCardPDF,
-    GenerateExamRoutinePDF
+    GenerateExamRoutinePDF,
+    GenerateCombinedMarksheetPDF
 };

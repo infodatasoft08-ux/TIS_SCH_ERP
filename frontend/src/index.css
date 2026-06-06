@@ -171,30 +171,30 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-@media (min-width: 1024px) {
+/* @media (min-width: 1024px) {
 
   /* Width */
   ::-webkit-scrollbar {
     width: 10px;
   }
 
-  /* Track */
+  /* Track 
   ::-webkit-scrollbar-track {
     background: #f1f1f1;
   }
 
-  /* Handle */
+  /* Handle 
   ::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 10px;
     border: 2px solid #f1f1f1;
   }
 
-  /* Handle on hover */
+  /* Handle on hover 
   ::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
-}
+} */
 
 
 
@@ -243,7 +243,7 @@ body {
 }
 
 /* No scrollbar utility */
-@layer utilities {
+/* @layer utilities {
   .no-scrollbar::-webkit-scrollbar {
     display: none;
   }
@@ -252,7 +252,7 @@ body {
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
-}
+} */
 
 @font-face {
   font-family: 'Sekuya';
@@ -264,5 +264,33 @@ body {
 @media(max-width: 484px) {
   .destiny {
     text-align: left;
+  }
+}
+
+
+@layer base {
+  /* Chrome, Edge, Safari */
+  ::-webkit-scrollbar {
+    width: 5px;
+    height: 5px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--background));
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--border));
+    border-radius: 9999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--primary));
+  }
+
+  /* Firefox */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--border)) hsl(var(--background));
   }
 }

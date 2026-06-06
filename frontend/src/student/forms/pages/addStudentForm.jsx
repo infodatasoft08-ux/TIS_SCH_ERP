@@ -411,7 +411,7 @@ export default function AddStudentDialog({
             </div>
           </DialogHeader>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6 bg-white dark:bg-gray-900/10" style={{ scrollbarWidth: "thin", scrollbarColor: "#8b5cf6 #f3f4f6", scrollBehavior: "smooth", msScrollbarArrowColor: "#8b5cf6" }}>
+        <div className="flex-1 overflow-y-auto px-6 py-6 bg-white dark:bg-gray-900/10">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {/* Debug: Show validation errors at top */}

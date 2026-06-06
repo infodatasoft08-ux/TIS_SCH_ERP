@@ -93,7 +93,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                         lab_marks_obtained: res.lab_marks_obtained !== null && res.lab_marks_obtained !== undefined ? res.lab_marks_obtained : '',
                         oral_marks_obtained: res.oral_marks_obtained !== null && res.oral_marks_obtained !== undefined ? res.oral_marks_obtained : '',
                         marks_obtained: res.marks_obtained !== null ? res.marks_obtained : '',
-                        grade: res.grade || ''
+                        grade: res.grade || '',
+                        is_existing: true
                     };
                 }
             });
@@ -128,18 +129,31 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
     const calculateGrade = (marks, maxMarks, passingMarks) => {
         if (marks === '' || marks === null) return '';
+
         const numMarks = parseFloat(marks);
-        if (isNaN(numMarks)) return '';
+        const totalMarks = parseFloat(maxMarks);
 
-        const passMark = parseFloat(passingMarks) || 35; // Fallback to 35
-        if (numMarks < passMark) return 'F';
+        if (isNaN(numMarks) || isNaN(totalMarks) || totalMarks <= 0) {
+            return '';
+        }
 
-        const percentage = (numMarks / maxMarks) * 100;
-        if (percentage >= 90) return 'A+';
-        if (percentage >= 80) return 'A';
-        if (percentage >= 70) return 'B';
-        if (percentage >= 60) return 'C';
-        return 'P';
+        const passMarks = parseFloat(passingMarks) || 35;
+
+        // Fail if below passing marks
+        if (numMarks < passMarks) {
+            return 'F';
+        }
+
+        const percentage = (numMarks / totalMarks) * 100;
+
+        if (percentage >= 91) return 'A+';
+        if (percentage >= 81) return 'A';
+        if (percentage >= 71) return 'B+';
+        if (percentage >= 61) return 'B';
+        if (percentage >= 51) return 'C';
+        if (percentage >= 41) return 'D';
+
+        return 'P'; // Passed but below 41%
     };
 
     const handleMarkChange = (studentId, subjectId, field, value) => {
@@ -177,13 +191,31 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             if (subjectData.attendance_status === 'Present') {
                 const groupSub = exam.subjects.find(s => String(s.subject_id) === subId);
                 if (groupSub) {
-                    const th = groupSub.has_theory ? (parseFloat(field === 'theory_marks_obtained' ? value : subjectData.theory_marks_obtained) || 0) : 0;
-                    const lb = groupSub.has_lab ? (parseFloat(field === 'lab_marks_obtained' ? value : subjectData.lab_marks_obtained) || 0) : 0;
-                    const or = groupSub.has_oral ? (parseFloat(field === 'oral_marks_obtained' ? value : subjectData.oral_marks_obtained) || 0) : 0;
+                    if (groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based') {
+                        // Grade is already set directly by the dropdown
+                        subjectData.marks_obtained = '';
+                    } else {
+                        const thStr = field === 'theory_marks_obtained' ? value : subjectData.theory_marks_obtained;
+                        const lbStr = field === 'lab_marks_obtained' ? value : subjectData.lab_marks_obtained;
+                        const orStr = field === 'oral_marks_obtained' ? value : subjectData.oral_marks_obtained;
 
-                    const total = th + lb + or;
-                    subjectData.marks_obtained = total;
-                    subjectData.grade = calculateGrade(total, groupSub.max_marks, groupSub.passing_marks);
+                        const hasTh = groupSub.has_theory && thStr !== '' && thStr !== null && thStr !== undefined;
+                        const hasLb = groupSub.has_lab && lbStr !== '' && lbStr !== null && lbStr !== undefined;
+                        const hasOr = groupSub.has_oral && orStr !== '' && orStr !== null && orStr !== undefined;
+
+                        if (!hasTh && !hasLb && !hasOr) {
+                            subjectData.marks_obtained = '';
+                            subjectData.grade = '';
+                        } else {
+                            const th = groupSub.has_theory ? (parseFloat(thStr) || 0) : 0;
+                            const lb = groupSub.has_lab ? (parseFloat(lbStr) || 0) : 0;
+                            const or = groupSub.has_oral ? (parseFloat(orStr) || 0) : 0;
+
+                            const total = th + lb + or;
+                            subjectData.marks_obtained = total;
+                            subjectData.grade = calculateGrade(total, groupSub.max_marks, groupSub.passing_marks);
+                        }
+                    }
                 }
             } else if (subjectData.attendance_status === 'Absent') {
                 subjectData.grade = 'AB';
@@ -210,10 +242,11 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                 const hasValidMarks = groupSub && (
                     (groupSub.has_theory && d.theory_marks_obtained !== '') ||
                     (groupSub.has_lab && d.lab_marks_obtained !== '') ||
-                    (groupSub.has_oral && d.oral_marks_obtained !== '')
+                    (groupSub.has_oral && d.oral_marks_obtained !== '') ||
+                    ((groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based') && d.grade !== '')
                 );
 
-                if (hasValidMarks || d.attendance_status === 'Absent') {
+                if (hasValidMarks || d.attendance_status === 'Absent' || d.is_existing) {
                     payloadMarks.push({
                         student_id: parseInt(studentId),
                         student_academic_id: d.student_academic_id,
@@ -222,6 +255,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                         theory_marks_obtained: d.attendance_status === 'Present' && groupSub.has_theory && d.theory_marks_obtained !== '' ? parseFloat(d.theory_marks_obtained) : null,
                         lab_marks_obtained: d.attendance_status === 'Present' && groupSub.has_lab && d.lab_marks_obtained !== '' ? parseFloat(d.lab_marks_obtained) : null,
                         oral_marks_obtained: d.attendance_status === 'Present' && groupSub.has_oral && d.oral_marks_obtained !== '' ? parseFloat(d.oral_marks_obtained) : null,
+                        grade: d.grade === 'none' ? null : (d.grade || null),
                         teacher_remark: remarksData[studentId] || null
                     });
                 }
@@ -343,8 +377,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                     return (
                                                                         <TableRow key={sub.subject_id}>
                                                                             <TableCell className="font-medium">{sub.subject_name}</TableCell>
-                                                                            <TableCell>{sub.max_marks}</TableCell>
-                                                                            <TableCell>{sub.passing_marks}</TableCell>
+                                                                            <TableCell>{sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? '-' : sub.max_marks}</TableCell>
+                                                                            <TableCell>{sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? '-' : sub.passing_marks}</TableCell>
                                                                             <TableCell>
                                                                                 <Select
                                                                                     value={mData.attendance_status || 'Present'}
@@ -361,67 +395,89 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                                 </Select>
                                                                             </TableCell>
                                                                             <TableCell>
-                                                                                <div className="flex flex-wrap gap-4 items-center">
-                                                                                    {sub.has_theory === 1 && (
-                                                                                        <div className="flex items-center space-x-1">
-                                                                                            <span className="text-xs text-muted-foreground font-semibold">Theory:</span>
-                                                                                            <Input
-                                                                                                type="number"
-                                                                                                className="w-16 h-8 text-xs p-1"
-                                                                                                value={mData.theory_marks_obtained || ''}
-                                                                                                disabled={mData.attendance_status === 'Absent' || isDisabled}
-                                                                                                onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'theory_marks_obtained', e.target.value)}
-                                                                                                max={sub.theory_max_marks || sub.max_marks}
-                                                                                                min="0"
-                                                                                            />
-                                                                                            <span className="text-xs text-muted-foreground">/{sub.theory_max_marks}</span>
-                                                                                        </div>
-                                                                                    )}
-
-                                                                                    {sub.has_lab === 1 && (
-                                                                                        <div className="flex items-center space-x-1">
-                                                                                            <span className="text-xs text-muted-foreground font-semibold">Lab:</span>
-                                                                                            <Input
-                                                                                                type="number"
-                                                                                                className="w-16 h-8 text-xs p-1"
-                                                                                                value={mData.lab_marks_obtained || ''}
-                                                                                                disabled={mData.attendance_status === 'Absent' || isDisabled}
-                                                                                                onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'lab_marks_obtained', e.target.value)}
-                                                                                                max={sub.lab_max_marks}
-                                                                                                min="0"
-                                                                                            />
-                                                                                            <span className="text-xs text-muted-foreground">/{sub.lab_max_marks}</span>
-                                                                                        </div>
-                                                                                    )}
-
-                                                                                    {sub.has_oral === 1 && (
-                                                                                        <div className="flex items-center space-x-1">
-                                                                                            <span className="text-xs text-muted-foreground font-semibold">Oral:</span>
-                                                                                            <Input
-                                                                                                type="number"
-                                                                                                className="w-16 h-8 text-xs p-1"
-                                                                                                value={mData.oral_marks_obtained || ''}
-                                                                                                disabled={mData.attendance_status === 'Absent' || isDisabled}
-                                                                                                onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'oral_marks_obtained', e.target.value)}
-                                                                                                max={sub.oral_max_marks}
-                                                                                                min="0"
-                                                                                            />
-                                                                                            <span className="text-xs text-muted-foreground">/{sub.oral_max_marks}</span>
-                                                                                        </div>
-                                                                                    )}
-
-                                                                                    <div className="flex items-center space-x-1 border-l pl-3 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
-                                                                                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Total:</span>
-                                                                                        <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
-                                                                                            {mData.marks_obtained !== '' && mData.marks_obtained !== undefined ? mData.marks_obtained : '0'}
-                                                                                        </span>
-                                                                                        <span className="text-xs text-muted-foreground">/{sub.max_marks}</span>
+                                                                                {sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? (
+                                                                                    <div className="flex flex-wrap gap-4 items-center">
+                                                                                        <Select
+                                                                                            value={mData.grade || ''}
+                                                                                            disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                            onValueChange={(val) => handleMarkChange(student.id, sub.subject_id, 'grade', val)}
+                                                                                        >
+                                                                                            <SelectTrigger className="w-[80px] h-8 text-xs">
+                                                                                                <SelectValue placeholder="Grade" />
+                                                                                            </SelectTrigger>
+                                                                                            <SelectContent>
+                                                                                                <SelectItem value="none">Null / Clear</SelectItem>
+                                                                                                <SelectItem value="A+">A+</SelectItem>
+                                                                                                <SelectItem value="A">A</SelectItem>
+                                                                                                <SelectItem value="B">B</SelectItem>
+                                                                                                <SelectItem value="C">C</SelectItem>
+                                                                                                <SelectItem value="D">D</SelectItem>
+                                                                                            </SelectContent>
+                                                                                        </Select>
                                                                                     </div>
-                                                                                </div>
+                                                                                ) : (
+                                                                                    <div className="flex flex-wrap gap-4 items-center">
+                                                                                        {sub.has_theory === 1 && (
+                                                                                            <div className="flex items-center space-x-1">
+                                                                                                <span className="text-xs text-muted-foreground font-semibold">Theory:</span>
+                                                                                                <Input
+                                                                                                    type="number"
+                                                                                                    className="w-16 h-8 text-xs p-1"
+                                                                                                    value={mData.theory_marks_obtained || ''}
+                                                                                                    disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                                    onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'theory_marks_obtained', e.target.value)}
+                                                                                                    max={sub.theory_max_marks || sub.max_marks}
+                                                                                                    min="0"
+                                                                                                />
+                                                                                                <span className="text-xs text-muted-foreground">/{sub.theory_max_marks}</span>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {sub.has_lab === 1 && (
+                                                                                            <div className="flex items-center space-x-1">
+                                                                                                <span className="text-xs text-muted-foreground font-semibold">Lab:</span>
+                                                                                                <Input
+                                                                                                    type="number"
+                                                                                                    className="w-16 h-8 text-xs p-1"
+                                                                                                    value={mData.lab_marks_obtained || ''}
+                                                                                                    disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                                    onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'lab_marks_obtained', e.target.value)}
+                                                                                                    max={sub.lab_max_marks}
+                                                                                                    min="0"
+                                                                                                />
+                                                                                                <span className="text-xs text-muted-foreground">/{sub.lab_max_marks}</span>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        {sub.has_oral === 1 && (
+                                                                                            <div className="flex items-center space-x-1">
+                                                                                                <span className="text-xs text-muted-foreground font-semibold">Oral:</span>
+                                                                                                <Input
+                                                                                                    type="number"
+                                                                                                    className="w-16 h-8 text-xs p-1"
+                                                                                                    value={mData.oral_marks_obtained || ''}
+                                                                                                    disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                                    onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'oral_marks_obtained', e.target.value)}
+                                                                                                    max={sub.oral_max_marks}
+                                                                                                    min="0"
+                                                                                                />
+                                                                                                <span className="text-xs text-muted-foreground">/{sub.oral_max_marks}</span>
+                                                                                            </div>
+                                                                                        )}
+
+                                                                                        <div className="flex items-center space-x-1 border-l pl-3 bg-slate-50 dark:bg-slate-800/50 px-2 py-1 rounded">
+                                                                                            <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Total:</span>
+                                                                                            <span className="text-xs font-extrabold text-indigo-600 dark:text-indigo-400">
+                                                                                                {mData.marks_obtained !== '' && mData.marks_obtained !== undefined ? mData.marks_obtained : '-'}
+                                                                                            </span>
+                                                                                            <span className="text-xs text-muted-foreground">/{sub.max_marks}</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                )}
                                                                             </TableCell>
                                                                             <TableCell>
                                                                                 <span className={`font-bold ${mData.grade === 'F' || mData.grade === 'AB' ? 'text-red-500' : 'text-green-600'}`}>
-                                                                                    {mData.grade || '-'}
+                                                                                    {sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? (mData.grade || '-') : (mData.grade || '-')}
                                                                                 </span>
                                                                             </TableCell>
                                                                         </TableRow>

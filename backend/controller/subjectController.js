@@ -6,7 +6,7 @@ const toInt = v => (v === undefined || v === null ? null : Number(v));
 
 
 const AddSubjects = async (req, res) => {
-  const { code, name, description } = req.body;
+  const { code, name, description, subject_type } = req.body;
   if (!isNonEmptyString(name)) {
 
     return res.status(400).json({ error: 'Subject name is required' });
@@ -14,9 +14,10 @@ const AddSubjects = async (req, res) => {
 
   try {
     const image_url = req.file ? req.file.path : null;
+    const finalType = (subject_type && ['academic', 'co-scholastic', 'skill-based'].includes(subject_type)) ? subject_type : 'academic';
     const [result] = await db.execute(
-      `INSERT INTO subjects (code, name, description, image_url, created_at) VALUES (?, ?, ?, ?, NOW())`,
-      [code || null, name.trim(), description || null, image_url]
+      `INSERT INTO subjects (code, name, description, image_url, subject_type, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [code || null, name.trim(), description || null, image_url, finalType]
     );
     const [rows] = await db.execute(`SELECT * FROM subjects WHERE id = ?`, [
       result.insertId
@@ -61,8 +62,8 @@ const UpdateSubjects = async (req, res) => {
   const id = toInt(req.params.id);
   if (!id) return res.status(400).json({ error: 'Invalid subject id' });
 
-  const { code, name, description } = req.body;
-  if (code === undefined && name === undefined && description === undefined && image_url === undefined && !req.file) {
+  const { code, name, description, subject_type } = req.body;
+  if (code === undefined && name === undefined && description === undefined && subject_type === undefined && image_url === undefined && !req.file) {
     return res.status(400).json({ error: 'At least one field is required' });
   }
   const conn = await db.getConnection();
@@ -74,6 +75,9 @@ const UpdateSubjects = async (req, res) => {
     if (code !== undefined) { updates.push('code = ?'); params.push(code || null); }
     if (name !== undefined) { updates.push('name = ?'); params.push(isNonEmptyString(name) ? name.trim() : null); }
     if (description !== undefined) { updates.push('description = ?'); params.push(description || null); }
+    if (subject_type !== undefined && ['academic', 'co-scholastic', 'skill-based'].includes(subject_type)) {
+      updates.push('subject_type = ?'); params.push(subject_type);
+    }
     const image_url = req.body.image_url;
     if (req.file) {
       const [existing] = await conn.execute(`SELECT image_url FROM subjects WHERE id = ? FOR UPDATE`, [id]);
