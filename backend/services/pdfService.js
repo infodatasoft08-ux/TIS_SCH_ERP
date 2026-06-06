@@ -9,6 +9,15 @@ handlebars.registerHelper('eq', function (a, b) {
   return a === b;
 });
 
+handlebars.registerHelper('gradeColor', function (grade) {
+    if (!grade) return '#cbd5e1';
+    if (grade.includes('A')) return '#65a30d';
+    if (grade.includes('B')) return '#eab308';
+    if (grade.includes('C')) return '#f97316';
+    if (grade.includes('D') || grade.includes('E') || grade.includes('F')) return '#ef4444';
+    return '#3b82f6';
+});
+
 class PdfService {
   /**
    * Method 1: Overlay dynamic data on a base PDF design
@@ -115,7 +124,7 @@ class PdfService {
    */
   async renderHbsTemplate(templatePath, data, dimensions = { width: 345, height: 570 }) {
     const html = await this.compileHbsToHtml(templatePath, data);
-    console.log(`Rendering HBS to PDF. HTML Size: ${html.length} chars.`);
+    // console.log(`Rendering HBS to PDF. HTML Size: ${html.length} chars.`);
 
     const browser = await puppeteer.launch({
       headless: 'new',
