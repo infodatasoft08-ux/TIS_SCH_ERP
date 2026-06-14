@@ -122,7 +122,7 @@ class PdfService {
   /**
    * Method 2: Render HBS template to PDF via Puppeteer
    */
-  async renderHbsTemplate(templatePath, data, dimensions = { width: 345, height: 570 }) {
+  async renderHbsTemplate(templatePath, data, options = {}) {
     const html = await this.compileHbsToHtml(templatePath, data);
     // console.log(`Rendering HBS to PDF. HTML Size: ${html.length} chars.`);
 
@@ -134,8 +134,8 @@ class PdfService {
     try {
       const page = await browser.newPage();
 
-      const width = dimensions.width || 345;
-      const height = dimensions.height || 570;
+      const width = options.width || 345;
+      const height = options.height || 570;
 
       await page.setViewport({
         width: width,
@@ -152,19 +152,27 @@ class PdfService {
 
       await page.emulateMediaType('screen');
 
-      const pdfBuffer = await page.pdf({
+      const pdfOptions = {
         width: `${width}px`,
         height: `${height}px`,
         printBackground: true,
-        pageRanges: '1',
+        pageRanges: options.pageRanges !== undefined ? options.pageRanges : '1',
         preferCSSPageSize: true,
-        margin: {
+        margin: options.margin || {
           top: '0',
           right: '0',
           bottom: '0',
           left: '0'
         }
-      });
+      };
+
+      if (options.displayHeaderFooter) {
+        pdfOptions.displayHeaderFooter = true;
+        pdfOptions.headerTemplate = options.headerTemplate || '<span></span>';
+        pdfOptions.footerTemplate = options.footerTemplate || '<span></span>';
+      }
+
+      const pdfBuffer = await page.pdf(pdfOptions);
 
       return pdfBuffer;
     } finally {

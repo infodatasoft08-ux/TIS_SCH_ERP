@@ -829,7 +829,7 @@ export default function Invoices() {
             Manage student invoices and payments
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center lg:flex-row flex-col gap-3">
           <Button
             variant="outline"
             onClick={loadInvoices}

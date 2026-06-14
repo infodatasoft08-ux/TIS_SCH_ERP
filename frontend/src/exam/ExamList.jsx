@@ -1,13 +1,13 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CalendarIcon, BookOpen, Layers, Edit, PlusCircle, CheckCircle, Loader2, RefreshCw, Trash2, CalendarClock, Globe, Lock, Printer, MoreVertical } from "lucide-react";
+import { CalendarIcon, BookOpen, Layers, Edit, PlusCircle, CheckCircle, Loader2, RefreshCw, Trash2, CalendarClock, Globe, Lock, Printer, MoreVertical, FileText, Download } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useAuth } from "@/auth/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
-export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh, limit = 10, setLimit, total = 0, offset = 0 }) {
+export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, onGenerateConsolidatedMarksheet, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh, limit = 10, setLimit, total = 0, offset = 0 }) {
   const { user } = useAuth();
   const isTeacher = user?.role_id === 2;
 
@@ -90,11 +90,16 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuLabel>Actions</DropdownMenuLabel>
                           <DropdownMenuSeparator />
+                          {!exam.is_results_published && (
+                            <DropdownMenuItem onClick={() => onEditExam(exam)}>
+                              <Edit className="mr-2 h-4 w-4" /> Edit Exam Details
+                            </DropdownMenuItem>
+                          )}
                           {!isOver && (
                             <>
-                              <DropdownMenuItem onClick={() => onEditExam(exam)}>
+                              {/* <DropdownMenuItem onClick={() => onEditExam(exam)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Exam Details
-                              </DropdownMenuItem>
+                              </DropdownMenuItem> */}
                               {!isTeacher && (
                                 <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
                                   {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
@@ -124,9 +129,18 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                                   {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
                                 </DropdownMenuItem>
                               )}
-                              <DropdownMenuItem onClick={() => window.print()}>
-                                <Printer className="mr-2 h-4 w-4" /> Print Marksheet
-                              </DropdownMenuItem>
+                              <DropdownMenuSeparator />
+                              <div className="px-2 py-1.5 flex items-center justify-between rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
+                                <span className="text-sm font-medium text-slate-700 dark:text-slate-300 pl-1">Consolidated Statement</span>
+                                <div className="flex items-center gap-1">
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-500 hover:text-indigo-600 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={(e) => { e.stopPropagation(); onGenerateConsolidatedMarksheet(exam, 'download'); }} title="Download">
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                  <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-500 hover:text-emerald-600 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={(e) => { e.stopPropagation(); onGenerateConsolidatedMarksheet(exam, 'print'); }} title="Print">
+                                    <Printer className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
                             </>
                           )}
                           {exam.status === 'Draft' && (
@@ -193,7 +207,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
 
               <CardFooter className="pt-4 flex flex-col gap-2 w-full">
                 <div className="flex flex-col gap-2 w-full">
-                  {!isOver && (
+                  {!exam.is_results_published && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -260,15 +274,17 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                           {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
                         </Button>
                       )}
-                      <Button
-                        size="sm"
-                        variant="default"
-                        className="w-full text-xs bg-emerald-600 hover:bg-emerald-700 justify-start"
-                        onClick={() => window.print()}
-                      >
-                        <Printer className="mr-2 h-3.5 w-3.5" />
-                        Print Marksheet
-                      </Button>
+                      <div className="flex items-center justify-between w-full p-2 bg-slate-50 dark:bg-slate-800/50 rounded-md border border-slate-200 dark:border-slate-700">
+                        <span className="text-xs font-medium pl-1 text-slate-700 dark:text-slate-300">Consolidated Statement</span>
+                        <div className="flex items-center space-x-2">
+                          <Button size="icon" variant="outline" className="h-7 w-7 border-indigo-200 text-indigo-600 hover:bg-indigo-50 dark:border-indigo-900 dark:hover:bg-indigo-950/30" onClick={(e) => { e.stopPropagation(); onGenerateConsolidatedMarksheet(exam, 'download'); }}>
+                            <Download className="h-3.5 w-3.5" />
+                          </Button>
+                          <Button size="icon" variant="outline" className="h-7 w-7 border-emerald-200 text-emerald-600 hover:bg-emerald-50 dark:border-emerald-900 dark:hover:bg-emerald-950/30" onClick={(e) => { e.stopPropagation(); onGenerateConsolidatedMarksheet(exam, 'print'); }}>
+                            <Printer className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
                     </>
                   )}
 

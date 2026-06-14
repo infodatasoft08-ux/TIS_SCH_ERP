@@ -45,6 +45,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
   const [academicYears, setAcademicYears] = useState([]);
   const [selectedSubjectsMap, setSelectedSubjectsMap] = useState({});
 
+  const isExamLocked = examToEdit && (examToEdit.status === 'Over' || examToEdit.status === 'Published');
+
   const form = useForm({
     resolver: zodResolver(schema),
     defaultValues: {
@@ -270,6 +272,15 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
 
     // Note: Non-academic subjects are no longer auto-appended, they are selected explicitly by the user
 
+    if (isExamLocked && examToEdit) {
+      data.name = examToEdit.name;
+      data.exam_type = examToEdit.exam_type;
+      if (examToEdit.custom_exam_name) data.custom_exam_name = examToEdit.custom_exam_name;
+      data.grade_id = examToEdit.grade_id.toString();
+      if (examToEdit.class_id) data.class_id = examToEdit.class_id.toString();
+      data.note = examToEdit.note || "";
+    }
+
     setIsSubmitting(true);
     try {
       if (examToEdit) {
@@ -315,11 +326,13 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                             <Input
                               placeholder="Enter custom exam name"
                               value={form.watch('custom_exam_name')}
+                              disabled={isExamLocked}
                               onChange={(e) => form.setValue('custom_exam_name', e.target.value)}
                             />
                             <Button
                               type="button"
                               variant="outline"
+                              disabled={isExamLocked}
                               onClick={() => {
                                 form.setValue('exam_type', 'UNIT_TEST_1');
                                 form.setValue('custom_exam_name', '');
@@ -329,7 +342,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                             </Button>
                           </div>
                         ) : (
-                          <Select onValueChange={field.onChange} value={field.value}>
+                          <Select disabled={isExamLocked} onValueChange={field.onChange} value={field.value}>
                             <SelectTrigger>
                               <SelectValue placeholder="Select Exam Type" />
                             </SelectTrigger>
@@ -354,7 +367,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                     <FormItem>
                       <FormLabel>Exam Name (Title) *</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="e.g. Unit Test 1" />
+                        <Input disabled={isExamLocked} {...field} placeholder="e.g. Unit Test 1" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -402,6 +415,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                       field={field}
                       label="Grade"
                       required
+                      disabled={isExamLocked}
                       items={grades}
                       valueKey="id"
                       labelKey="name"
@@ -420,6 +434,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                     <ComboboxFormField
                       field={field}
                       label="Class"
+                      disabled={isExamLocked}
                       items={[{ id: "", name: "Select None / Clear" }, ...classes]}
                       valueKey="id"
                       labelKey="name"
@@ -477,7 +492,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                     <FormItem>
                       <FormLabel>Instructions/Note</FormLabel>
                       <FormControl>
-                        <Textarea {...field} placeholder="Enter exam instructions..." rows={1} />
+                        <Textarea disabled={isExamLocked} {...field} placeholder="Enter exam instructions..." rows={1} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>

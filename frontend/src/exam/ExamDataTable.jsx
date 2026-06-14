@@ -188,6 +188,19 @@ export default function ExamDataTable() {
     }
 
     async function togglePublish(exam) {
+        if (exam.status !== 'Published') {
+            const academicSubjects = exam.subjects?.filter(s => {
+                const n = s.subject_name?.toLowerCase().trim();
+                return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+            }) || [];
+
+            const isRoutineScheduled = academicSubjects.length > 0 && academicSubjects.some(s => s.exam_date !== null && s.exam_date !== undefined && s.exam_date !== '');
+
+            if (!isRoutineScheduled) {
+                toast.warning("Please create exam routine before publishing");
+                return;
+            }
+        }
         const newStatus = exam.status === 'Published' ? 'Draft' : 'Published';
         try {
             await API.put(`/exam/update/exams/${exam.id}`, { status: newStatus });
@@ -550,6 +563,111 @@ export default function ExamDataTable() {
         }
     };
 
+    const handleConsolidatedMarksheetAction = async (exam, action) => {
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating consolidated marksheet for ${exam.name}...`);
+        try {
+            const res = await API.post('/exam/generate-consolidated-marksheet', {
+                exam_id: exam.id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: "application/pdf" });
+
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action,
+                                fileName: `ConsolidatedMarksheet_${exam.name}.pdf`,
+                                payload: { base64 }
+                            })
+                        );
+                        toast.success(`Consolidated marksheet sent to mobile app for ${action}.`);
+                    } catch (e) {
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+                reader.readAsDataURL(blob);
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate consolidated marksheet.");
+                return;
+            }
+
+            if (res.data) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `ConsolidatedMarksheet_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                } else if (action === 'view') {
+                    window.open(blobUrl, '_blank');
+                    // Revoke after a delay to ensure it loads in the new tab
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+                } else if (action === 'download_and_print') {
+                    // Trigger download
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `ConsolidatedMarksheet_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+
+                    // Trigger print
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 60000);
+                }
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const generatePerformanceReportPDF = (student) => {
         const doc = new jsPDF();
 
@@ -678,6 +796,7 @@ export default function ExamDataTable() {
                                     onCreateRoutine={openRoutineDialog}
                                     onTogglePublish={togglePublish}
                                     onToggleResultsPublish={toggleResultsPublish}
+                                    onGenerateConsolidatedMarksheet={handleConsolidatedMarksheetAction}
                                     deleteExam={deleteExam}
                                     hasMore={hasMore}
                                     isLoading={isLoading}

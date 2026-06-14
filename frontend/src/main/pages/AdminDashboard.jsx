@@ -218,7 +218,7 @@ export default function AdminDashboard() {
           {/* Summary Cards */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
             {stats.map((stat, idx) => (
-              <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border dark:border-gray-800 hover:border-gray-700 transition-all group overflow-hidden relative">
+              <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border dark:border-gray-800 hover:border-gray-700 transition-all group overflow-hidden relative" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
                 <div className="relative z-10 flex items-start justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{stat.label}</p>

@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Consolidated Marksheet</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700&family=Cinzel:wght@600;700&display=swap');
+
+        body {
+            font-family: 'Montserrat', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #fff;
+            color: #1e293b;
+            box-sizing: border-box;
+        }
+
+        .container {
+            width: 100%;
+            padding: 30px;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .school-name {
+            font-family: 'Cinzel', serif;
+            font-size: 28px;
+            font-weight: 700;
+            color: #1e3a8a;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin: 0 0 5px 0;
+        }
+
+        .report-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #334155;
+            margin: 0 0 15px 0;
+        }
+
+        .details-bar {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 600;
+            color: #475569;
+            margin-bottom: 15px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid #cbd5e1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 10px;
+            text-align: center;
+        }
+
+        th,
+        td {
+            border: 1px solid #94a3b8;
+            padding: 6px 4px;
+        }
+
+        th {
+            background-color: #f1f5f9;
+            color: #1e293b;
+            font-weight: 600;
+        }
+
+        .subject-header {
+            background-color: #e2e8f0;
+            color: #0f172a;
+        }
+
+        .marks-header {
+            background-color: #f8fafc;
+            font-size: 9px;
+            color: #1e293b;
+            font-weight: bold;
+        }
+
+        thead tr:first-child th:first-child,
+        tbody td:first-child {
+            width: 30px;
+        }
+
+        thead tr:first-child th:nth-child(2),
+        tbody td:nth-child(2) {
+            text-align: left;
+            width: 180px;
+        }
+
+        .student-name {
+            font-weight: 600;
+            color: #0f172a;
+            font-size: 11px;
+            margin-bottom: 2px;
+        }
+
+        .father-name {
+            font-size: 9px;
+            color: #64748b;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 60px;
+            padding: 0 40px 20px 40px;
+            page-break-inside: avoid;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .signature-box {
+            text-align: center;
+            width: 150px;
+        }
+
+        .signature-line {
+            border-top: 1px dotted #334155;
+            margin-bottom: 5px;
+        }
+
+        .signature-title {
+            font-size: 11px;
+            font-weight: 600;
+            color: #334155;
+            text-transform: uppercase;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
+            <h2 class="report-title">Consolidated Subject-Wise Marks Statement</h2>
+        </div>
+
+        <div class="details-bar">
+            <span>Academic Session: {{academicSession}}</span>
+            <span>Examination: {{examName}}</span>
+            <span>Class: {{className}}</span>
+        </div>
+
+        <table>
+            <thead>
+                <tr>
+                    <th rowspan="3" style="background-color: #2563eb; color: white;">ROLL<br>NO.</th>
+                    <th rowspan="3" style="background-color: #2563eb; color: white; text-align: left;">STUDENT NAME
+                        /<br>FATHER'S NAME</th>
+                    {{#each subjects}}
+                    <th colspan="{{this.colSpan}}" class="subject-header">{{this.name}}</th>
+                    {{/each}}
+                    <th rowspan="3" style="background-color: #1e3a8a; color: white;">GRAND<br>TOTAL<br>({{totalMaxAll}})
+                    </th>
+                    <th rowspan="3" style="background-color: #2563eb; color: white;">RESULT /<br>REMARKS</th>
+                </tr>
+                <tr class="marks-header">
+                    {{#each subjects}}
+                    {{#if this.hasTheory}}<th>T</th>{{/if}}
+                    {{#if this.hasOral}}<th>O</th>{{/if}}
+                    {{#if this.hasLab}}<th>L</th>{{/if}}
+                    <th>TOT</th>
+                    {{/each}}
+                </tr>
+                <tr class="marks-header" style="font-weight: bold; color: #1e293b;">
+                    {{#each subjects}}
+                    {{#if this.hasTheory}}<th>({{this.theoryMax}})</th>{{/if}}
+                    {{#if this.hasOral}}<th>({{this.oralMax}})</th>{{/if}}
+                    {{#if this.hasLab}}<th>({{this.labMax}})</th>{{/if}}
+                    <th>({{this.totalMax}})</th>
+                    {{/each}}
+                </tr>
+            </thead>
+            <tbody>
+                {{#each students}}
+                <tr>
+                    <td>{{this.rollNo}}</td>
+                    <td>
+                        <div class="student-name">{{this.name}}</div>
+                        <div class="father-name">{{this.fatherName}}</div>
+                    </td>
+                    {{#each this.marks}}
+                    {{#if this.hasTheory}}<td>{{this.theory}}</td>{{/if}}
+                    {{#if this.hasOral}}<td>{{this.oral}}</td>{{/if}}
+                    {{#if this.hasLab}}<td>{{this.lab}}</td>{{/if}}
+                    <td style="background-color: #f8fafc; font-weight: 600;">{{this.total}}</td>
+                    {{/each}}
+                    <td style="background-color: #e2e8f0; font-weight: 700;">{{this.grandTotal}}</td>
+                    <td
+                        style="background-color: #f1f5f9; font-weight: 600; color: {{#if (eq this.result 'FAIL')}}#ef4444{{else}}#10b981{{/if}}">
+                        {{this.result}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+
+        <div class="footer">
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-title">Class Teacher</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-title">Exam Coordinator</div>
+            </div>
+            <div class="signature-box">
+                <div class="signature-line"></div>
+                <div class="signature-title">Principal</div>
+            </div>
+        </div>
+    </div>
+</body>
+
+</html>

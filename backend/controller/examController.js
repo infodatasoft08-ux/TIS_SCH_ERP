@@ -1267,6 +1267,183 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
     }
 }
 
+const GenerateConsolidatedMarksheetPDF = async (req, res) => {
+    const { exam_id } = req.body;
+    if (!exam_id) return res.status(400).json({ error: 'exam_id is required' });
+
+    try {
+        // Fetch exam group info
+        const [[examGroup]] = await db.execute(`
+            SELECT eg.name as exam_name, eg.start_date,
+                   c.name as class_name, g.name as grade_name, ay.name as academic_year_name
+            FROM exam_groups eg
+            LEFT JOIN classes c ON c.id = eg.class_id
+            LEFT JOIN grades g ON g.id = eg.grade_id
+            LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
+            WHERE eg.id = ?
+        `, [exam_id]);
+
+        if (!examGroup) return res.status(404).json({ error: 'Exam not found' });
+
+        const sessionName = examGroup.academic_year_name || 'N/A';
+        const examName = examGroup.exam_name;
+        const className = examGroup.class_name || examGroup.grade_name || 'All';
+
+        // Fetch subjects
+        const [subjects] = await db.execute(`
+            SELECT egs.id as exam_group_subject_id, s.name as subject_name,
+                   egs.max_marks, egs.has_theory, egs.has_lab, egs.has_oral,
+                   egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
+                   s.subject_type
+            FROM exam_group_subjects egs
+            JOIN subjects s ON s.id = egs.subject_id
+            WHERE egs.exam_group_id = ?
+              AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
+            ORDER BY egs.id ASC
+        `, [exam_id]);
+
+        // Process subjects for columns
+        const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+        
+        let totalMaxAll = 0;
+        const formattedSubjects = subjects.map(sub => {
+            const hasTheory = checkTrue(sub.has_theory);
+            const hasLab = checkTrue(sub.has_lab);
+            const hasOral = checkTrue(sub.has_oral);
+            
+            let colSpan = 0;
+            if (hasTheory) colSpan++;
+            if (hasLab) colSpan++;
+            if (hasOral) colSpan++;
+            colSpan++; // For total of the subject
+            
+            totalMaxAll += Number(sub.max_marks || 0);
+
+            return {
+                id: sub.exam_group_subject_id,
+                name: sub.subject_name,
+                hasTheory, hasLab, hasOral,
+                theoryMax: sub.theory_max_marks,
+                labMax: sub.lab_max_marks,
+                oralMax: sub.oral_max_marks,
+                totalMax: sub.max_marks,
+                colSpan
+            };
+        });
+
+        // Fetch students and marks
+        const [results] = await db.execute(`
+            SELECT st.id as student_id, u.name as student_name, sar.roll_no, st.fathers_name,
+                   egr.exam_group_subject_id,
+                   egr.marks_obtained, egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
+                   egr.attendance_status, egr.grade
+            FROM exam_group_results egr
+            JOIN students st ON st.id = egr.student_id
+            JOIN users u ON u.id = st.user_id
+            JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+            LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
+            WHERE egs.exam_group_id = ?
+            ORDER BY CAST(sar.roll_no AS UNSIGNED) ASC, u.name ASC
+        `, [exam_id]);
+
+        const studentsMap = {};
+        results.forEach(row => {
+            if (!studentsMap[row.student_id]) {
+                studentsMap[row.student_id] = {
+                    rollNo: row.roll_no || '-',
+                    name: row.student_name,
+                    fatherName: row.fathers_name || '-',
+                    marksMap: {},
+                    grandTotal: 0,
+                    hasFailed: false,
+                    isAbsent: true
+                };
+            }
+            
+            if (row.attendance_status !== 'Absent') {
+                studentsMap[row.student_id].isAbsent = false;
+            }
+            
+            if (row.grade === 'F' || row.attendance_status === 'Absent') {
+                studentsMap[row.student_id].hasFailed = true;
+            }
+
+            studentsMap[row.student_id].marksMap[row.exam_group_subject_id] = {
+                theory: row.theory_marks_obtained,
+                lab: row.lab_marks_obtained,
+                oral: row.oral_marks_obtained,
+                total: row.marks_obtained,
+                attendance_status: row.attendance_status
+            };
+            
+            if (row.marks_obtained !== null && row.attendance_status !== 'Absent') {
+                studentsMap[row.student_id].grandTotal += Number(row.marks_obtained);
+            }
+        });
+
+        const formattedStudents = Object.values(studentsMap).map(student => {
+            const marks = formattedSubjects.map(sub => {
+                const sm = student.marksMap[sub.id];
+                if (!sm || sm.attendance_status === 'Absent') {
+                    return {
+                        theory: 'AB', lab: 'AB', oral: 'AB', total: 'AB',
+                        hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral
+                    };
+                }
+                return {
+                    theory: sm.theory !== null && sm.theory !== undefined ? sm.theory : '-',
+                    lab: sm.lab !== null && sm.lab !== undefined ? sm.lab : '-',
+                    oral: sm.oral !== null && sm.oral !== undefined ? sm.oral : '-',
+                    total: sm.total !== null && sm.total !== undefined ? sm.total : '-',
+                    hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral
+                };
+            });
+            
+            return {
+                rollNo: student.rollNo,
+                name: student.name,
+                fatherName: student.fatherName,
+                marks,
+                grandTotal: student.isAbsent ? 'AB' : student.grandTotal,
+                result: student.isAbsent ? 'ABSENT' : (student.hasFailed ? 'FAIL' : 'PASS')
+            };
+        });
+
+        const templateData = {
+            academicSession: sessionName,
+            examName: examName,
+            className: className,
+            subjects: formattedSubjects,
+            totalMaxAll: totalMaxAll,
+            students: formattedStudents
+        };
+
+        const templatePath = 'uploads/templates/consolidated_marksheet.hbs';
+        
+        // Render HBS to PDF buffer
+        const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
+            width: 1123,
+            height: 794,
+            pageRanges: '', // print all pages
+            displayHeaderFooter: true,
+            margin: { top: '30px', right: '0', bottom: '60px', left: '0' },
+            footerTemplate: `
+                <div style="font-size: 10px; color: #64748b; width: 100%; padding: 0 40px; display: flex; justify-content: space-between; font-family: 'Montserrat', sans-serif;">
+                    <span>Times International School Academic Record &mdash; ${examName}</span>
+                    <span>Page <span class="pageNumber"></span></span>
+                </div>
+            `
+        });
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Consolidated_Marksheet_${exam_id}.pdf`);
+        return res.send(pdfBuffer);
+    } catch (err) {
+        console.error('POST /api/exam/generate-consolidated-marksheet error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     AddExamGroup,
     GetExamGroups,
@@ -1282,5 +1459,6 @@ module.exports = {
     GenerateMarksheetPDF,
     GenerateAdmitCardPDF,
     GenerateExamRoutinePDF,
-    GenerateCombinedMarksheetPDF
+    GenerateCombinedMarksheetPDF,
+    GenerateConsolidatedMarksheetPDF
 };

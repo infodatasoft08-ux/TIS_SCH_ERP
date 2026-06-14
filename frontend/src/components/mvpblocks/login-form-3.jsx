@@ -398,16 +398,38 @@ export default function SignInPage() {
                     </Link>
                   </div>
 
-                  <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
+                  <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
+                    Need support?{" "}
+                    <Link to="/contact" className={`font-semibold text-blue-600 hover:text-blue-700 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
+                      Contact Administration
+                    </Link>
+
+                    {" | "}
+
+                    <a
+                      href="/privacy-policy.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                    >
+                      Privacy Policy
+                    </a>
+
+                    <div className="mt-1 text-center text-xs text-muted-foreground w-full">
+                      {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
+                      © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
+                    </div>
+                  </div>
+
+                  {/* <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
                     Need support??{" "}
                     <Link to="/contact" className={`font-semibold text-blue-600 hover:text-blue-700 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
                       Contact Administration
                     </Link>
-                  </div>
-                  <div className="mt-1 text-center text-xs text-muted-foreground w-full">
-                    {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
+                  </div> */}
+                  {/* <div className="mt-1 text-center text-xs text-muted-foreground w-full">
+                    {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> 
                     © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
-                  </div>
+                  </div> */}
                 </div>
               </div>
             </div>
