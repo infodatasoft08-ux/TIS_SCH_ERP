@@ -1336,7 +1336,7 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
             SELECT st.id as student_id, u.name as student_name, sar.roll_no, st.fathers_name,
                    egr.exam_group_subject_id,
                    egr.marks_obtained, egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
-                   egr.attendance_status, egr.grade
+                   egr.attendance_status, egr.grade, egr.teacher_remark
             FROM exam_group_results egr
             JOIN students st ON st.id = egr.student_id
             JOIN users u ON u.id = st.user_id
@@ -1356,7 +1356,8 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                     marksMap: {},
                     grandTotal: 0,
                     hasFailed: false,
-                    isAbsent: true
+                    isAbsent: true,
+                    teacherRemark: null
                 };
             }
             
@@ -1366,6 +1367,10 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
             
             if (row.grade === 'F' || row.attendance_status === 'Absent') {
                 studentsMap[row.student_id].hasFailed = true;
+            }
+
+            if (row.teacher_remark) {
+                studentsMap[row.student_id].teacherRemark = row.teacher_remark;
             }
 
             studentsMap[row.student_id].marksMap[row.exam_group_subject_id] = {
@@ -1387,7 +1392,8 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                 if (!sm || sm.attendance_status === 'Absent') {
                     return {
                         theory: 'AB', lab: 'AB', oral: 'AB', total: 'AB',
-                        hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral
+                        hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral,
+                        isAbsent: true
                     };
                 }
                 return {
@@ -1395,9 +1401,12 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                     lab: sm.lab !== null && sm.lab !== undefined ? sm.lab : '-',
                     oral: sm.oral !== null && sm.oral !== undefined ? sm.oral : '-',
                     total: sm.total !== null && sm.total !== undefined ? sm.total : '-',
-                    hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral
+                    hasTheory: sub.hasTheory, hasLab: sub.hasLab, hasOral: sub.hasOral,
+                    isAbsent: false
                 };
             });
+            
+            const defaultRemark = student.isAbsent ? '-' : (student.hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
             
             return {
                 rollNo: student.rollNo,
@@ -1405,7 +1414,8 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                 fatherName: student.fatherName,
                 marks,
                 grandTotal: student.isAbsent ? 'AB' : student.grandTotal,
-                result: student.isAbsent ? 'ABSENT' : (student.hasFailed ? 'FAIL' : 'PASS')
+                result: student.isAbsent ? 'ABSENT' : (student.hasFailed ? 'FAIL' : 'PASS'),
+                teacherRemark: student.teacherRemark || defaultRemark
             };
         });
 

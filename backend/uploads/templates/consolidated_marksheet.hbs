@@ -191,15 +191,29 @@
                         <div class="father-name">{{this.fatherName}}</div>
                     </td>
                     {{#each this.marks}}
-                    {{#if this.hasTheory}}<td>{{this.theory}}</td>{{/if}}
-                    {{#if this.hasOral}}<td>{{this.oral}}</td>{{/if}}
-                    {{#if this.hasLab}}<td>{{this.lab}}</td>{{/if}}
-                    <td style="background-color: #f8fafc; font-weight: 600;">{{this.total}}</td>
-                    {{/each}}
-                    <td style="background-color: #e2e8f0; font-weight: 700;">{{this.grandTotal}}</td>
+                    {{#if this.hasTheory}}<td
+                        style="{{#if this.isAbsent}}color: #ef4444; font-weight: bold; background-color: #fee2e2;{{/if}}">
+                        {{this.theory}}</td>{{/if}}
+                    {{#if this.hasOral}}<td
+                        style="{{#if this.isAbsent}}color: #ef4444; font-weight: bold; background-color: #fee2e2;{{/if}}">
+                        {{this.oral}}</td>{{/if}}
+                    {{#if this.hasLab}}<td
+                        style="{{#if this.isAbsent}}color: #ef4444; font-weight: bold; background-color: #fee2e2;{{/if}}">
+                        {{this.lab}}</td>{{/if}}
                     <td
-                        style="background-color: #f1f5f9; font-weight: 600; color: {{#if (eq this.result 'FAIL')}}#ef4444{{else}}#10b981{{/if}}">
-                        {{this.result}}</td>
+                        style="background-color: #f8fafc; font-weight: 600; {{#if this.isAbsent}}color: #ef4444; background-color: #fee2e2;{{/if}}">
+                        {{this.total}}</td>
+                    {{/each}}
+                    <td
+                        style="background-color: #e2e8f0; font-weight: 700; {{#if (eq this.grandTotal 'AB')}}color: #ef4444; background-color: #fee2e2;{{/if}}">
+                        {{this.grandTotal}}</td>
+                    <td
+                        style="background-color: #f1f5f9; font-weight: 600; color: {{#if (eq this.result 'FAIL')}}#ef4444{{else}}{{#if (eq this.result 'ABSENT')}}#ef4444{{else}}#10b981{{/if}}{{/if}}">
+                        {{this.result}}
+                        <br>
+                        <span
+                            style="font-size: 8px; color: #64748b; font-weight: normal; text-transform: none;">{{this.teacherRemark}}</span>
+                    </td>
                 </tr>
                 {{/each}}
             </tbody>
