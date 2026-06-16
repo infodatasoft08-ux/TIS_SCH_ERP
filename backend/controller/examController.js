@@ -1347,8 +1347,10 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
         `, [exam_id]);
 
         const studentsMap = {};
+        const orderedStudentIds = [];
         results.forEach(row => {
             if (!studentsMap[row.student_id]) {
+                orderedStudentIds.push(row.student_id);
                 studentsMap[row.student_id] = {
                     rollNo: row.roll_no || '-',
                     name: row.student_name,
@@ -1386,7 +1388,8 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
             }
         });
 
-        const formattedStudents = Object.values(studentsMap).map(student => {
+        const formattedStudents = orderedStudentIds.map(studentId => {
+            const student = studentsMap[studentId];
             const marks = formattedSubjects.map(sub => {
                 const sm = student.marksMap[sub.id];
                 if (!sm || sm.attendance_status === 'Absent') {
