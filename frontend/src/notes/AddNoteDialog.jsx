@@ -158,7 +158,7 @@ export default function AddNoteDialog({ open, onOpenChange, noteToEdit, onSucces
                 <Form {...form}>
                     {/* <ScrollArea className="max-h-[50vh] md:max-h-[60vh] lg:max-h-[60vh]"></ScrollArea> */}
                     <ScrollArea className="overflow-y-auto h-[calc(100vh-200px)]">
-                        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+                        <form id="add-note-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                 <FormField
                                     control={form.control}
@@ -295,7 +295,7 @@ export default function AddNoteDialog({ open, onOpenChange, noteToEdit, onSucces
                         <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
                             Cancel
                         </Button>
-                        <Button type="submit" disabled={isLoading}>
+                        <Button type="submit" form="add-note-form" disabled={isLoading}>
                             {isLoading ? (
                                 <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />

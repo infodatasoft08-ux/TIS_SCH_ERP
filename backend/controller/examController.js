@@ -158,11 +158,14 @@ const GetExamGroups = async (req, res) => {
 // Update Exam Group (Status / Details)
 const UpdateExamGroup = async (req, res) => {
     const id = toInt(req.params.id);
-    const { name, exam_type, custom_exam_name, note, start_date, end_date, status, is_results_published, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects } = req.body;
 
     const updates = []; const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
     if (exam_type !== undefined) { updates.push('exam_type = ?'); params.push(exam_type); }
+    if (class_id !== undefined) { updates.push('class_id = ?'); params.push(class_id === '' || class_id === null ? null : toInt(class_id)); }
+    if (grade_id !== undefined) { updates.push('grade_id = ?'); params.push(toInt(grade_id)); }
+    if (academic_year_id !== undefined) { updates.push('academic_year_id = ?'); params.push(toInt(academic_year_id)); }
     if (custom_exam_name !== undefined) { updates.push('custom_exam_name = ?'); params.push(custom_exam_name); }
     if (note !== undefined) { updates.push('note = ?'); params.push(note); }
     if (start_date !== undefined) { updates.push('start_date = ?'); params.push(start_date || null); }
@@ -1457,6 +1460,169 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
     }
 }
 
+const GenerateBulkMarksheetPDF = async (req, res) => {
+    const { student_ids, exam_id } = req.body;
+
+    if (!student_ids || !exam_id || !Array.isArray(student_ids) || student_ids.length === 0) {
+        return res.status(400).json({ error: 'student_ids array and exam_id are required' });
+    }
+
+    try {
+        const pdfBuffers = [];
+        let logoData = null;
+        try {
+            const logoPath = require('path').join(__dirname, '../assets/school_invoice_logo.png');
+            const fs = require('fs');
+            if (fs.existsSync(logoPath)) {
+                logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+            }
+        } catch (e) { }
+
+        for (let student_id of student_ids) {
+            const [rows] = await db.execute(`
+                SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+                       COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
+                       COALESCE(g.name, eg_g.name) as grade_name, 
+                       COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
+                       COALESCE(ay.name, eg_ay.name) as academic_year_name,
+                       eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
+                       egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+                       egs.has_theory, egs.has_lab, egs.has_oral,
+                       egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
+                       egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained, egr.teacher_remark
+                FROM exam_group_results egr
+                JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+                JOIN exam_groups eg ON eg.id = egs.exam_group_id
+                JOIN students st ON st.id = egr.student_id
+                JOIN users u ON u.id = st.user_id
+                LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
+                LEFT JOIN grades g ON g.id = sar.grade_id
+                LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+                LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
+                LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
+                LEFT JOIN subjects s ON s.id = egs.subject_id
+                WHERE st.id = ? AND eg.id = ? 
+                  AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
+            `, [student_id, exam_id]);
+
+            if (rows.length === 0) continue;
+
+            const student = {
+                id: rows[0].student_id,
+                name: rows[0].student_name,
+                roll_no: rows[0].roll_no || 'N/A',
+                grade_name: rows[0].grade_name || 'N/A',
+                academic_year_name: rows[0].academic_year_name || 'N/A'
+            };
+
+            const examDate = rows[0].start_date ? formatMySQLDate(rows[0].start_date) : 'N/A';
+            const exam = {
+                name: rows[0].exam_name,
+                formattedDate: examDate,
+                subjects: []
+            };
+
+            let totalMax = 0;
+            let totalObtained = 0;
+            let serialNo = 1;
+
+            rows.forEach(row => {
+                if (row.marks_obtained === null && row.attendance_status !== 'Absent') {
+                    return;
+                }
+
+                exam.subjects.push({
+                    serial_no: serialNo++,
+                    subject_name: row.subject_name,
+                    marks_obtained: row.marks_obtained !== null && row.marks_obtained !== undefined ? Math.round(Number(row.marks_obtained)) : row.marks_obtained,
+                    max_marks: row.max_marks,
+                    grade: row.grade || '-',
+                    attendance_status: row.attendance_status,
+                    has_theory: row.has_theory,
+                    has_lab: row.has_lab,
+                    has_oral: row.has_oral,
+                    theory_max_marks: row.theory_max_marks,
+                    lab_max_marks: row.lab_max_marks,
+                    oral_max_marks: row.oral_max_marks,
+                    theory_marks_obtained: row.theory_marks_obtained !== null && row.theory_marks_obtained !== undefined ? Math.round(Number(row.theory_marks_obtained)) : row.theory_marks_obtained,
+                    lab_marks_obtained: row.lab_marks_obtained !== null && row.lab_marks_obtained !== undefined ? Math.round(Number(row.lab_marks_obtained)) : row.lab_marks_obtained,
+                    oral_marks_obtained: row.oral_marks_obtained !== null && row.oral_marks_obtained !== undefined ? Math.round(Number(row.oral_marks_obtained)) : row.oral_marks_obtained
+                });
+                totalMax += Number(row.max_marks || 0);
+                if (row.attendance_status !== 'Absent') {
+                    totalObtained += Number(row.marks_obtained || 0);
+                }
+            });
+
+            totalObtained = Math.round(totalObtained);
+
+            const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+            const showTheory = exam.subjects.some(s => checkTrue(s.has_theory));
+            const showLab = exam.subjects.some(s => checkTrue(s.has_lab));
+            const showOral = exam.subjects.some(s => checkTrue(s.has_oral));
+
+            const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+            const currentDate = new Date().toLocaleDateString();
+
+            let hasFailed = false;
+            let dynamicTeacherRemark = null;
+            rows.forEach(row => {
+                if (row.grade === 'F' || row.attendance_status === 'Absent') {
+                    hasFailed = true;
+                }
+                if (row.teacher_remark) {
+                    dynamicTeacherRemark = row.teacher_remark;
+                }
+            });
+            const finalResult = hasFailed ? 'Fail' : 'Pass';
+            const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
+
+            const templateData = {
+                student,
+                exam: {
+                    ...exam,
+                    showTheory,
+                    showLab,
+                    showOral
+                },
+                totalMax,
+                totalObtained,
+                percentage,
+                currentDate,
+                finalResult,
+                teacherRemark,
+                logoData
+            };
+
+            const templatePath = 'uploads/templates/student_marksheet.hbs';
+
+            const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
+                width: 794,
+                height: 1123
+            });
+            pdfBuffers.push(pdfBuffer);
+        }
+
+        if (pdfBuffers.length === 0) {
+            return res.status(404).json({ error: 'No marksheets generated for the selected students' });
+        }
+
+        let finalPdfBuffer;
+        if (pdfBuffers.length === 1) {
+            finalPdfBuffer = pdfBuffers[0];
+        } else {
+            finalPdfBuffer = await pdfService.mergePdfs(pdfBuffers);
+        }
+
+        res.setHeader('Content-Type', 'application/pdf');
+        res.setHeader('Content-Disposition', `attachment; filename=Bulk_Marksheets_${exam_id}.pdf`);
+        return res.send(Buffer.from(finalPdfBuffer));
+    } catch (err) {
+        console.error('POST /api/exam/generate-bulk-marksheet error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
 module.exports = {
     AddExamGroup,
     GetExamGroups,
@@ -1473,5 +1639,6 @@ module.exports = {
     GenerateAdmitCardPDF,
     GenerateExamRoutinePDF,
     GenerateCombinedMarksheetPDF,
-    GenerateConsolidatedMarksheetPDF
+    GenerateConsolidatedMarksheetPDF,
+    GenerateBulkMarksheetPDF
 };

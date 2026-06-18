@@ -103,7 +103,7 @@ export default function EventForm({ open, onOpenChange, onSuccess, event }) {
                 </DialogHeader>
 
                 <ScrollArea className="overflow-y-auto h-[calc(70vh)]">
-                    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                    <form id="event-form" onSubmit={handleSubmit} className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="title">Event Title</Label>
                             <Input
@@ -215,7 +215,7 @@ export default function EventForm({ open, onOpenChange, onSuccess, event }) {
 
                 <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button type="submit" disabled={loading}>
+                    <Button type="submit" form="event-form" disabled={loading}>
                         {loading ? "Saving..." : (event ? "Update Event" : "Create Event")}
                     </Button>
                 </DialogFooter>

@@ -98,7 +98,7 @@ export default function NoticeForm({ open, onOpenChange, onSuccess, notice }) {
                     <DialogTitle>{notice ? 'Update Notice' : 'Create New Notice'}</DialogTitle>
                 </DialogHeader>
                 <ScrollArea className="overflow-y-auto h-[calc(50vh)]">
-                    <form onSubmit={handleSubmit} className="space-y-4 py-4">
+                    <form id="notice-form" onSubmit={handleSubmit} className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label htmlFor="title">Title</Label>
                             <Input
@@ -197,7 +197,7 @@ export default function NoticeForm({ open, onOpenChange, onSuccess, notice }) {
                 </ScrollArea>
                 <DialogFooter className="pt-4">
                     <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-                    <Button type="submit" disabled={loading}>
+                    <Button type="submit" form="notice-form" disabled={loading}>
                         {loading ? "Saving..." : (notice ? "Update Notice" : "Create Notice")}
                     </Button>
                 </DialogFooter>

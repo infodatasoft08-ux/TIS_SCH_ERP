@@ -37,6 +37,7 @@ export default function ExamDataTable() {
     const [isRoutineDialogOpen, setIsRoutineDialogOpen] = useState(false);
     const [isReportDialogOpen, setIsReportDialogOpen] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [selectedStudentIds, setSelectedStudentIds] = useState([]);
     const [isGenerating, setIsGenerating] = useState(false);
 
     const [filterGrade, setFilterGrade] = useState("all");
@@ -668,6 +669,105 @@ export default function ExamDataTable() {
         }
     };
 
+    const getCommonExams = () => {
+        if (selectedStudentIds.length === 0) return [];
+        const selectedStudents = filteredSummaries.filter(s => selectedStudentIds.includes(s.id));
+        const examMap = new Map();
+        selectedStudents.forEach(student => {
+            student.exams.forEach(ex => {
+                if (!examMap.has(ex.id)) {
+                    examMap.set(ex.id, ex);
+                }
+            });
+        });
+        return Array.from(examMap.values());
+    };
+
+    const handleBulkMarksheetAction = async (exam, action) => {
+        if (filterGrade === "all") {
+            toast.warning("Please select a single class for bulk print");
+            return;
+        }
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating bulk marksheets for ${exam.name}...`);
+        try {
+            const res = await API.post('/exam/generate-bulk-marksheet', {
+                student_ids: selectedStudentIds,
+                exam_id: exam.id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: "application/pdf" });
+
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action,
+                                fileName: `BulkMarksheets_${exam.name}.pdf`,
+                                payload: { base64 }
+                            })
+                        );
+                        toast.success(`Bulk marksheets sent to mobile app for ${action}.`);
+                    } catch (e) {
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+                reader.readAsDataURL(blob);
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate bulk marksheets.");
+                return;
+            }
+
+            if (res.data) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `BulkMarksheets_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                }
+                setSelectedStudentIds([]); // Clear selection after generating
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     const generatePerformanceReportPDF = (student) => {
         const doc = new jsPDF();
 
@@ -865,11 +965,91 @@ export default function ExamDataTable() {
                                     </div>
                                 </div>
 
+                                {/* Bulk Print Action */}
+                                {selectedStudentIds.length > 1 && (
+                                    <div className="flex items-center gap-4 mb-4 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800 animate-in slide-in-from-top-2">
+                                        <span className="text-sm font-medium text-indigo-800 dark:text-indigo-200 ml-2">
+                                            {selectedStudentIds.length} students selected
+                                        </span>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="default"
+                                                    className="bg-indigo-600 hover:bg-indigo-700"
+                                                    onClick={(e) => {
+                                                        if (filterGrade === "all") {
+                                                            e.preventDefault();
+                                                            toast.warning("Please select a single class");
+                                                        } else if (selectedStudentIds.length > 10) {
+                                                            e.preventDefault();
+                                                            toast.warning("You can only bulk print up to 10 marksheets at a time.");
+                                                        }
+                                                    }}
+                                                >
+                                                    <Printer className="h-4 w-4 mr-2" />
+                                                    Bulk Print Marksheet
+                                                </Button>
+                                            </PopoverTrigger>
+                                            {filterGrade !== "all" && selectedStudentIds.length <= 10 && (
+                                                <PopoverContent className="w-64 p-2" align="start">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam for Bulk Print</p>
+                                                        {getCommonExams().map(ex => (
+                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                        onClick={() => handleBulkMarksheetAction(ex, 'download')}
+                                                                        title="Download PDF"
+                                                                        disabled={isGenerating}
+                                                                    >
+                                                                        <Download className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                        onClick={() => handleBulkMarksheetAction(ex, 'print')}
+                                                                        title="Print directly"
+                                                                        disabled={isGenerating}
+                                                                    >
+                                                                        <Printer className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {getCommonExams().length === 0 && (
+                                                            <div className="p-2 text-sm text-gray-500">No common exams found.</div>
+                                                        )}
+                                                    </div>
+                                                </PopoverContent>
+                                            )}
+                                        </Popover>
+                                    </div>
+                                )}
+
                                 {/* Web View: Desktop Table */}
                                 <div className="hidden md:block overflow-x-auto rounded-xl border">
                                     <Table>
                                         <TableHeader className="bg-gray-50/50 dark:bg-gray-800/50">
                                             <TableRow>
+                                                <TableHead className="w-12">
+                                                    <input
+                                                        type="checkbox"
+                                                        className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                                        checked={filteredSummaries.length > 0 && selectedStudentIds.length === filteredSummaries.length}
+                                                        onChange={(e) => {
+                                                            if (e.target.checked) {
+                                                                setSelectedStudentIds(filteredSummaries.map(s => s.id));
+                                                            } else {
+                                                                setSelectedStudentIds([]);
+                                                            }
+                                                        }}
+                                                    />
+                                                </TableHead>
                                                 <TableHead>Roll No</TableHead>
                                                 <TableHead>Student Name</TableHead>
                                                 <TableHead>Grade</TableHead>
@@ -893,6 +1073,20 @@ export default function ExamDataTable() {
                                             ) : (
                                                 filteredSummaries.map((student) => (
                                                     <TableRow key={student.id} className="hover:bg-gray-50/50 dark:hover:bg-gray-800/20">
+                                                        <TableCell>
+                                                            <input
+                                                                type="checkbox"
+                                                                className="w-4 h-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                                                checked={selectedStudentIds.includes(student.id)}
+                                                                onChange={(e) => {
+                                                                    if (e.target.checked) {
+                                                                        setSelectedStudentIds(prev => [...prev, student.id]);
+                                                                    } else {
+                                                                        setSelectedStudentIds(prev => prev.filter(id => id !== student.id));
+                                                                    }
+                                                                }}
+                                                            />
+                                                        </TableCell>
                                                         <TableCell className="font-medium">{student.roll_no || 'N/A'}</TableCell>
                                                         <TableCell>{student.name}</TableCell>
                                                         <TableCell>{student.grade_name || 'N/A'}</TableCell>
@@ -1067,15 +1261,29 @@ export default function ExamDataTable() {
                                         filteredSummaries.map((student) => (
                                             <Card key={student.id} className="group hover:shadow-xl transition-all duration-300 border border-gray-100 dark:border-gray-800 rounded-3xl overflow-hidden bg-white dark:bg-gray-950/10 relative">
                                                 <CardHeader className="p-5 pb-3 bg-gray-50/50 dark:bg-gray-900/30 border-b border-gray-100/70 dark:border-gray-800">
-                                                    <div>
-                                                        <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
-                                                            {student.name}
-                                                        </CardTitle>
-                                                        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
-                                                            <span>Roll No: {student.roll_no || 'N/A'}</span>
-                                                            <span className="text-gray-300 dark:text-gray-700">•</span>
-                                                            <span>Grade: {student.grade_name || 'N/A'}</span>
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <CardTitle className="text-base font-bold text-gray-900 dark:text-gray-100">
+                                                                {student.name}
+                                                            </CardTitle>
+                                                            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1 text-xs text-muted-foreground font-semibold uppercase tracking-wider">
+                                                                <span>Roll No: {student.roll_no || 'N/A'}</span>
+                                                                <span className="text-gray-300 dark:text-gray-700">•</span>
+                                                                <span>Grade: {student.grade_name || 'N/A'}</span>
+                                                            </div>
                                                         </div>
+                                                        <input
+                                                            type="checkbox"
+                                                            className="w-5 h-5 rounded border-gray-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                                                            checked={selectedStudentIds.includes(student.id)}
+                                                            onChange={(e) => {
+                                                                if (e.target.checked) {
+                                                                    setSelectedStudentIds(prev => [...prev, student.id]);
+                                                                } else {
+                                                                    setSelectedStudentIds(prev => prev.filter(id => id !== student.id));
+                                                                }
+                                                            }}
+                                                        />
                                                     </div>
                                                 </CardHeader>
                                                 <CardContent className="p-5 space-y-3 pb-4">
