@@ -5,6 +5,11 @@ const whatsappQueue = require('../queues/whatsappQueue');
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 
+const generatePublicToken = (id) => {
+  const secret = process.env.JWT_SECRET || 'fallback_secret';
+  return crypto.createHmac('sha256', secret).update(String(id)).digest('hex');
+};
+
 
 /**
  * POST /api/fees/types
