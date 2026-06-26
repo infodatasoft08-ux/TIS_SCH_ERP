@@ -1,5 +1,6 @@
 const pool = require('../db');
 const { generateInvoicePDF, generatePaymentReceiptPDF, generateCombinedInvoiceReceiptPDF, generateBulkInvoicesPDF } = require('../helper/pdfHelper');
+const crypto = require('crypto');
 const whatsappQueue = require('../queues/whatsappQueue');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
