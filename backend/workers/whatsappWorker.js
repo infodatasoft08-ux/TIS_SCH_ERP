@@ -2,14 +2,15 @@ const { Worker } = require('bullmq');
 const connection = require('../config/redis');
 const whatsappService = require('../services/whatsappService');
 
-console.log('🚀 Starting WhatsApp Queue Worker...');
+const queueName = process.env.WHATSAPP_QUEUE_NAME || 'whatsappQueue-ti';
+console.log(`🚀 Starting WhatsApp Queue Worker for queue: ${queueName}...`);
 
 /**
  * WhatsApp Worker instance
  * Handles rate limiting (max 50 messages per minute)
  */
 const worker = new Worker(
-    'whatsappQueue',
+    queueName,
     async (job) => {
         const { contact, message, jobType } = job.data;
 

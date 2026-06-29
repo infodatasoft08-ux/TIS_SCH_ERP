@@ -1,10 +1,14 @@
 const { Queue } = require('bullmq');
 const connection = require('../config/redis');
 
+
+require('dotenv').config();
+
 /**
  * Define the WhatsApp Queue instance
  */
-const whatsappQueue = new Queue('whatsappQueue', {
+const queueName = process.env.WHATSAPP_QUEUE_NAME || 'whatsappQueue-times';
+const whatsappQueue = new Queue(queueName, {
     connection,
     defaultJobOptions: {
         attempts: 3, // Retry up to 3 times
