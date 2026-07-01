@@ -13,6 +13,18 @@ class WhatsAppService {
      * @returns {Promise<object>} API response
      */
     async sendWhatsAppTemplate(to, message) {
+
+        // Check if WhatsApp notifications are enabled in admin settings
+        try {
+            const [settings] = await pool.query('SELECT setting_value FROM school_settings WHERE setting_key = "whatsapp_enabled"');
+            if (settings.length > 0 && settings[0].setting_value === '0') {
+                console.log(`⚠️ WhatsApp notifications disabled by admin. Skipping message to ${to}`);
+                return { success: true, message: 'WhatsApp disabled by admin' };
+            }
+        } catch (err) {
+            console.error('Error checking whatsapp_enabled setting:', err.message);
+        }
+
         if (!to) {
             throw new Error('No phone number provided');
         }

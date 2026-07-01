@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useThemeAnimation } from '@space-man/react-theme-animation';
 import { useLanguage } from '@/context/LanguageContext';
-import { Moon, Sun, Globe, User, ShieldCheck, MenuIcon, School, Camera, Image as ImageIcon, Trash2, Plus, Loader2 } from 'lucide-react';
+import { Moon, Sun, Globe, User, ShieldCheck, MenuIcon, School, Camera, Image as ImageIcon, Trash2, Plus, Loader2, Wand2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
@@ -35,6 +35,7 @@ export default function Settings() {
     const [sidebarBg, setSidebarBg] = useState("#ffffff");
     const [mainBg, setMainBg] = useState("#f8fafc");
     const [appFont, setAppFont] = useState("'Inter', sans-serif");
+    const [whatsappEnabled, setWhatsappEnabled] = useState(true);
 
     const ROLES = {
         ADMIN: 3,
@@ -67,6 +68,7 @@ export default function Settings() {
             setSidebarBg(settingsRes.data.settings?.sidebar_bg || "#ffffff");
             setMainBg(settingsRes.data.settings?.main_bg || "#f8fafc");
             setAppFont(settingsRes.data.settings?.app_font || "'Inter', sans-serif");
+            setWhatsappEnabled(settingsRes.data.settings?.whatsapp_enabled !== "0");
         } catch (error) {
             console.error('Fetch Branding Error:', error);
             toast.error("Failed to load school branding");
@@ -92,7 +94,8 @@ export default function Settings() {
                     header_bg: headerBg,
                     sidebar_bg: sidebarBg,
                     main_bg: mainBg,
-                    app_font: appFont
+                    app_font: appFont,
+                    whatsapp_enabled: whatsappEnabled ? "1" : "0"
                 }
             });
             toast.success("School settings updated successfully");
@@ -480,6 +483,42 @@ export default function Settings() {
                     </CardContent>
                 </Card>
 
+                {/* Communication Section (Admin Only) */}
+                {user.role_id === ROLES.ADMIN && (
+                    <Card className="overflow-hidden border-muted/60 shadow-md">
+                        <CardHeader className="bg-muted/30">
+                            <div className="flex items-center gap-2">
+                                <MessageCircle className="h-5 w-5 text-green-500" />
+                                <CardTitle className="text-lg">Communication</CardTitle>
+                            </div>
+                            <CardDescription>Manage how the system communicates with parents and staff.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base">WhatsApp Notifications</Label>
+                                    <p className="text-sm text-muted-foreground">Enable or disable automated WhatsApp messages.</p>
+                                </div>
+                                <Switch
+                                    checked={whatsappEnabled}
+                                    onCheckedChange={setWhatsappEnabled}
+                                />
+                            </div>
+
+                            <div className="flex justify-end mt-4">
+                                <Button
+                                    onClick={handleUpdateSettings}
+                                    disabled={savingSettings}
+                                    variant="outline"
+                                >
+                                    {savingSettings ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                                    Save Setting
+                                </Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
                 {/* Account Shortcuts */}
                 <Card className="overflow-hidden border-muted/60 shadow-md">
                     <CardHeader className="bg-muted/30">
@@ -494,7 +533,7 @@ export default function Settings() {
                             <Button
                                 variant="outline"
                                 className="justify-start h-16 gap-3"
-                                onClick={() => navigate('/profile')}
+                                onClick={() => navigate('/school/profile')}
                             >
                                 <div className="bg-primary/10 p-2 rounded-full">
                                     <User className="h-5 w-5 text-primary" />
@@ -507,7 +546,7 @@ export default function Settings() {
                             <Button
                                 variant="outline"
                                 className="justify-start h-16 gap-3"
-                                onClick={() => navigate('/profile')}
+                                onClick={() => navigate('/school/profile')}
                             >
                                 <div className="bg-amber-100 dark:bg-amber-900/30 p-2 rounded-full">
                                     <ShieldCheck className="h-5 w-5 text-amber-600" />
