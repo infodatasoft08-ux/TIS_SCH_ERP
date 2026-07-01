@@ -847,8 +847,8 @@ const CreateBulkInvoices = async (req, res) => {
         JOIN student_academic_records sar ON sar.student_id = s.id
         JOIN academic_years ay ON ay.id = sar.academic_year_id
         LEFT JOIN student_invoices si ON si.student_id = s.id
-        JOIN classes c ON c.id = s.class_id
-        JOIN grades g ON g.id = s.grade_id
+        JOIN classes c ON c.id = sar.class_id
+        JOIN grades g ON g.id = sar.grade_id
         WHERE s.id IN (${students.map(() => '?').join(',')})
       `, students.map(s => s.id));
 
