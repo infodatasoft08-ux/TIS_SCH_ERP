@@ -15,6 +15,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Check, ChevronsUpDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ComboboxFormField } from "@/widgets/comboboxFormField";
 
 // Create a dynamic schema based on edit mode
 const createClassSchema = (isEditMode) => z.object({
@@ -177,13 +178,10 @@ export default function AddClassDialog({
                       (grade) => grade.id === field.value
                     );
 
-                    // console.log("mayank grade: ", grade);
-                    // console.log("mayank selectedGrade: ", selectedGrade);
-
                     return (
                       <FormItem className="flex flex-col">
                         <FormLabel>Class</FormLabel>
-                        <Popover open={open} onOpenChange={setOpen}>
+                        <Popover open={open} onOpenChange={setOpen} modal={true}>
                           <PopoverTrigger asChild>
                             <Button
                               variant="outline"
@@ -203,6 +201,7 @@ export default function AddClassDialog({
                               width: "var(--radix-popover-trigger-width)"
                             }}
                             align="start"
+                            onWheel={(e) => e.stopPropagation()} onTouchMove={(e) => e.stopPropagation()}
                           >
                             <Command>
                               <CommandInput
