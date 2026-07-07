@@ -772,7 +772,7 @@ export default function RegistrationPage() {
 
         {/* Global Footer info */}
         <div className="mt-8 text-center text-xs text-gray-500 dark:text-gray-400">
-          © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
+          © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
         </div>
       </div>
     </div>

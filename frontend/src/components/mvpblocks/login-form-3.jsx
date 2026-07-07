@@ -416,7 +416,7 @@ export default function SignInPage() {
 
                     <div className="mt-1 text-center text-xs text-muted-foreground w-full">
                       {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
-                      © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
+                      © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary text-[12px] tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
                     </div>
                   </div>
 
