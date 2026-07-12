@@ -47,7 +47,14 @@ export default function RegistrationPage() {
         ]);
         setGrades(gradesRes.data.grades || []);
         setClasses(classesRes.data.classes || []);
-        setAcademicYears(ayRes.data.academic_years || []);
+        
+        const fetchedAcademicYears = ayRes.data.academic_years || [];
+        setAcademicYears(fetchedAcademicYears);
+
+        const activeAy = fetchedAcademicYears.find(ay => ay.status === 'active') || fetchedAcademicYears[0];
+        if (activeAy) {
+          setStudentForm(prev => ({ ...prev, academic_year: activeAy.id.toString() }));
+        }
 
         // Filter roles where sub_role is 'staff'
         const filteredRoles = (rolesRes.data.roles || []).filter(
@@ -65,7 +72,7 @@ export default function RegistrationPage() {
   const [studentForm, setStudentForm] = useState({
     name: '', email: '', password: '', phone: '', blood_group: '',
     gender: 'male', grade: '', class: '', admission_date: '',
-    date_of_birth: '', academic_year: '2025-2026', address: '',
+    date_of_birth: '', academic_year: '', address: '',
     adhar_no: '', fathers_name: '', mothers_name: '',
     father_occupation: '', mother_contect: '', parent_contact: ''
   });
@@ -101,6 +108,10 @@ export default function RegistrationPage() {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
+    if (!studentForm.academic_year) {
+      toast.error('Academic year is required.');
+      return;
+    }
     setLoading(true);
     try {
       const submissionStudentData = { ...studentForm, password: studentForm.phone };
@@ -109,7 +120,7 @@ export default function RegistrationPage() {
       setStudentForm({
         name: '', email: '', password: '', phone: '', blood_group: '',
         gender: 'male', grade: '', class: '', admission_date: '',
-        date_of_birth: '', academic_year: '2025-2026', address: '',
+        date_of_birth: '', academic_year: studentForm.academic_year, address: '',
         adhar_no: '', fathers_name: '', mothers_name: '',
         father_occupation: '', mother_contect: '', parent_contact: ''
       });
