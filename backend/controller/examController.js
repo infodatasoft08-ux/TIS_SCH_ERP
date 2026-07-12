@@ -400,7 +400,7 @@ const PublishExam = async (req, res) => {
         }
         msg += `\nPlease check the application for the detailed routine.\n`;
         msg += `\nBest regards,\n`;
-        msg += `CMC MITHILESH COMMERCE`;
+        msg += `TIMES INTERNATIONAL SCHOOL`;
 
         for (const c of contacts) {
             const phone = c.parent_contact || c.student_phone;
@@ -419,7 +419,7 @@ const PublishExam = async (req, res) => {
         const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
         let teacherMsg = `🔔 *Exam Published (Teachers)* 🔔\n\nExam: ${exam.name}\nClass: ${className}\n`;
         if (exam.start_date) teacherMsg += `Starts: ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
-        teacherMsg += `\nBest regards,\nCMC MITHILESH COMMERCE`;
+        teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
 
         for (const t of teacherContacts) {
             if (t.phone) {
