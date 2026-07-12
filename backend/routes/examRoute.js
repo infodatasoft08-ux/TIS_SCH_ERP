@@ -18,13 +18,15 @@ const {
     GenerateExamRoutinePDF,
     GenerateCombinedMarksheetPDF,
     GenerateConsolidatedMarksheetPDF,
-    GenerateBulkMarksheetPDF
+    GenerateBulkMarksheetPDF,
+    PublishExam
 } = require('../controller/examController');
 
 // Exam Groups
 router.post('/add/exams', auth, AddExamGroup);
 router.get('/list/exams', auth, GetExamGroups);
 router.put('/update/exams/:id', auth, UpdateExamGroup);
+router.put('/publish/exams/:id', auth, PublishExam);
 router.delete('/delete/exam/:id', auth, DeleteExamGroup);
 
 // Exam Routine
