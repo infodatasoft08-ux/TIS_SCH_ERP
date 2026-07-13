@@ -12,7 +12,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
-    const { name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
 
     if (!isNonEmptyString(name) || !grade_id || !academic_year_id) {
@@ -23,49 +23,63 @@ const AddExamGroup = async (req, res) => {
         return res.status(400).json({ error: 'At least one subject is required' });
     }
 
+    let targetClassIds = [];
+    if (class_ids && Array.isArray(class_ids) && class_ids.length > 0) {
+        targetClassIds = class_ids;
+    } else if (class_id) {
+        targetClassIds = [class_id];
+    } else {
+        return res.status(400).json({ error: 'Section is required' });
+    }
+
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
 
-        // insert exam_groups
-        const [egRes] = await conn.execute(
-            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW())`,
-            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, toInt(class_id) || null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null]
-        );
-        const examGroupId = egRes.insertId;
+        const createdExamGroupIds = [];
 
-        // insert exam_group_subjects
-        for (const sub of subjects) {
-            const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
-            const hasLab = sub.has_lab ? 1 : 0;
-            const hasOral = sub.has_oral ? 1 : 0;
-            
-            const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
-            const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
-            const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
-            
-            const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
-
-            await conn.execute(
-                `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-                [
-                    examGroupId, 
-                    toInt(sub.subject_id), 
-                    calculatedMax, 
-                    toInt(sub.passing_marks) || 35,
-                    hasTheory,
-                    hasLab,
-                    hasOral,
-                    hasTheory ? thMax : null,
-                    hasLab ? lbMax : null,
-                    hasOral ? orMax : null
-                ]
+        for (const cid of targetClassIds) {
+            // insert exam_groups
+            const [egRes] = await conn.execute(
+                `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW())`,
+                [name.trim(), exam_type || 'OTHER', custom_exam_name || null, toInt(cid) || null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null]
             );
+            const examGroupId = egRes.insertId;
+            createdExamGroupIds.push(examGroupId);
+
+            // insert exam_group_subjects
+            for (const sub of subjects) {
+                const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
+                const hasLab = sub.has_lab ? 1 : 0;
+                const hasOral = sub.has_oral ? 1 : 0;
+                
+                const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
+                const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
+                const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
+                
+                const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
+
+                await conn.execute(
+                    `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+                    [
+                        examGroupId, 
+                        toInt(sub.subject_id), 
+                        calculatedMax, 
+                        toInt(sub.passing_marks) || 35,
+                        hasTheory,
+                        hasLab,
+                        hasOral,
+                        hasTheory ? thMax : null,
+                        hasLab ? lbMax : null,
+                        hasOral ? orMax : null
+                    ]
+                );
+            }
         }
 
         await conn.commit();
         conn.release();
-        return res.status(201).json({ success: true, exam_group_id: examGroupId });
+        return res.status(201).json({ success: true, exam_group_ids: createdExamGroupIds });
     } catch (err) {
         await conn.rollback();
         conn.release();
