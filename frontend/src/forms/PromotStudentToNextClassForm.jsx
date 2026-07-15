@@ -80,37 +80,6 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
     }, [open]);
 
     const selectedGradeId = form.watch("grade_id");
-    const selectedClassId = form.watch("class_id");
-
-    useEffect(() => {
-        if (selectedClassId) {
-            const selectedClassData = classes.find(cls => cls.id.toString() === selectedClassId);
-            if (selectedClassData) {
-                if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
-                    form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
-                }
-            }
-        }
-    }, [selectedClassId, classes, form]);
-
-    useEffect(() => {
-        if (selectedGradeId) {
-            const availableSections = classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
-            if (availableSections.length === 1) {
-                if (form.getValues("class_id") !== availableSections[0].id.toString()) {
-                    form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
-                }
-            } else if (availableSections.length > 1) {
-                const currentSection = form.getValues("class_id");
-                if (currentSection) {
-                    const belongsToGrade = availableSections.some(cls => cls.id.toString() === currentSection);
-                    if (!belongsToGrade) {
-                        form.setValue("class_id", "", { shouldValidate: true });
-                    }
-                }
-            }
-        }
-    }, [selectedGradeId, classes, form]);
 
     const filteredSections = React.useMemo(() => {
         if (!selectedGradeId) return classes;
@@ -191,16 +160,35 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                                     name="grade_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={field}
+                                            field={{
+                                                ...field,
+                                                onChange: (newGradeId) => {
+                                                    field.onChange(newGradeId);
+                                                    if (newGradeId) {
+                                                        const availableSections = classes.filter(cls => cls.grade_id.toString() === newGradeId.toString());
+                                                        if (availableSections.length === 1) {
+                                                            form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+                                                        } else if (availableSections.length > 1) {
+                                                            const currentSection = form.getValues("class_id");
+                                                            if (currentSection) {
+                                                                const belongs = availableSections.some(cls => cls.id.toString() === currentSection.toString());
+                                                                if (!belongs) {
+                                                                    form.setValue("class_id", "", { shouldValidate: true });
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
                                             fieldState={fieldState}
                                             items={grades}
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
-                                            placeholder="Select Grade"
-                                            searchPlaceholder="Search grade..."
-                                            emptyMessage="No grade found."
-                                            label="New Grade *"
+                                            placeholder="Select Class"
+                                            searchPlaceholder="Search Class..."
+                                            emptyMessage="No Class found."
+                                            label="New Class"
                                             required
                                         />
                                     )}
@@ -211,16 +199,29 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                                     name="class_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={field}
+                                            field={{
+                                                ...field,
+                                                onChange: (newClassId) => {
+                                                    field.onChange(newClassId);
+                                                    if (newClassId) {
+                                                        const selectedClassData = classes.find(cls => cls.id.toString() === newClassId.toString());
+                                                        if (selectedClassData) {
+                                                            if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
+                                                                form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
                                             fieldState={fieldState}
                                             items={filteredSections}
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
-                                            placeholder="Select Class"
-                                            searchPlaceholder="Search class..."
-                                            emptyMessage="No class found."
-                                            label="New Class Section *"
+                                            placeholder="Select Section"
+                                            searchPlaceholder="Search Section..."
+                                            emptyMessage="No Section found."
+                                            label="New Class Section"
                                             required
                                         />
                                     )}

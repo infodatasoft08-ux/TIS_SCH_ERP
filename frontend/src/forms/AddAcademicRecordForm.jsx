@@ -68,37 +68,6 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
     }, [open, recordToEdit, form]);
 
     const selectedGradeId = form.watch("grade_id");
-    const selectedClassId = form.watch("class_id");
-
-    useEffect(() => {
-        if (selectedClassId) {
-            const selectedClassData = classes.find(cls => cls.id.toString() === selectedClassId);
-            if (selectedClassData) {
-                if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
-                    form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
-                }
-            }
-        }
-    }, [selectedClassId, classes, form]);
-
-    useEffect(() => {
-        if (selectedGradeId) {
-            const availableSections = classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
-            if (availableSections.length === 1) {
-                if (form.getValues("class_id") !== availableSections[0].id.toString()) {
-                    form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
-                }
-            } else if (availableSections.length > 1) {
-                const currentSection = form.getValues("class_id");
-                if (currentSection) {
-                    const belongsToGrade = availableSections.some(cls => cls.id.toString() === currentSection);
-                    if (!belongsToGrade) {
-                        form.setValue("class_id", "", { shouldValidate: true });
-                    }
-                }
-            }
-        }
-    }, [selectedGradeId, classes, form]);
 
     const filteredSections = React.useMemo(() => {
         if (!selectedGradeId) return classes;
@@ -198,16 +167,35 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                     name="grade_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={field}
+                                            field={{
+                                                ...field,
+                                                onChange: (newGradeId) => {
+                                                    field.onChange(newGradeId);
+                                                    if (newGradeId) {
+                                                        const availableSections = classes.filter(cls => cls.grade_id.toString() === newGradeId.toString());
+                                                        if (availableSections.length === 1) {
+                                                            form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+                                                        } else if (availableSections.length > 1) {
+                                                            const currentSection = form.getValues("class_id");
+                                                            if (currentSection) {
+                                                                const belongs = availableSections.some(cls => cls.id.toString() === currentSection.toString());
+                                                                if (!belongs) {
+                                                                    form.setValue("class_id", "", { shouldValidate: true });
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
                                             fieldState={fieldState}
                                             items={grades}
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
-                                            placeholder="Select Grade"
-                                            searchPlaceholder="Search grade..."
-                                            emptyMessage="No grade found."
-                                            label="Grade *"
+                                            placeholder="Select Class"
+                                            searchPlaceholder="Search Class..."
+                                            emptyMessage="No Class found."
+                                            label="Class *"
                                             required
                                         />
                                     )}
@@ -218,7 +206,20 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                     name="class_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={field}
+                                            field={{
+                                                ...field,
+                                                onChange: (newClassId) => {
+                                                    field.onChange(newClassId);
+                                                    if (newClassId) {
+                                                        const selectedClassData = classes.find(cls => cls.id.toString() === newClassId.toString());
+                                                        if (selectedClassData) {
+                                                            if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
+                                                                form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
                                             fieldState={fieldState}
                                             items={filteredSections}
                                             valueKey="id"
