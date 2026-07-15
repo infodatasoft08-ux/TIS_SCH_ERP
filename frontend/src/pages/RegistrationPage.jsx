@@ -108,6 +108,14 @@ export default function RegistrationPage() {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
+    if (!studentForm.grade) {
+      toast.error('Target Grade is required.');
+      return;
+    }
+    if (!studentForm.class) {
+      toast.error('Target Class / Section is required.');
+      return;
+    }
     if (!studentForm.academic_year) {
       toast.error('Academic year is required.');
       return;
@@ -377,7 +385,7 @@ export default function RegistrationPage() {
                     searchPlaceholder="Search grade..."
                     field={{
                       value: studentForm.grade,
-                      onChange: (val) => setStudentForm({ ...studentForm, grade: val })
+                      onChange: (val) => setStudentForm({ ...studentForm, grade: val, class: '' })
                     }}
                     className="w-full"
                   />

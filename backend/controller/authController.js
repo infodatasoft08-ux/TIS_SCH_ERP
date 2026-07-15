@@ -484,10 +484,11 @@ const AddStaffUser = async (req, res) => {
     const userId = userres.insertId;
 
     // 2) create staff profile
+    const fallbackHireDate = new Date().toISOString().split('T')[0];
     const [staffRes] = await db.execute(
       `INSERT INTO staff (id, user_id, employee_code, hire_date, qualification, bio, department)
       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [userId, userId, finalEmployeeCode || null, hire_date || null, qualification || null, bio || null, department || null]
+      [userId, userId, finalEmployeeCode || null, hire_date || fallbackHireDate, qualification || 'N/A', bio || null, department || null]
     );
 
     // fetch created staff with user info

@@ -286,7 +286,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-5xl rounded-3xl max-h-[90vh] flex flex-col"
+            <DialogContent className="w-screen h-[100dvh] max-w-none border-0 rounded-none p-4 sm:p-6 sm:w-full sm:max-w-5xl sm:h-auto sm:max-h-[90vh] sm:border sm:rounded-3xl flex flex-col"
                 onInteractOutside={(e) => e.preventDefault()}
                 onEscapeKeyDown={(e) => e.preventDefault()}
             >
@@ -302,7 +302,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                     ) : (
                         <div className="space-y-6">
                             {/* Mode Toggle Button Group */}
-                            <div className="flex bg-slate-100 dark:bg-slate-800 dark:text-white p-1 rounded-xl w-fit mb-4 gap-1">
+                            <div className="flex flex-col md:flex-row bg-slate-100 dark:bg-slate-800 dark:text-white p-1 rounded-xl w-full mb-4 gap-1">
                                 <Button
                                     variant={mode === 'add' ? 'default' : 'ghost'}
                                     size="sm"
@@ -344,10 +344,10 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                             const isDisabled = isAlreadySubmitted && mode === 'add';
 
                                             return (
-                                                <div key={student.id} className={`border rounded-xl p-4 shadow-sm transition-opacity ${isDisabled ? 'opacity-60 bg-slate-50/50 dark:bg-slate-900/10' : ''}`}>
-                                                    <div className="font-semibold text-lg border-b pb-2 mb-4 flex justify-between items-center">
+                                                <div key={student.id} className={`border rounded-xl p-1 shadow-sm transition-opacity ${isDisabled ? 'opacity-60 bg-slate-50/50 dark:bg-slate-900/10' : ''}`}>
+                                                    <div className="font-semibold text-lg border-b pb-2 mb-4 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
                                                         <span>{student.user_name} || {student.grade_name} || {student.class_name}</span>
-                                                        <div className="flex items-center gap-3">
+                                                        <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-1 sm:mt-0">
                                                             {isAlreadySubmitted && (
                                                                 <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 text-xs py-0.5 font-semibold">
                                                                     Marks Submitted
@@ -356,7 +356,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                             <span className="text-sm dark:text-gray-300 text-gray-600 font-normal">Roll No: {student.roll_no || student.admission_number || 'N/A'}</span>
                                                         </div>
                                                     </div>
-                                                    <div className="overflow-x-auto">
+                                                    <div className="overflow-x-auto hidden md:block">
                                                         <Table>
                                                             <TableHeader>
                                                                 <TableRow>
@@ -485,6 +485,128 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                 })}
                                                             </TableBody>
                                                         </Table>
+                                                    </div>
+
+                                                    {/* Mobile View */}
+                                                    <div className="md:hidden space-y-4 mt-4">
+                                                        {exam.subjects?.filter(s => {
+                                                            const n = s.subject_name?.toLowerCase().trim();
+                                                            return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+                                                        }).map(sub => {
+                                                            const mData = marksData[String(student.id)]?.[String(sub.subject_id)] || {};
+                                                            return (
+                                                                <div key={sub.subject_id} className="border rounded-lg p-3 bg-white dark:bg-slate-950 shadow-sm space-y-3">
+                                                                    <div className="flex justify-between items-center border-b pb-2">
+                                                                        <div>
+                                                                            <div className="font-bold text-sm text-slate-800 dark:text-slate-200">{sub.subject_name}</div>
+                                                                            <div className="text-xs text-muted-foreground">
+                                                                                Max: {sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? '-' : sub.max_marks} |
+                                                                                Pass: {sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? '-' : sub.passing_marks}
+                                                                            </div>
+                                                                        </div>
+                                                                        <div className="text-right">
+                                                                            <div className="text-xs text-muted-foreground">Grade</div>
+                                                                            <div className={`font-bold ${mData.grade === 'F' || mData.grade === 'AB' ? 'text-red-500' : 'text-green-600'}`}>
+                                                                                {mData.grade || '-'}
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="flex flex-col gap-3">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-xs font-semibold">Status:</span>
+                                                                            <Select
+                                                                                value={mData.attendance_status || 'Present'}
+                                                                                disabled={isDisabled}
+                                                                                onValueChange={(val) => handleMarkChange(student.id, sub.subject_id, 'attendance_status', val)}
+                                                                            >
+                                                                                <SelectTrigger className="w-[120px] h-8 text-xs">
+                                                                                    <SelectValue />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="Present">Present</SelectItem>
+                                                                                    <SelectItem value="Absent">Absent</SelectItem>
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </div>
+
+                                                                        {sub.subject_type === 'co-scholastic' || sub.subject_type === 'skill-based' ? (
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-xs font-semibold">Grade:</span>
+                                                                                <Select
+                                                                                    value={mData.grade || ''}
+                                                                                    disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                    onValueChange={(val) => handleMarkChange(student.id, sub.subject_id, 'grade', val)}
+                                                                                >
+                                                                                    <SelectTrigger className="w-[120px] h-8 text-xs">
+                                                                                        <SelectValue placeholder="Select" />
+                                                                                    </SelectTrigger>
+                                                                                    <SelectContent>
+                                                                                        <SelectItem value="none">Clear</SelectItem>
+                                                                                        <SelectItem value="A+">A+</SelectItem>
+                                                                                        <SelectItem value="A">A</SelectItem>
+                                                                                        <SelectItem value="B">B</SelectItem>
+                                                                                        <SelectItem value="C">C</SelectItem>
+                                                                                        <SelectItem value="D">D</SelectItem>
+                                                                                    </SelectContent>
+                                                                                </Select>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <div className="space-y-2 bg-slate-50 dark:bg-slate-900 p-2 rounded-md border">
+                                                                                {sub.has_theory === 1 && (
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <span className="text-xs font-semibold">Theory (/{sub.theory_max_marks}):</span>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            className="w-20 h-8 text-xs"
+                                                                                            value={mData.theory_marks_obtained || ''}
+                                                                                            disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                            onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'theory_marks_obtained', e.target.value)}
+                                                                                            max={sub.theory_max_marks || sub.max_marks}
+                                                                                            min="0"
+                                                                                        />
+                                                                                    </div>
+                                                                                )}
+                                                                                {sub.has_lab === 1 && (
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <span className="text-xs font-semibold">Lab (/{sub.lab_max_marks}):</span>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            className="w-20 h-8 text-xs"
+                                                                                            value={mData.lab_marks_obtained || ''}
+                                                                                            disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                            onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'lab_marks_obtained', e.target.value)}
+                                                                                            max={sub.lab_max_marks}
+                                                                                            min="0"
+                                                                                        />
+                                                                                    </div>
+                                                                                )}
+                                                                                {sub.has_oral === 1 && (
+                                                                                    <div className="flex items-center justify-between">
+                                                                                        <span className="text-xs font-semibold">Oral (/{sub.oral_max_marks}):</span>
+                                                                                        <Input
+                                                                                            type="number"
+                                                                                            className="w-20 h-8 text-xs"
+                                                                                            value={mData.oral_marks_obtained || ''}
+                                                                                            disabled={mData.attendance_status === 'Absent' || isDisabled}
+                                                                                            onChange={(e) => handleMarkChange(student.id, sub.subject_id, 'oral_marks_obtained', e.target.value)}
+                                                                                            max={sub.oral_max_marks}
+                                                                                            min="0"
+                                                                                        />
+                                                                                    </div>
+                                                                                )}
+                                                                                <div className="flex justify-between items-center border-t pt-2 mt-1">
+                                                                                    <span className="text-xs font-bold">Total:</span>
+                                                                                    <span className="text-sm font-bold text-indigo-600 dark:text-indigo-400">
+                                                                                        {mData.marks_obtained !== '' && mData.marks_obtained !== undefined ? mData.marks_obtained : '-'} / {sub.max_marks}
+                                                                                    </span>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
                                                     </div>
 
                                                     {/* Teacher Remark Input */}

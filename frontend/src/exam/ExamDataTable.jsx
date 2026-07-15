@@ -219,7 +219,7 @@ export default function ExamDataTable() {
             toast.success(`Results ${newState ? 'published' : 'unpublished'} successfully`);
             loadExams(true);
         } catch (err) {
-            toast.error("Failed to update results publication status");
+            toast.error(err.response?.data?.error || "Failed to update results publication status");
         }
     }
 

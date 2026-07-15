@@ -624,9 +624,11 @@ const GetExamsForStudent = async (req, res) => {
 
         // 1. Get the student's ID and current academic record (class_id, grade_id)
         const [studentRows] = await conn.execute(
-            `SELECT s.id as student_id, sar.id as student_academic_id, sar.class_id, sar.grade_id 
+            `SELECT s.id as student_id, sar.id as student_academic_id, sar.class_id, sar.grade_id, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
              FROM students s
              JOIN student_academic_records sar ON sar.student_id = s.id
+             JOIN classes c ON c.id = sar.class_id
+             JOIN grades g ON g.id = c.grade_id
              WHERE s.user_id = ? 
              ORDER BY sar.academic_year_id DESC LIMIT 1`,
             [userId]
@@ -641,13 +643,17 @@ const GetExamsForStudent = async (req, res) => {
 
         // 2. Fetch exam groups that are Published or Over for this class
         const [examRows] = await conn.execute(`
-            SELECT eg.*, ay.name AS academic_year_name
+            SELECT eg.*, ay.name AS academic_year_name, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
             FROM exam_groups eg
+            JOIN students s ON s.user_id = ?
             LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
+            LEFT JOIN student_academic_records sar ON sar.student_id = s.id
+            JOIN classes c ON c.id = sar.class_id
+            JOIN grades g ON g.id = c.grade_id
             WHERE (eg.class_id = ? OR (eg.class_id IS NULL AND eg.grade_id = ?)) 
             AND eg.status IN ('Published', 'Over')
             ORDER BY eg.created_at DESC
-        `, [class_id, grade_id]);
+        `, [student_id, class_id, grade_id]);
 
         // Fetch subjects and results for these exams
         if (examRows.length > 0) {

@@ -7,6 +7,17 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel,
 import { useAuth } from "@/auth/AuthContext";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
+const formatDate = (dateString) => {
+  if (!dateString) return '';
+  if (typeof dateString === 'string' && dateString.includes('-')) {
+    const parts = dateString.split('T')[0].split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return dateString;
+};
+
 export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onCreateRoutine, onTogglePublish, onToggleResultsPublish, onGenerateConsolidatedMarksheet, deleteExam, hasMore, isLoading, currentPage, onNextPage, onPrevPage, onRefresh, limit = 10, setLimit, total = 0, offset = 0 }) {
   const { user } = useAuth();
   const isTeacher = user?.role_id === 2;
@@ -69,7 +80,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     </div>
                   </TableCell>
                   <TableCell className="text-xs text-muted-foreground">
-                    {exam.start_date && exam.end_date ? `${exam.start_date} - ${exam.end_date}` : exam.start_date || exam.end_date || 'N/A'}
+                    {exam.start_date && exam.end_date ? `${formatDate(exam.start_date)} - ${formatDate(exam.end_date)}` : formatDate(exam.start_date) || formatDate(exam.end_date) || 'N/A'}
                   </TableCell>
                   <TableCell className="text-center">
                     <Badge variant="outline" className="font-normal">{academicSubjectsCount}</Badge>
@@ -183,7 +194,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                 <div className="flex items-center text-xs text-muted-foreground mt-1 font-medium justify-between">
                   <div className="flex items-center">
                     <CalendarIcon className="mr-1.5 h-3.5 w-3.5 text-blue-500" />
-                    {exam.start_date && exam.end_date ? `${exam.start_date} to ${exam.end_date}` : exam.start_date ? `Starts: ${exam.start_date}` : exam.end_date ? `Ends: ${exam.end_date}` : 'No Dates'}
+                    {exam.start_date && exam.end_date ? `${formatDate(exam.start_date)} to ${formatDate(exam.end_date)}` : exam.start_date ? `Starts: ${formatDate(exam.start_date)}` : exam.end_date ? `Ends: ${formatDate(exam.end_date)}` : 'No Dates'}
                   </div>
                 </div>
               </CardHeader>
@@ -219,7 +230,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     </Button>
                   )}
 
-                  {!isOver || !isTeacher && (
+                  {!isOver && !isTeacher && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -242,24 +253,14 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                   </Button>
 
                   {!exam.is_results_published && (
-                    <div className="flex gap-2 w-full">
-                      <Button
-                        size="sm"
-                        className="flex-1 text-xs bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md border-0 justify-start"
-                        onClick={() => onAddMarks(exam, 'add')}
-                      >
-                        <PlusCircle className="mr-2 h-3.5 w-3.5" />
-                        Add Marks
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="flex-1 text-xs bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white shadow-md border-0 justify-start"
-                        onClick={() => onAddMarks(exam, 'update')}
-                      >
-                        <CheckCircle className="mr-2 h-3.5 w-3.5" />
-                        Update Marks
-                      </Button>
-                    </div>
+                    <Button
+                      size="sm"
+                      className="w-full text-xs bg-gradient-to-r from-blue-600 to-cyan-600 hover:from-blue-700 hover:to-cyan-700 text-white shadow-md border-0 justify-start"
+                      onClick={() => onAddMarks(exam, 'add')}
+                    >
+                      <PlusCircle className="mr-2 h-3.5 w-3.5" />
+                      Add Marks
+                    </Button>
                   )}
 
                   {isOver && (
@@ -314,18 +315,18 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
 
       {exams.length > 0 && !isLoading && (
         <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-4 border-t border-gray-100 dark:border-gray-800">
-          <div className="flex items-center gap-4">
-            <p className="text-sm text-muted-foreground font-medium">
+          <div className="flex flex-wrap items-center justify-center sm:justify-start gap-3 sm:gap-4 w-full sm:w-auto">
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium text-center">
               Showing {offset + 1} to {Math.min(offset + limit, total)} of {total} records
             </p>
             {setLimit && (
               <div className="flex items-center gap-2">
-                <span className="text-sm text-muted-foreground">Rows per page:</span>
+                <span className="text-xs sm:text-sm text-muted-foreground">Rows per page:</span>
                 <Select
                   value={limit.toString()}
                   onValueChange={(val) => setLimit(Number(val))}
                 >
-                  <SelectTrigger className="h-8 w-[70px]">
+                  <SelectTrigger className="h-8 w-[65px] text-xs sm:text-sm">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -338,7 +339,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
               </div>
             )}
           </div>
-          <div className="flex items-center justify-end gap-2">
+          <div className="flex flex-wrap items-center justify-center sm:justify-end gap-2 w-full sm:w-auto">
             <Button
               variant="outline"
               size="sm"
@@ -346,7 +347,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
             >
               <RefreshCw className="h-3.5 w-3.5 text-gray-500" />
             </Button>
-            <p className="text-sm text-muted-foreground font-medium mx-2">
+            <p className="text-xs sm:text-sm text-muted-foreground font-medium mx-1 sm:mx-2">
               Page {currentPage}
             </p>
             <Button
@@ -354,7 +355,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
               size="sm"
               onClick={onPrevPage}
               disabled={currentPage === 1}
-              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs sm:text-sm px-2 sm:px-3"
             >
               Previous
             </Button>
@@ -363,7 +364,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
               size="sm"
               onClick={onNextPage}
               disabled={!hasMore}
-              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800"
+              className="rounded-xl border-2 hover:bg-gray-50 dark:hover:bg-gray-800 text-xs sm:text-sm px-2 sm:px-3"
             >
               Next
             </Button>

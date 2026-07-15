@@ -37,7 +37,7 @@ const createStudentSchema = (isEditMode) =>
     date_of_birth: z.string().min(1, "Date of Birth is required"),
     grade_id: z.coerce.string().min(1, "Grade is required"),
     class_id: z.coerce.string().min(1, "Class is required"),
-    admission_date: z.string().min(1, "Admission Date is required"),
+    admission_date: z.string().optional(),
     adhar_number: z.string().max(12, "12 Digit Adhar Number is required").optional(),
     blood_group: z.string().optional(),
     mother_contect: z.string().max(10, "Phone is required and 10 digit number").optional(),
@@ -216,23 +216,60 @@ export default function AddStudentDialog({
     }
   }, [open, studentToEdit, classes, form]);
 
-  // Watch for class_id changes to update grade_id
+  // Watch for class_id and grade_id changes
   const selectedClassId = form.watch("class_id");
+  const selectedGradeId = form.watch("grade_id");
 
   useEffect(() => {
     if (selectedClassId) {
       const selectedClassData = classes.find(cls => cls.id.toString() === selectedClassId);
       if (selectedClassData) {
         setSelectedClass(selectedClassData);
-        // Auto-set the grade_id when class is selected
-        form.setValue("grade_id", selectedClassData.grade_id.toString(), {
-          shouldValidate: true
-        });
+        // Auto-set the grade_id when section is selected, if it's different
+        if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
+          form.setValue("grade_id", selectedClassData.grade_id.toString(), {
+            shouldValidate: true
+          });
+        }
       }
     } else {
       setSelectedClass(null);
     }
   }, [selectedClassId, classes, form]);
+
+  useEffect(() => {
+    if (selectedGradeId) {
+      const availableSections = classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+      if (availableSections.length === 1) {
+        if (form.getValues("class_id") !== availableSections[0].id.toString()) {
+          form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+        }
+      } else if (availableSections.length > 1) {
+        const currentSection = form.getValues("class_id");
+        if (currentSection) {
+          const belongsToGrade = availableSections.some(cls => cls.id.toString() === currentSection);
+          if (!belongsToGrade) {
+            form.setValue("class_id", "", { shouldValidate: true });
+          }
+        }
+      }
+    }
+  }, [selectedGradeId, classes, form]);
+
+  const filteredSections = React.useMemo(() => {
+    if (!selectedGradeId) {
+      return classes.map(cls => ({
+        id: cls.id,
+        display: `${cls.name} (Grade: ${cls.grade_name})`
+      }));
+    }
+    return classes
+      .filter(cls => cls.grade_id.toString() === selectedGradeId.toString())
+      .map(cls => ({
+        id: cls.id,
+        display: cls.name
+      }));
+  }, [classes, selectedGradeId]);
 
   // Fetch academic years
   useEffect(() => {
@@ -607,7 +644,7 @@ export default function AddStudentDialog({
                       name="admission_date"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Admission Date *</FormLabel>
+                          <FormLabel>Admission Date</FormLabel>
                           <FormControl>
                             <DatePicker
                               value={field.value}
@@ -643,7 +680,8 @@ export default function AddStudentDialog({
                       name="academic_year_id"
                       render={({ field, fieldState }) => (
                         <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
+                          field={field}
+                          fieldState={fieldState}
                           label="Academic Year"
                           required
                           items={academicYears}
@@ -660,34 +698,14 @@ export default function AddStudentDialog({
 
                   {/* Fourth Row - Class, Grade, Status */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="class_id"
-                      render={({ field, fieldState }) => (
-                        <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
-                          label="Section"
-                          required
-                          items={classes.map(cls => ({
-                            id: cls.id,
-                            display: `${cls.name} (Grade: ${cls.grade_name})`
-                          }))}
-                          valueKey="id"
-                          labelKey="display"
-                          searchKey="display"
-                          placeholder="Select section"
-                          searchPlaceholder="Search section..."
-                          emptyMessage="No section found."
-                        />
-                      )}
-                    />
 
                     <FormField
                       control={form.control}
                       name="grade_id"
                       render={({ field, fieldState }) => (
                         <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
+                          field={field}
+                          fieldState={fieldState}
                           label="Class"
                           required
                           items={uniqueGrades}
@@ -697,6 +715,27 @@ export default function AddStudentDialog({
                           placeholder={selectedClass ? selectedClass.grade_name : "Select grade"}
                           searchPlaceholder="Search grade..."
                           emptyMessage="No grade found."
+                        />
+                      )}
+                    />
+
+
+                    <FormField
+                      control={form.control}
+                      name="class_id"
+                      render={({ field, fieldState }) => (
+                        <ComboboxFormField
+                          field={field}
+                          fieldState={fieldState}
+                          label="Section"
+                          required
+                          items={filteredSections}
+                          valueKey="id"
+                          labelKey="display"
+                          searchKey="display"
+                          placeholder="Select section"
+                          searchPlaceholder="Search section..."
+                          emptyMessage="No section found."
                         />
                       )}
                     />
@@ -762,7 +801,7 @@ export default function AddStudentDialog({
                       name="blood_group"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Blood Group *</FormLabel>
+                          <FormLabel>Blood Group</FormLabel>
                           <FormControl>
                             <Input
                               {...field}

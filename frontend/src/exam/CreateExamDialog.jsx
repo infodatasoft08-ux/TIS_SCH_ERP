@@ -425,7 +425,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                         fieldState={fieldState}
                         label="Section(s)"
                         required
-                        disabled={isExamLocked || !!examToEdit}
+                        disabled={isExamLocked}
                         items={filteredSections}
                         valueKey="id"
                         labelKey="name"

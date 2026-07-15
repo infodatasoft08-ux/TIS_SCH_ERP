@@ -336,7 +336,7 @@ const approveRegistration = async (req, res) => {
 
       await conn.execute(
         `INSERT INTO staff (id, user_id, employee_code, department, hire_date, qualification) VALUES (?, ?, ?, ?, ?, ?)`,
-        [userId, userId, finalEmployeeCode || null, departmentName || null, hire_date || null, qualification || null]
+        [userId, userId, finalEmployeeCode || null, departmentName || null, hire_date ? formatMySQLDate(hire_date) : formatMySQLDate(new Date()), qualification || 'N/A']
       );
     }
 

@@ -139,13 +139,39 @@ const CheckExams = () => {
                                             </Badge>
                                             <CardTitle className="text-xl group-hover:text-primary transition-colors">{exam.name}</CardTitle>
                                         </div>
-                                        <Badge className={cn("ml-2 whitespace-nowrap", over ? "bg-gray-500" : "bg-blue-500")}>
-                                            {over ? "Exam is Over" : "Upcoming"}
-                                        </Badge>
+                                        <div className="flex flex-col items-end gap-2">
+                                            <Badge className={cn("ml-2 whitespace-nowrap", over ? "bg-gray-500" : "bg-blue-500")}>
+                                                {over ? "Exam is Over" : "Upcoming"}
+                                            </Badge>
+                                        </div>
                                     </div>
-                                    <CardDescription className="flex items-center mt-1 text-xs">
-                                        <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
-                                        End Date: {exam.end_date || 'N/A'}
+                                    <CardDescription className="flex flex-col gap-2 mt-1 text-xs">
+                                        <div>
+                                            <div className="flex items-center gap-2">
+                                                <CalendarIcon className="h-3.5 w-3.5" />
+                                                <span>{exam.start_date ? format(new Date(exam.start_date), 'dd/MM/yyyy') : ''} {exam.end_date ? `to ${format(new Date(exam.end_date), 'dd/MM/yyyy')}` : ''}</span>
+                                            </div>
+
+                                            <div className="flex flex-col gap-1 mt-1">
+                                                <div className="flex gap-16">
+                                                    <div className="h-2 w-11">Name: </div>
+                                                    <span className='w-36'>{exam.custom_exam_name ? exam.custom_exam_name : exam.exam_type}</span>
+                                                </div>
+                                                <div className="flex gap-16">
+                                                    <div className="h-2 w-11">Roll No: </div>
+                                                    <span>{exam.roll_no}</span>
+                                                </div>
+                                                <div className="flex gap-16">
+                                                    <div className="h-2 w-11">Class: </div>
+                                                    <span>{exam.class_name}</span>
+                                                </div>
+                                                <div className="flex gap-16">
+                                                    <div className="h-2 w-11">Section: </div>
+                                                    <span>{exam.section_name}</span>
+                                                </div>
+                                            </div>
+
+                                        </div>
                                     </CardDescription>
                                 </CardHeader>
                                 <CardContent className="pb-3 flex-grow">
@@ -164,21 +190,22 @@ const CheckExams = () => {
                                             <span className="line-clamp-2">{exam.note}</span>
                                         </div>
                                     )}
+                                    {exam.is_results_published == 1 && (
+                                        <div className="mt-4 bg-green-100 dark:bg-green-900/30 border border-green-300 dark:border-green-800 text-green-800 dark:text-green-300 p-2.5 rounded-lg flex items-center justify-center shadow-sm animate-pulse cursor-pointer transition-colors hover:bg-green-200 dark:hover:bg-green-900/50" onClick={() => handleViewDetails(exam)}>
+                                            <CheckCircle className="h-4 w-4 mr-2 flex-shrink-0" />
+                                            <span className="text-xs font-bold text-center">The result is published! Click on View Details to check.</span>
+                                        </div>
+                                    )}
                                 </CardContent>
                                 <CardFooter className="pt-3 border-t bg-muted/5 flex gap-2">
                                     <Button variant="outline" className="flex-1" onClick={() => handleViewDetails(exam)}>
                                         <FileText className="mr-2 h-4 w-4" /> View Details
                                     </Button>
-                                    {/* {exam.status === 'Over' && (
+                                    {/* {exam.status === 'Over' && exam.is_results_published === true && (
                                         <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => window.print()}>
                                             <Printer className="mr-2 h-4 w-4" /> Print Marksheet
                                         </Button>
                                     )} */}
-                                    {exam.status === 'Over' && exam.is_results_published === true && (
-                                        <Button className="flex-1 bg-green-600 hover:bg-green-700" onClick={() => window.print()}>
-                                            <Printer className="mr-2 h-4 w-4" /> Print Marksheet
-                                        </Button>
-                                    )}
                                 </CardFooter>
                             </Card>
                         )

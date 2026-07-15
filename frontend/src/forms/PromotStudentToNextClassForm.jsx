@@ -79,6 +79,44 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
         if (open) fetchAcademicYears();
     }, [open]);
 
+    const selectedGradeId = form.watch("grade_id");
+    const selectedClassId = form.watch("class_id");
+
+    useEffect(() => {
+        if (selectedClassId) {
+            const selectedClassData = classes.find(cls => cls.id.toString() === selectedClassId);
+            if (selectedClassData) {
+                if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
+                    form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
+                }
+            }
+        }
+    }, [selectedClassId, classes, form]);
+
+    useEffect(() => {
+        if (selectedGradeId) {
+            const availableSections = classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+            if (availableSections.length === 1) {
+                if (form.getValues("class_id") !== availableSections[0].id.toString()) {
+                    form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+                }
+            } else if (availableSections.length > 1) {
+                const currentSection = form.getValues("class_id");
+                if (currentSection) {
+                    const belongsToGrade = availableSections.some(cls => cls.id.toString() === currentSection);
+                    if (!belongsToGrade) {
+                        form.setValue("class_id", "", { shouldValidate: true });
+                    }
+                }
+            }
+        }
+    }, [selectedGradeId, classes, form]);
+
+    const filteredSections = React.useMemo(() => {
+        if (!selectedGradeId) return classes;
+        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+    }, [classes, selectedGradeId]);
+
     async function onSubmit(values) {
         setIsSubmitting(true);
         try {
@@ -150,26 +188,6 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <FormField
                                     control={form.control}
-                                    name="class_id"
-                                    render={({ field, fieldState }) => (
-                                        <ComboboxFormField
-                                            field={field}
-                                            fieldState={fieldState}
-                                            items={classes}
-                                            valueKey="id"
-                                            labelKey="name"
-                                            searchKey="name"
-                                            placeholder="Select Class"
-                                            searchPlaceholder="Search class..."
-                                            emptyMessage="No class found."
-                                            label="New Class Section *"
-                                            required
-                                        />
-                                    )}
-                                />
-
-                                <FormField
-                                    control={form.control}
                                     name="grade_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
@@ -183,6 +201,26 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                                             searchPlaceholder="Search grade..."
                                             emptyMessage="No grade found."
                                             label="New Grade *"
+                                            required
+                                        />
+                                    )}
+                                />
+
+                                <FormField
+                                    control={form.control}
+                                    name="class_id"
+                                    render={({ field, fieldState }) => (
+                                        <ComboboxFormField
+                                            field={field}
+                                            fieldState={fieldState}
+                                            items={filteredSections}
+                                            valueKey="id"
+                                            labelKey="name"
+                                            searchKey="name"
+                                            placeholder="Select Class"
+                                            searchPlaceholder="Search class..."
+                                            emptyMessage="No class found."
+                                            label="New Class Section *"
                                             required
                                         />
                                     )}
