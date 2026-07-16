@@ -32,14 +32,24 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const fetchStudentsAndExistingMarks = async () => {
         setIsLoading(true);
         try {
-            // Fetch students in the class or grade
-            const fetchUrl = exam.class_id ? `/students/get/student?class_id=${exam.class_id}&limit=500` : `/students/get/student?grade_id=${exam.grade_id}&limit=500`;
+            let fetchUrl = `/students/get/student?grade_id=${exam.grade_id}&limit=500`;
+            if (!exam.grade_id && exam.class_id) {
+               fetchUrl = `/students/get/student?class_id=${exam.class_id}&limit=500`;
+            }
+
             const [studentsRes, resultsRes] = await Promise.all([
                 API.get(fetchUrl),
                 API.get(`/exam/list/exam/${exam.id}/results`)
             ]);
 
-            const fetchedStudents = studentsRes.data.students || [];
+            let fetchedStudents = studentsRes.data.students || [];
+
+            if (exam.section_ids && exam.section_ids.length > 0) {
+                fetchedStudents = fetchedStudents.filter(st => exam.section_ids.includes(st.class_id));
+            } else if (exam.class_id) {
+                fetchedStudents = fetchedStudents.filter(st => st.class_id === exam.class_id);
+            }
+
             const existingResults = resultsRes.data.results || [];
 
             setStudents(fetchedStudents);

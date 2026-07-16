@@ -46,13 +46,18 @@ class WhatsAppService {
                 };
             }
 
+            let textBody = typeof msg === 'string' ? msg : JSON.stringify(msg);
+            if (typeof msg === 'object' && !msg.template && msg.fallbackText) {
+                textBody = msg.fallbackText;
+            }
+
             // Text message fallback
             return {
                 messaging_product: "whatsapp",
                 to: cleanTo,
                 type: "text",
                 text: {
-                    body: typeof msg === 'string' ? msg : JSON.stringify(msg)
+                    body: textBody
                 }
             };
         };

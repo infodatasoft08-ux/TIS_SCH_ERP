@@ -91,7 +91,9 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           name: examToEdit.name || "",
           exam_type: examToEdit.exam_type || "OTHER",
           custom_exam_name: examToEdit.custom_exam_name || "",
-          class_ids: examToEdit.class_id ? [examToEdit.class_id.toString()] : [],
+          class_ids: examToEdit.section_ids && examToEdit.section_ids.length > 0
+            ? examToEdit.section_ids.map(id => id.toString())
+            : (examToEdit.class_id ? [examToEdit.class_id.toString()] : []),
           grade_id: examToEdit.grade_id ? examToEdit.grade_id.toString() : "",
           academic_year_id: examToEdit.academic_year_id ? examToEdit.academic_year_id.toString() : "",
           start_date: examToEdit.start_date || "",
@@ -110,9 +112,10 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           })) : []
         });
 
-        if (examToEdit.class_id) {
+        if (examToEdit.class_id || (examToEdit.section_ids && examToEdit.section_ids.length > 0)) {
           // Find grade for this class
-          const c = classes.find(cls => cls.id === examToEdit.class_id);
+          const cIdToUse = examToEdit.class_id || examToEdit.section_ids[0];
+          const c = classes.find(cls => cls.id === cIdToUse);
           if (c) {
             form.setValue("grade_id", c.grade_id.toString());
           }
@@ -278,14 +281,17 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       data.exam_type = examToEdit.exam_type;
       if (examToEdit.custom_exam_name) data.custom_exam_name = examToEdit.custom_exam_name;
       data.grade_id = examToEdit.grade_id.toString();
-      if (examToEdit.class_id) data.class_ids = [examToEdit.class_id.toString()];
+      if (examToEdit.section_ids && examToEdit.section_ids.length > 0) {
+        data.class_ids = examToEdit.section_ids.map(id => id.toString());
+      } else if (examToEdit.class_id) {
+        data.class_ids = [examToEdit.class_id.toString()];
+      }
       data.note = examToEdit.note || "";
     }
 
     setIsSubmitting(true);
     try {
       if (examToEdit) {
-        data.class_id = data.class_ids && data.class_ids.length > 0 ? data.class_ids[0] : null;
         await API.put(`/exam/update/exams/${examToEdit.id}`, data);
         toast.success("Exam updated successfully");
       } else {

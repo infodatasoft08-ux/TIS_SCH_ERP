@@ -1,48 +1,55 @@
 const axios = require('axios');
 require('dotenv').config();
 
-/**
- * Sends a WhatsApp message using a configured API or logs it to console.
- * @param {string} to - The recipient's phone number (with country code).
- * @param {string|object} message - The message content (string for text, object for template).
- */
 const sendWhatsAppMessage = async (to, message) => {
+
     if (!to) {
         console.warn('No phone number provided');
         return;
     }
 
-    // Clean number
+    // Clean phone number
     let cleanTo = to.replace(/\D/g, '');
+
     if (cleanTo.length === 10) {
         cleanTo = '91' + cleanTo;
     }
 
-    let payload;
-    if (typeof message === 'object' && message.template) {
+    // Base payload creator
+    const createPayload = (msg) => {
+
         // Template message
-        payload = {
-            messaging_product: "whatsapp",
-            to: cleanTo,
-            type: "template",
-            template: message.template
-        };
-    } else {
-        // Plain text message
-        payload = {
+        if (typeof msg === 'object' && msg.template) {
+            return {
+                messaging_product: "whatsapp",
+                to: cleanTo,
+                type: "template",
+                template: msg.template
+            };
+        }
+
+        let textBody = typeof msg === 'string' ? msg : JSON.stringify(msg);
+        if (typeof msg === 'object' && !msg.template && msg.fallbackText) {
+            textBody = msg.fallbackText;
+        }
+
+        // Text message
+        return {
             messaging_product: "whatsapp",
             to: cleanTo,
             type: "text",
             text: {
-                body: message
+                body: textBody
             }
         };
-    }
+    };
 
     try {
+
+        // Try sending original message
         const response = await axios.post(
             `https://graph.facebook.com/v25.0/${process.env.PHONE_NUMBER_ID}/messages`,
-            payload,
+            createPayload(message),
             {
                 headers: {
                     Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
@@ -53,13 +60,63 @@ const sendWhatsAppMessage = async (to, message) => {
 
         console.log(`✅ WhatsApp sent to ${cleanTo}`);
         return response.data;
-    } catch (error) {
-        const errorData = error.response?.data || error.message;
-        console.error(`❌ WhatsApp Error for ${cleanTo}:`, JSON.stringify(errorData, null, 2));
 
-        if (error.response?.data?.error?.code === 131030) {
-            console.warn(`💡 TIP: The number ${cleanTo} is not in your Meta App's "Allowed numbers" list. Add it in the Meta Developer Dashboard to fix this.`);
+    } catch (error) {
+
+        const errorData = error.response?.data || error.message;
+
+        console.error(
+            `❌ WhatsApp Error for ${cleanTo}:`,
+            JSON.stringify(errorData, null, 2)
+        );
+
+        // -----------------------------------
+        // FALLBACK TO NORMAL TEXT MESSAGE
+        // -----------------------------------
+
+        const isTemplateError =
+            typeof message === 'object' &&
+            message.template;
+
+        if (isTemplateError) {
+
+            console.log('⚠️ Template failed. Sending normal text message...');
+
+            try {
+
+                // Create fallback text
+                const fallbackText =
+                    message.fallbackText ||
+                    'Fee invoice generated successfully.';
+
+                const fallbackResponse = await axios.post(
+                    `https://graph.facebook.com/v25.0/${process.env.PHONE_NUMBER_ID}/messages`,
+                    createPayload(fallbackText),
+                    {
+                        headers: {
+                            Authorization: `Bearer ${process.env.WHATSAPP_TOKEN}`,
+                            "Content-Type": "application/json"
+                        }
+                    }
+                );
+
+                console.log(`✅ Fallback text sent to ${cleanTo}`);
+
+                return fallbackResponse.data;
+
+            } catch (fallbackError) {
+
+                console.error(
+                    `❌ Fallback message failed for ${cleanTo}:`,
+                    fallbackError.response?.data || fallbackError.message
+                );
+
+                return {
+                    error: fallbackError.response?.data || fallbackError.message
+                };
+            }
         }
+
         return { error: errorData };
     }
 };
