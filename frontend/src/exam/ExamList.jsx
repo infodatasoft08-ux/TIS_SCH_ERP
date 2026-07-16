@@ -41,12 +41,12 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
 
   return (
     <div>
-      <div className="flex justify-end mb-4">
+      {/* <div className="flex justify-end mb-4">
         <Button onClick={() => onAddExam()} className="bg-primary hover:bg-primary/90">
           <PlusCircle className="mr-2 h-4 w-4" />
           Add New Exam
         </Button>
-      </div>
+      </div> */}
 
       {/* Web View: Data Table */}
       <div className="hidden md:block overflow-x-auto rounded-xl border bg-white dark:bg-gray-900 shadow-sm mb-6">
@@ -212,7 +212,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
               <CardContent className="flex-grow text-sm space-y-3 pb-2">
                 <div className="flex items-center text-gray-600 dark:text-gray-300">
                   <Layers className="mr-2.5 h-4 w-4 text-indigo-500 shrink-0" />
-                  <span className="font-semibold text-gray-700 dark:text-gray-200 mr-1.5 shrink-0">{exam.section_names ? 'Sections:' : (exam.class_name ? 'Class:' : 'Grade:')}</span> 
+                  <span className="font-semibold text-gray-700 dark:text-gray-200 mr-1.5 shrink-0">{exam.section_names ? 'Sections:' : (exam.class_name ? 'Class:' : 'Grade:')}</span>
                   {exam.section_names ? (
                     <div className="flex flex-wrap gap-1 ml-1">
                       {exam.section_names.split(', ').map((sec, idx) => (
