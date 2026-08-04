@@ -32,6 +32,7 @@ const employeeAttendanceRouter = require('./routes/employeeAttendanceRoute');
 const homeworkRouter = require('./routes/homework_routes');
 const registrationRouter = require('./routes/registrationRoute');
 const documentRouter = require('./routes/documentRoute');
+const appVersionRoute = require('./routes/appVersionRoute');
 const path = require('path');
 
 app.use(cors());
@@ -87,6 +88,7 @@ app.use('/api/employee-attendance', employeeAttendanceRouter);
 app.use('/api/homework', homeworkRouter);
 app.use('/api/registration', registrationRouter);
 app.use('/api/documents', documentRouter);
+app.use('/api/app-version', appVersionRoute);
 
 
 const PORT = process.env.PORT;

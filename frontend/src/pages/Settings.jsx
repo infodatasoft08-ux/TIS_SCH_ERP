@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import ImageCropUpload from '@/components/ImageCropUpload';
 import API from '@/api';
 import { toast } from 'sonner';
+import AppVersionManagerDialog from '@/components/admin/AppVersionManagerDialog';
 
 export default function Settings() {
     const { theme, toggleTheme, ref } = useThemeAnimation();
@@ -186,6 +187,29 @@ export default function Settings() {
                                         <MenuIcon className="h-4 w-4" />
                                         Assign Menu
                                     </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Mobile App Settings Section */}
+                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN) && (
+                    <Card className="overflow-hidden border-muted/60 shadow-md">
+                        <CardHeader className="bg-muted/30">
+                            <div className="flex items-center gap-2">
+                                <School className="h-5 w-5 text-primary" />
+                                <CardTitle className="text-lg">Mobile App Version</CardTitle>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-6 space-y-6">
+                            <div className="flex items-center justify-between">
+                                <div className="space-y-0.5">
+                                    <Label className="text-base">App Version Control</Label>
+                                    <p className="text-sm text-muted-foreground">Manage mobile app version updates and policies.</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <AppVersionManagerDialog />
                                 </div>
                             </div>
                         </CardContent>
