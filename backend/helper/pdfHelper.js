@@ -114,7 +114,7 @@ const generateInvoicePDF = async (invoice) => {
         rowItems
     };
 
-    return await generatePDFFromTemplate('niyati_invoice', data, {
+    return await generatePDFFromTemplate('times_international_invoice', data, {
         format: 'A6',
         margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
     });
@@ -141,7 +141,7 @@ const generatePaymentReceiptPDF = async (payment) => {
         }
     };
 
-    return await generatePDFFromTemplate('niyati_receipt', data, {
+    return await generatePDFFromTemplate('times_international_receipt', data, {
         format: 'A6',
         margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
     });
@@ -189,8 +189,8 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
     if (bal < 0) bal = 0;
 
     // Load templates
-    const invoiceTemplatePath = path.join(__dirname, '../templates/niyati_invoice.hbs');
-    const receiptTemplatePath = path.join(__dirname, '../templates/niyati_receipt.hbs');
+    const invoiceTemplatePath = path.join(__dirname, '../templates/times_international_invoice.hbs');
+    const receiptTemplatePath = path.join(__dirname, '../templates/times_international_receipt.hbs');
 
     const invoiceTemplateSource = fs.readFileSync(invoiceTemplatePath, 'utf8');
     const receiptTemplateSource = fs.readFileSync(receiptTemplatePath, 'utf8');
@@ -325,7 +325,7 @@ const generateBulkInvoicesPDF = async (invoices) => {
         }
     } catch (e) { }
 
-    const invoiceTemplatePath = path.join(__dirname, '../templates/niyati_invoice.hbs');
+    const invoiceTemplatePath = path.join(__dirname, '../templates/times_international_invoice.hbs');
     const invoiceTemplateSource = fs.readFileSync(invoiceTemplatePath, 'utf8');
     const invoiceCompiled = handlebars.compile(invoiceTemplateSource);
 
@@ -441,7 +441,7 @@ const generateExamRoutinePDF = async (routineData) => {
             logoData = `data:image/png;base64,${logoBuffer.toString('base64')}`;
         }
         
-        const cmcPath = path.join(__dirname, '../assets/cmc_logo.png');
+        const cmcPath = path.join(__dirname, '../assets/Times_Internation_School_logo.png');
         if (fs.existsSync(cmcPath)) {
             const cmcBuffer = fs.readFileSync(cmcPath);
             cmcLogo = `data:image/png;base64,${cmcBuffer.toString('base64')}`;

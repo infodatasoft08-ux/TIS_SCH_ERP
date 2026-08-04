@@ -10,7 +10,7 @@ import CreateRoutineDialog from "./CreateRoutineDialog.jsx";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Printer, TrendingUp, Filter, Calendar, Download, Lock, FileText } from "lucide-react";
+import { Search, Printer, TrendingUp, Filter, Calendar, Download, Lock, FileText, PlusCircle } from "lucide-react";
 import StudentPerformanceReport from "./StudentPerformanceReport.jsx";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -219,7 +219,7 @@ export default function ExamDataTable() {
             toast.success(`Results ${newState ? 'published' : 'unpublished'} successfully`);
             loadExams(true);
         } catch (err) {
-            toast.error("Failed to update results publication status");
+            toast.error(err.response?.data?.error || "Failed to update results publication status");
         }
     }
 
@@ -887,6 +887,16 @@ export default function ExamDataTable() {
                                             </Select>
                                         </div>
                                     </div>
+
+                                    {!isTeacher && (
+                                        <Button
+                                            onClick={openAddDialog}
+                                            className="h-8 md:h-10 w-full lg:w-auto bg-primary hover:bg-primary/90 text-white shadow-md rounded-md px-6"
+                                        >
+                                            <PlusCircle className="mr-2 h-5 w-5" />
+                                            Create Exam
+                                        </Button>
+                                    )}
                                 </div>
                                 <ExamList
                                     exams={exams}

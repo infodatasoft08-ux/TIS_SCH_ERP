@@ -13,6 +13,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { useEffect, useState } from "react";
 import { ComboboxFormField } from "@/widgets/comboboxFormField";
+import { MultiSelectCombobox } from "@/widgets/multiSelectCombobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 
@@ -20,7 +21,7 @@ const schema = z.object({
   name: z.string().min(1, "Name is required"),
   exam_type: z.string().min(1, "Exam type is required"),
   custom_exam_name: z.string().optional(),
-  class_id: z.coerce.string().optional(),
+  class_ids: z.array(z.coerce.string()).min(1, "At least one section is required"),
   grade_id: z.coerce.string().min(1, "Grade is required"),
   academic_year_id: z.coerce.string().min(1, "Academic Year is required"),
   start_date: z.string().optional(),
@@ -53,7 +54,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       name: "",
       exam_type: "UNIT_TEST_1",
       custom_exam_name: "",
-      class_id: "",
+      class_ids: [],
       grade_id: "",
       academic_year_id: "",
       start_date: "",
@@ -90,7 +91,9 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           name: examToEdit.name || "",
           exam_type: examToEdit.exam_type || "OTHER",
           custom_exam_name: examToEdit.custom_exam_name || "",
-          class_id: examToEdit.class_id ? examToEdit.class_id.toString() : "",
+          class_ids: examToEdit.section_ids && examToEdit.section_ids.length > 0
+            ? examToEdit.section_ids.map(id => id.toString())
+            : (examToEdit.class_id ? [examToEdit.class_id.toString()] : []),
           grade_id: examToEdit.grade_id ? examToEdit.grade_id.toString() : "",
           academic_year_id: examToEdit.academic_year_id ? examToEdit.academic_year_id.toString() : "",
           start_date: examToEdit.start_date || "",
@@ -109,9 +112,10 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           })) : []
         });
 
-        if (examToEdit.class_id) {
+        if (examToEdit.class_id || (examToEdit.section_ids && examToEdit.section_ids.length > 0)) {
           // Find grade for this class
-          const c = classes.find(cls => cls.id === examToEdit.class_id);
+          const cIdToUse = examToEdit.class_id || examToEdit.section_ids[0];
+          const c = classes.find(cls => cls.id === cIdToUse);
           if (c) {
             form.setValue("grade_id", c.grade_id.toString());
           }
@@ -139,7 +143,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           name: "",
           exam_type: "UNIT_TEST_1",
           custom_exam_name: "",
-          class_id: "",
+          class_ids: [],
           grade_id: "",
           academic_year_id: "",
           start_date: "",
@@ -277,7 +281,11 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       data.exam_type = examToEdit.exam_type;
       if (examToEdit.custom_exam_name) data.custom_exam_name = examToEdit.custom_exam_name;
       data.grade_id = examToEdit.grade_id.toString();
-      if (examToEdit.class_id) data.class_id = examToEdit.class_id.toString();
+      if (examToEdit.section_ids && examToEdit.section_ids.length > 0) {
+        data.class_ids = examToEdit.section_ids.map(id => id.toString());
+      } else if (examToEdit.class_id) {
+        data.class_ids = [examToEdit.class_id.toString()];
+      }
       data.note = examToEdit.note || "";
     }
 
@@ -313,7 +321,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
         <Form {...form}>
           <ScrollArea className="max-h-[calc(100vh-200px)] pr-4">
             <form onSubmit={form.handleSubmit(submit)} className="space-y-4 pt-4 px-2">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <FormField
                   name="exam_type"
                   control={form.control}
@@ -375,7 +383,67 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                 />
               </div>
               {/* <div className="grid grid-cols-1 gap-4"> */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              </div> */}
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <FormField
+                  name="grade_id"
+                  control={form.control}
+                  render={({ field }) => (
+                    <ComboboxFormField
+                      field={field}
+                      label="Grade"
+                      required
+                      disabled={isExamLocked}
+                      items={grades}
+                      valueKey="id"
+                      labelKey="name"
+                      searchKey="name"
+                      placeholder="Select Grade"
+                      searchPlaceholder="Search grade..."
+                      emptyMessage="No grade found."
+                    />
+                  )}
+                />
+
+                <FormField
+                  name="class_ids"
+                  control={form.control}
+                  render={({ field, fieldState }) => {
+                    const filteredSections = classes.filter(c => c.grade_id?.toString() === selectedGradeId);
+
+                    if (!selectedGradeId) {
+                      return (
+                        <FormItem>
+                          <FormLabel>Section(s) *</FormLabel>
+                          <div className="flex flex-wrap gap-4 pl-2 pr-2 pt-2 border rounded-md min-h-[34px] bg-white dark:bg-slate-950">
+                            <div className="text-sm text-gray-500 italic">Please select a Grade first</div>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }
+
+                    return (
+                      <MultiSelectCombobox
+                        field={field}
+                        fieldState={fieldState}
+                        label="Section(s)"
+                        required
+                        disabled={isExamLocked}
+                        items={filteredSections}
+                        valueKey="id"
+                        labelKey="name"
+                        searchKey="name"
+                        placeholder="Select Sections"
+                        searchPlaceholder="Search section..."
+                        emptyMessage="No sections found for this grade."
+                      />
+                    );
+                  }}
+                />
+
                 <FormField
                   control={form.control}
                   name="academic_year_id"
@@ -402,47 +470,6 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                       </FormControl>
                       <FormMessage />
                     </FormItem>
-                  )}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <FormField
-                  name="grade_id"
-                  control={form.control}
-                  render={({ field }) => (
-                    <ComboboxFormField
-                      field={field}
-                      label="Grade"
-                      required
-                      disabled={isExamLocked}
-                      items={grades}
-                      valueKey="id"
-                      labelKey="name"
-                      searchKey="name"
-                      placeholder="Select Grade"
-                      searchPlaceholder="Search grade..."
-                      emptyMessage="No grade found."
-                    />
-                  )}
-                />
-
-                <FormField
-                  name="class_id"
-                  control={form.control}
-                  render={({ field }) => (
-                    <ComboboxFormField
-                      field={field}
-                      label="Class"
-                      disabled={isExamLocked}
-                      items={[{ id: "", name: "Select None / Clear" }, ...classes]}
-                      valueKey="id"
-                      labelKey="name"
-                      searchKey="name"
-                      placeholder="Select Class"
-                      searchPlaceholder="Search class..."
-                      emptyMessage="No class found."
-                    />
                   )}
                 />
               </div>

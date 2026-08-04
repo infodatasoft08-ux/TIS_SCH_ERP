@@ -157,7 +157,14 @@ const AddStudent = async (req, res) => {
     await conn.rollback();
     console.error('POST /api/students error', err);
     if (avatar_url) await deleteFromCloudinary(avatar_url);
-    if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email or admission_no conflict' });
+    if (err && err.code === 'ER_DUP_ENTRY') {
+      let errorMsg = 'An account with this email or admission number already exists.';
+      if (err.sqlMessage) {
+        if (err.sqlMessage.includes('email')) errorMsg = 'This email address is already in use by another user.';
+        else if (err.sqlMessage.includes('admission_no')) errorMsg = 'This Admission Number is already assigned to another student.';
+      }
+      return res.status(409).json({ error: errorMsg });
+    }
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
     conn.release();
@@ -604,7 +611,14 @@ const UpdateStudent = async (req, res) => {
     conn.release();
     console.error('PUT /api/students/:id error', err);
     if (req.file) await deleteFromCloudinary(req.file.path);
-    if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Email or admission_no conflict' });
+    if (err && err.code === 'ER_DUP_ENTRY') {
+      let errorMsg = 'An account with this email or admission number already exists.';
+      if (err.sqlMessage) {
+        if (err.sqlMessage.includes('email')) errorMsg = 'This email address is already in use by another user.';
+        else if (err.sqlMessage.includes('admission_no')) errorMsg = 'This Admission Number is already assigned to another student.';
+      }
+      return res.status(409).json({ error: errorMsg });
+    }
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
     conn.release();

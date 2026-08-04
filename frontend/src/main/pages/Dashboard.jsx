@@ -11,8 +11,12 @@ const ROLES = {
   TEACHER: 2,
   STUDENT: 1,
   PARENT: 5,
-  ACCOUNTANT: 4,
   SUPERADMIN: 6,
+  RECEPTION: 8,
+  COORDINATOR: 7,
+  DISCIPLINE_INCHARGE: 11,
+  CARE_TAKER: 10,
+  COMPUTER_OPERATOR: 9,
   STAFF: "staff"
 };
 
@@ -33,6 +37,9 @@ export default function Dashboard() {
     case ROLES.ADMIN:
       return <AdminDashboard />;
 
+    case ROLES.COORDINATOR:
+      return <AdminDashboard />;
+
     case ROLES.TEACHER:
       return <TeacherDashboard />;
 
@@ -42,13 +49,19 @@ export default function Dashboard() {
     case ROLES.PARENT:
       return <StudentDashboard />;
 
-    case ROLES.ACCOUNTANT:
+    case ROLES.RECEPTION:
       return <FinanceDashboard />;
 
     case ROLES.SUPERADMIN:
       return <AdminDashboard />;
 
-    case ROLES.STAFF:
+    case ROLES.DISCIPLINE_INCHARGE:
+      return <StaffDashboard />;
+
+    case ROLES.CARE_TAKER:
+      return <StaffDashboard />;
+
+    case ROLES.COMPUTER_OPERATOR:
       return <StaffDashboard />;
 
     default:

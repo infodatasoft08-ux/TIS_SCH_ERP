@@ -28,8 +28,8 @@ const StaffSchema = z.object({
   phone: z.string().min(1, "Phone is required"),
   role_id: z.number().min(1, "Role is required"),
   employee_code: z.string().optional(),
-  hire_date: z.string().min(1, "Hire date is required"),
-  qualification: z.string().min(1, "Qualification is required"),
+  hire_date: z.string().optional(),
+  qualification: z.string().optional(),
   bio: z.string().optional(),
   department: z.string().min(1, "Department is required"),
   address: z.string().min(1, "Address is required"),
@@ -358,7 +358,7 @@ export default function AddStaffDialog({
                   name="hire_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Hire Date *</FormLabel>
+                      <FormLabel>Hire Date</FormLabel>
                       <FormControl>
                         <DatePicker
                           value={field.value}
@@ -404,7 +404,7 @@ export default function AddStaffDialog({
                   name="qualification"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Qualification *</FormLabel>
+                      <FormLabel>Qualification</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Enter qualification" />
                       </FormControl>
@@ -507,6 +507,7 @@ export default function AddStaffDialog({
                                         value={role.id}
                                         onSelect={() => {
                                           field.onChange(role.id);
+                                          form.setValue("department", role.role_name, { shouldValidate: true });
                                           setOpen(false);
                                         }}
                                         className="cursor-pointer"
@@ -540,7 +541,7 @@ export default function AddStaffDialog({
                     <FormItem>
                       <FormLabel>Department</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Enter department" />
+                        <Input {...field} placeholder="Auto-filled by role" readOnly={true} className="cursor-not-allowed opacity-50 bg-muted" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -578,26 +579,7 @@ export default function AddStaffDialog({
                 </div>
               </div>
 
-              <FormField
-                control={form.control}
-                name="role_id"
-                render={({ field }) => (
-                  <FormItem>
-                    {/* <FormLabel>Role *</FormLabel> */}
-                    <FormControl>
-                      <Input
-                        {...field}
-                        value="2"
-                        disabled={true}
-                        readOnly={true}
-                        type="hidden"
-                        className="bg-gray-50"
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+
 
               <div className="pb-4"></div>
             </form>

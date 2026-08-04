@@ -212,10 +212,9 @@ export default function MainLayout() {
                   </AnimatePresence>
 
                   {/* Company Branding */}
-                  <div className="mt-auto pt-8 pb-16 md:pb-2 text-center text-xs text-muted-foreground w-full">
-                    {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
+                  {/* <div className="mt-auto pt-8 pb-16 md:pb-2 text-center text-xs text-muted-foreground w-full">
                     © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION PRIVATE LIMITED</b>
-                  </div>
+                  </div> */}
                 </div>
               </CustomPullToRefresh>
             </main>

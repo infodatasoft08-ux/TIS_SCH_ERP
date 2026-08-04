@@ -37,7 +37,7 @@ const createStudentSchema = (isEditMode) =>
     date_of_birth: z.string().min(1, "Date of Birth is required"),
     grade_id: z.coerce.string().min(1, "Grade is required"),
     class_id: z.coerce.string().min(1, "Class is required"),
-    admission_date: z.string().min(1, "Admission Date is required"),
+    admission_date: z.string().optional(),
     adhar_number: z.string().max(12, "12 Digit Adhar Number is required").optional(),
     blood_group: z.string().optional(),
     mother_contect: z.string().max(10, "Phone is required and 10 digit number").optional(),
@@ -216,23 +216,22 @@ export default function AddStudentDialog({
     }
   }, [open, studentToEdit, classes, form]);
 
-  // Watch for class_id changes to update grade_id
-  const selectedClassId = form.watch("class_id");
+  const selectedGradeId = form.watch("grade_id");
 
-  useEffect(() => {
-    if (selectedClassId) {
-      const selectedClassData = classes.find(cls => cls.id.toString() === selectedClassId);
-      if (selectedClassData) {
-        setSelectedClass(selectedClassData);
-        // Auto-set the grade_id when class is selected
-        form.setValue("grade_id", selectedClassData.grade_id.toString(), {
-          shouldValidate: true
-        });
-      }
-    } else {
-      setSelectedClass(null);
+  const filteredSections = React.useMemo(() => {
+    if (!selectedGradeId) {
+      return classes.map(cls => ({
+        id: cls.id,
+        display: `${cls.name} (Grade: ${cls.grade_name})`
+      }));
     }
-  }, [selectedClassId, classes, form]);
+    return classes
+      .filter(cls => cls.grade_id.toString() === selectedGradeId.toString())
+      .map(cls => ({
+        id: cls.id,
+        display: cls.name
+      }));
+  }, [classes, selectedGradeId]);
 
   // Fetch academic years
   useEffect(() => {
@@ -317,18 +316,6 @@ export default function AddStudentDialog({
     }
   }
 
-  // Add error logging
-  // useEffect(() => {
-  //   const subscription = form.watch((value, { name, type }) => {
-  //     console.log("Form values changed:", value);
-  //   });
-  //   return () => subscription.unsubscribe();
-  // }, [form.watch]);
-
-  // useEffect(() => {
-  //   console.log("Form errors:", form.formState.errors);
-  // }, [form.formState.errors]);
-
   const togglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
@@ -404,7 +391,6 @@ export default function AddStudentDialog({
                   {isEditMode ? "Update student details and information." : "Enroll a new student into the system."}
                 </p>
               </div>
-              {/* Custom Close Button could go here if needed, but Dialog usually handles it */}
             </div>
             <div className="mt-6">
               <Stepper currentStep={step} steps={["Student Info", "Parent Info"]} />
@@ -414,27 +400,9 @@ export default function AddStudentDialog({
         <div className="flex-1 overflow-y-auto px-6 py-6 bg-white dark:bg-gray-900/10">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              {/* Debug: Show validation errors at top */}
-              {/* {Object.keys(form.formState.errors).length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded p-3 mb-4">
-                  <p className="text-red-600 font-semibold">
-                    Please fix the following errors:
-                  </p>
-                  <ul className="text-red-500 text-sm mt-1">
-                    {Object.entries(form.formState.errors).map(
-                      ([key, error]) => (
-                        <li key={key}>{error.message}</li>
-                      )
-                    )}
-                  </ul>
-                </div>
-              )} */}
-
               {step === 1 && (
                 <div className="space-y-4">
                   <h3 className="text-lg font-semibold">Student Information</h3>
-                  {/* Student-related fields here */}
-                  {/* First Row - Student Name, Email, Phone */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -460,11 +428,6 @@ export default function AddStudentDialog({
                         <FormItem>
                           <FormLabel>Email *</FormLabel>
                           <FormControl>
-                            {/* <Input
-                              type="email"
-                              {...field}
-                              placeholder="email@gmail.com"
-                            /> */}
                             <Input
                               {...field}
                               type="email"
@@ -487,11 +450,6 @@ export default function AddStudentDialog({
                         <FormItem>
                           <FormLabel>Phone *</FormLabel>
                           <FormControl>
-                            {/* <Input
-                              type="tel"
-                              {...field}
-                              placeholder="Enter phone number"
-                            /> */}
                             <Input
                               {...field}
                               maxLength={10}
@@ -510,7 +468,6 @@ export default function AddStudentDialog({
                     />
                   </div>
 
-                  {/* Second Row - Password, Admission No, Roll No */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
@@ -556,7 +513,6 @@ export default function AddStudentDialog({
                             <FormControl>
                               <Input
                                 {...field}
-                                // disabled
                                 placeholder={isEditMode ? "Enter admission number" : "Auto-generated"}
                               />
                             </FormControl>
@@ -565,25 +521,6 @@ export default function AddStudentDialog({
                         )}
                       />
                     )}
-
-                    {/* <FormField
-                      control={form.control}
-                      name="admission_no"
-                      className={`${isEditMode ? "block" : "hidden"}`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className={`${isEditMode ? "block" : "hidden"}`}>Admission No *</FormLabel>
-                          <FormControl className={`${isEditMode ? "block" : "hidden"}`}>
-                            <Input
-                              {...field}
-                              disabled
-                              placeholder={isEditMode ? "Enter admission number" : "Auto-generated"}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    /> */}
 
                     <FormField
                       control={form.control}
@@ -600,14 +537,13 @@ export default function AddStudentDialog({
                     />
                   </div>
 
-                  {/* Third Row - Dates */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <FormField
                       control={form.control}
                       name="admission_date"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Admission Date *</FormLabel>
+                          <FormLabel>Admission Date</FormLabel>
                           <FormControl>
                             <DatePicker
                               value={field.value}
@@ -643,7 +579,8 @@ export default function AddStudentDialog({
                       name="academic_year_id"
                       render={({ field, fieldState }) => (
                         <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
+                          field={field}
+                          fieldState={fieldState}
                           label="Academic Year"
                           required
                           items={academicYears}
@@ -658,45 +595,65 @@ export default function AddStudentDialog({
                     />
                   </div>
 
-                  {/* Fourth Row - Class, Grade, Status */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                    <FormField
-                      control={form.control}
-                      name="class_id"
-                      render={({ field, fieldState }) => (
-                        <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
-                          label="Section"
-                          required
-                          items={classes.map(cls => ({
-                            id: cls.id,
-                            display: `${cls.name} (Grade: ${cls.grade_name})`
-                          }))}
-                          valueKey="id"
-                          labelKey="display"
-                          searchKey="display"
-                          placeholder="Select section"
-                          searchPlaceholder="Search section..."
-                          emptyMessage="No section found."
-                        />
-                      )}
-                    />
-
                     <FormField
                       control={form.control}
                       name="grade_id"
                       render={({ field, fieldState }) => (
                         <ComboboxFormField
-                          field={{ ...field, error: fieldState.error }}
+                          field={{
+                            ...field,
+                            onChange: (newGradeId) => {
+                              field.onChange(newGradeId);
+                              if (newGradeId) {
+                                const availableSections = classes.filter(cls => cls.grade_id.toString() === newGradeId.toString());
+                                if (availableSections.length === 1) {
+                                  form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+                                  setSelectedClass(availableSections[0]);
+                                } else if (availableSections.length > 1) {
+                                  const currentSection = form.getValues("class_id");
+                                  if (currentSection) {
+                                    const belongs = availableSections.some(cls => cls.id.toString() === currentSection.toString());
+                                    if (!belongs) {
+                                      form.setValue("class_id", "", { shouldValidate: true });
+                                      setSelectedClass(null);
+                                    }
+                                  }
+                                }
+                              }
+                            }
+                          }}
+                          fieldState={fieldState}
                           label="Class"
                           required
                           items={uniqueGrades}
                           valueKey="id"
                           labelKey="name"
                           searchKey="name"
-                          placeholder={selectedClass ? selectedClass.grade_name : "Select grade"}
-                          searchPlaceholder="Search grade..."
-                          emptyMessage="No grade found."
+                          placeholder="Select class"
+                          searchPlaceholder="Search class..."
+                          emptyMessage="No class found."
+                        />
+                      )}
+                    />
+
+
+                    <FormField
+                      control={form.control}
+                      name="class_id"
+                      render={({ field, fieldState }) => (
+                        <ComboboxFormField
+                          field={field}
+                          fieldState={fieldState}
+                          label="Section"
+                          required
+                          items={filteredSections}
+                          valueKey="id"
+                          labelKey="display"
+                          searchKey="display"
+                          placeholder="Select section"
+                          searchPlaceholder="Search section..."
+                          emptyMessage="No section found."
                         />
                       )}
                     />
@@ -762,7 +719,7 @@ export default function AddStudentDialog({
                       name="blood_group"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Blood Group *</FormLabel>
+                          <FormLabel>Blood Group</FormLabel>
                           <FormControl>
                             <Input
                               {...field}

@@ -13,6 +13,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
     const [routine, setRoutine] = useState([]);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
+    const [errors, setErrors] = useState({});
 
     useEffect(() => {
         if (open && exam && exam.subjects) {
@@ -24,20 +25,63 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                 start_time: s.start_time || "",
                 end_time: s.end_time || ""
             })));
+            setErrors({});
         } else {
             setRoutine([]);
+            setErrors({});
         }
     }, [open, exam]);
 
     const handleDateChange = (id, date) => {
         setRoutine(prev => prev.map(r => r.id === id ? { ...r, exam_date: date } : r));
+        if (errors[id]?.exam_date) {
+            setErrors(prev => ({ ...prev, [id]: { ...prev[id], exam_date: null } }));
+        }
     };
 
     const handleTimeChange = (id, field, value) => {
         setRoutine(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+        if (errors[id]?.[field]) {
+            setErrors(prev => ({ ...prev, [id]: { ...prev[id], [field]: null } }));
+        }
     };
 
     const handleSubmit = async () => {
+        const academicSubjects = routine.filter(s => {
+            const n = s.subject_name?.toLowerCase().trim();
+            const type = s.subject_type?.toLowerCase() || '';
+            const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
+            return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+        });
+
+        const newErrors = {};
+        let isValid = true;
+
+        academicSubjects.forEach(subject => {
+            const subjectErrors = {};
+            if (!subject.exam_date) {
+                subjectErrors.exam_date = "Exam date is required";
+                isValid = false;
+            }
+            if (!subject.start_time) {
+                subjectErrors.start_time = "Start time is required";
+                isValid = false;
+            }
+            if (!subject.end_time) {
+                subjectErrors.end_time = "End time is required";
+                isValid = false;
+            }
+            if (Object.keys(subjectErrors).length > 0) {
+                newErrors[subject.id] = subjectErrors;
+            }
+        });
+
+        if (!isValid) {
+            setErrors(newErrors);
+            toast.error("Please fill in all mandatory fields");
+            return;
+        }
+
         const formattedRoutine = routine.map(r => ({
             id: r.id,
             exam_date: r.exam_date ? convertToYYYYMMDD(r.exam_date) : null,
@@ -93,6 +137,13 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
         }
     };
 
+    const academicSubjects = routine.filter(s => {
+        const n = s.subject_name?.toLowerCase().trim();
+        const type = s.subject_type?.toLowerCase() || '';
+        const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
+        return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
+    });
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[700px] rounded-3xl"
@@ -122,50 +173,49 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                 </DialogHeader>
 
                 <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto px-2">
-                    {routine.filter(s => {
-                        const n = s.subject_name?.toLowerCase().trim();
-                        const type = s.subject_type?.toLowerCase() || '';
-                        const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
-                        return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-                    }).length === 0 ? (
+                    {academicSubjects.length === 0 ? (
                         <p className="text-center text-gray-500">No subjects found for this exam.</p>
                     ) : (
-                        routine.filter(s => {
-                            const n = s.subject_name?.toLowerCase().trim();
-                            const type = s.subject_type?.toLowerCase() || '';
-                            const isNonAcademic = type === 'co-scholastic' || type === 'skill-based';
-                            return !isNonAcademic && !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-                        }).map(item => (
+                        academicSubjects.map(item => (
                             <div key={item.id} className="p-4 border rounded-lg space-y-4">
                                 <h4 className="font-semibold text-lg">{item.subject_name}</h4>
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium">Exam Date</label>
+                                        <label className="text-sm font-medium">Exam Date <span className="text-red-500">*</span></label>
                                         <div className="mt-1">
                                             <DatePicker
                                                 value={item.exam_date}
                                                 onChange={(date) => handleDateChange(item.id, date)}
                                                 placeholder="dd/mm/yyyy"
                                             />
+                                            {errors[item.id]?.exam_date && (
+                                                <p className="text-red-500 text-xs mt-1">{errors[item.id].exam_date}</p>
+                                            )}
                                         </div>
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium">Start Time</label>
+                                        <label className="text-sm font-medium">Start Time <span className="text-red-500">*</span></label>
                                         <Input
                                             type="time"
-                                            className="mt-1 bg-slate-50 text-black dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                                            className={`mt-1 bg-slate-50 text-black dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] ${errors[item.id]?.start_time ? 'border-red-500' : ''}`}
                                             value={item.start_time}
                                             onChange={(e) => handleTimeChange(item.id, 'start_time', e.target.value)}
                                         />
+                                        {errors[item.id]?.start_time && (
+                                            <p className="text-red-500 text-xs mt-1">{errors[item.id].start_time}</p>
+                                        )}
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium">End Time</label>
+                                        <label className="text-sm font-medium">End Time <span className="text-red-500">*</span></label>
                                         <Input
                                             type="time"
-                                            className="mt-1 bg-slate-50 text-black dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                                            className={`mt-1 bg-slate-50 text-black dark:bg-gray-700 dark:text-white dark:[color-scheme:dark] ${errors[item.id]?.end_time ? 'border-red-500' : ''}`}
                                             value={item.end_time}
                                             onChange={(e) => handleTimeChange(item.id, 'end_time', e.target.value)}
                                         />
+                                        {errors[item.id]?.end_time && (
+                                            <p className="text-red-500 text-xs mt-1">{errors[item.id].end_time}</p>
+                                        )}
                                     </div>
                                 </div>
                             </div>

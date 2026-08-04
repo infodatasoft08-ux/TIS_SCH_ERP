@@ -294,3 +294,53 @@ body {
     scrollbar-color: hsl(var(--border)) hsl(var(--background));
   }
 }
+
+/* Fix for ScheduleX DatePicker mobile responsiveness and borders */
+.sx__date-picker-popup {
+  zoom: 0.85; /* Decrease size on all screens */
+  z-index: 9999 !important;
+  background-color: hsl(var(--popover)) !important;
+  color: hsl(var(--popover-foreground)) !important;
+  border: 1px solid hsl(var(--border)) !important;
+}
+
+/* Force correct theme colors for ScheduleX DatePicker header */
+.sx__date-picker__month-view-header {
+  background-color: hsl(var(--muted)) !important;
+  color: hsl(var(--muted-foreground)) !important;
+}
+
+.sx__date-picker__month-view-header * {
+  color: hsl(var(--muted-foreground)) !important;
+  fill: hsl(var(--muted-foreground)) !important;
+}
+
+.sx__date-picker__day-name, 
+.sx__date-picker__day {
+  color: hsl(var(--foreground)) !important;
+}
+
+.sx__date-picker__day:hover {
+  background-color: hsl(var(--accent)) !important;
+  color: hsl(var(--accent-foreground)) !important;
+}
+
+.sx__date-picker__day.sx__date-picker__day--today {
+  background-color: hsl(var(--primary)) !important;
+  color: white !important;
+}
+
+.sx__date-picker__day.sx__date-picker__day--selected {
+  background-color: green !important;
+  color: white !important;
+}
+
+@media (max-width: 640px) {
+  .sx__date-picker-popup {
+    zoom: 0.75; /* Slightly smaller on mobile */
+  }
+}
+
+html.dark .sx-react-calendar-wrapper {
+  border: none !important;
+}

@@ -12,6 +12,16 @@ import BulkPromoteForm from "./forms/BulkPromoteForm.jsx";
 import { useAuth } from "@/auth/AuthContext.jsx";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AcademicRecordsPage() {
     const [records, setRecords] = useState([]);
@@ -24,6 +34,7 @@ export default function AcademicRecordsPage() {
     const [isPromoteDialogOpen, setIsPromoteDialogOpen] = useState(false);
     const [isBulkPromoteDialogOpen, setIsBulkPromoteDialogOpen] = useState(false);
     const [academicYears, setAcademicYears] = useState([]);
+    const [recordToDelete, setRecordToDelete] = useState(null);
 
     // Pagination states
     const [limit, setLimit] = useState(10);
@@ -119,16 +130,22 @@ export default function AcademicRecordsPage() {
     }, []);
 
     // Delete record
-    async function deleteRecord(id) {
-        if (!confirm("Are you sure you want to delete this record?")) return;
+    function deleteRecord(id) {
+        setRecordToDelete(id);
+    }
+
+    async function executeDelete() {
+        if (!recordToDelete) return;
 
         try {
-            await API.delete(`/academic/delete/${id}`);
+            await API.delete(`/academic/delete/${recordToDelete}`);
             toast.success("Record deleted successfully");
             loadRecords(true);
         } catch (err) {
             const msg = err.response?.data?.error || "Failed to delete record";
             toast.error(msg);
+        } finally {
+            setRecordToDelete(null);
         }
     }
 
@@ -342,6 +359,21 @@ export default function AcademicRecordsPage() {
                     classes={classes}
                     academicYears={academicYears}
                 />
+
+                <AlertDialog open={!!recordToDelete} onOpenChange={(open) => !open && setRecordToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure you want to delete this record?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the student and their academic records from the system.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel onClick={() => setRecordToDelete(null)}>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={executeDelete} className="bg-red-600 hover:bg-red-700">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
             </div>
         </div>
     );

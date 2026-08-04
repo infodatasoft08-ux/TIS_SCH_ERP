@@ -4,6 +4,7 @@ const pdfService = require('../services/pdfService');
 const storageService = require('../services/storageService');
 const path = require('path');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
+const whatsappQueue = require('../queues/whatsappQueue');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -11,7 +12,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
-    const { name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
 
     if (!isNonEmptyString(name) || !grade_id || !academic_year_id) {
@@ -22,35 +23,48 @@ const AddExamGroup = async (req, res) => {
         return res.status(400).json({ error: 'At least one subject is required' });
     }
 
+    let targetClassIds = [];
+    if (class_ids && Array.isArray(class_ids) && class_ids.length > 0) {
+        targetClassIds = class_ids;
+    } else if (class_id) {
+        targetClassIds = [class_id];
+    } else {
+        return res.status(400).json({ error: 'Section is required' });
+    }
+
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
 
-        // insert exam_groups
+        const createdExamGroupIds = [];
+
+        const sectionIdsJson = JSON.stringify(targetClassIds.map(id => parseInt(id, 10)));
+
         const [egRes] = await conn.execute(
-            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW())`,
-            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, toInt(class_id) || null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null]
+            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?)`,
+            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null, sectionIdsJson]
         );
         const examGroupId = egRes.insertId;
+        createdExamGroupIds.push(examGroupId);
 
         // insert exam_group_subjects
         for (const sub of subjects) {
             const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
             const hasLab = sub.has_lab ? 1 : 0;
             const hasOral = sub.has_oral ? 1 : 0;
-            
+
             const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
             const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
             const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
-            
+
             const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
 
             await conn.execute(
                 `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                 [
-                    examGroupId, 
-                    toInt(sub.subject_id), 
-                    calculatedMax, 
+                    examGroupId,
+                    toInt(sub.subject_id),
+                    calculatedMax,
                     toInt(sub.passing_marks) || 35,
                     hasTheory,
                     hasLab,
@@ -64,7 +78,7 @@ const AddExamGroup = async (req, res) => {
 
         await conn.commit();
         conn.release();
-        return res.status(201).json({ success: true, exam_group_id: examGroupId });
+        return res.status(201).json({ success: true, exam_group_ids: createdExamGroupIds });
     } catch (err) {
         await conn.rollback();
         conn.release();
@@ -87,8 +101,8 @@ const GetExamGroups = async (req, res) => {
         let params = [];
 
         if (classId) {
-            whereClause.push('eg.class_id = ?');
-            params.push(classId);
+            whereClause.push('(eg.class_id = ? OR JSON_CONTAINS(COALESCE(eg.section_ids, "[]"), CAST(? AS CHAR)))');
+            params.push(classId, classId);
         }
         if (gradeId) {
             whereClause.push('eg.grade_id = ?');
@@ -141,11 +155,30 @@ const GetExamGroups = async (req, res) => {
             }
         }
 
-        const formattedExams = rows.map(exam => ({
-            ...exam,
-            start_date: exam.start_date ? formatMySQLDate(exam.start_date) : null,
-            end_date: exam.end_date ? formatMySQLDate(exam.end_date) : null
-        }));
+        const [allClasses] = await db.query('SELECT id, name FROM classes');
+        const classMap = {};
+        allClasses.forEach(c => classMap[c.id] = c.name);
+
+        const formattedExams = rows.map(exam => {
+            let sectionNames = [];
+            let sectionIds = [];
+
+            if (exam.section_ids && Array.isArray(exam.section_ids) && exam.section_ids.length > 0) {
+                sectionIds = exam.section_ids;
+                sectionNames = exam.section_ids.map(id => classMap[id]).filter(Boolean);
+            } else if (exam.class_id) {
+                sectionIds = [exam.class_id];
+                sectionNames = [exam.class_name || classMap[exam.class_id]];
+            }
+
+            return {
+                ...exam,
+                section_ids: sectionIds,
+                section_names: sectionNames.join(', '),
+                start_date: exam.start_date ? formatMySQLDate(exam.start_date) : null,
+                end_date: exam.end_date ? formatMySQLDate(exam.end_date) : null
+            }
+        });
 
         return res.json({ total, limit, offset, exams: formattedExams });
 
@@ -156,14 +189,128 @@ const GetExamGroups = async (req, res) => {
 }
 
 // Update Exam Group (Status / Details)
+// const UpdateExamGroup = async (req, res) => {
+//     const id = toInt(req.params.id);
+//     const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects } = req.body;
+
+//     const updates = []; const params = [];
+//     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
+//     if (exam_type !== undefined) { updates.push('exam_type = ?'); params.push(exam_type); }
+//     if (class_id !== undefined && !class_ids) { updates.push('class_id = ?'); params.push(class_id === '' || class_id === null ? null : toInt(class_id)); }
+//     if (class_ids !== undefined && Array.isArray(class_ids)) {
+//         updates.push('section_ids = ?'); 
+//         params.push(JSON.stringify(class_ids.map(c => parseInt(c, 10))));
+//         updates.push('class_id = ?');
+//         params.push(null);
+//     }
+//     if (grade_id !== undefined) { updates.push('grade_id = ?'); params.push(toInt(grade_id)); }
+//     if (academic_year_id !== undefined) { updates.push('academic_year_id = ?'); params.push(toInt(academic_year_id)); }
+//     if (custom_exam_name !== undefined) { updates.push('custom_exam_name = ?'); params.push(custom_exam_name); }
+//     if (note !== undefined) { updates.push('note = ?'); params.push(note); }
+//     if (start_date !== undefined) { updates.push('start_date = ?'); params.push(start_date || null); }
+//     if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
+//     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
+//     if (is_results_published !== undefined) { updates.push('is_results_published = ?'); params.push(is_results_published ? 1 : 0); }
+
+//     if (updates.length === 0 && (!subjects || !Array.isArray(subjects))) return res.status(400).json({ error: 'Nothing to update' });
+
+//     const conn = await db.getConnection();
+//     try {
+//         await conn.beginTransaction();
+
+//         if (updates.length > 0) {
+//             const updateParams = [...params, id];
+//             await conn.execute(`UPDATE exam_groups SET ${updates.join(', ')} WHERE id = ?`, updateParams);
+//         }
+
+//         if (subjects && Array.isArray(subjects)) {
+//             const [existingSubjects] = await conn.execute(`SELECT id, subject_id FROM exam_group_subjects WHERE exam_group_id = ?`, [id]);
+//             const existingSubjectMap = {};
+//             for(let s of existingSubjects) {
+//                 existingSubjectMap[s.subject_id] = s.id;
+//             }
+
+//             const newSubjectIds = subjects.map(s => toInt(s.subject_id));
+//             const subjectsToDelete = existingSubjects.filter(s => !newSubjectIds.includes(s.subject_id)).map(s => s.id);
+
+//             if (subjectsToDelete.length > 0) {
+//                 await conn.execute(`DELETE FROM exam_group_subjects WHERE id IN (${subjectsToDelete.join(',')})`);
+//             }
+
+//             for (const sub of subjects) {
+//                 const subId = toInt(sub.subject_id);
+//                 const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
+//                 const hasLab = sub.has_lab ? 1 : 0;
+//                 const hasOral = sub.has_oral ? 1 : 0;
+
+//                 const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
+//                 const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
+//                 const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
+
+//                 const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
+//                 const passMarks = toInt(sub.passing_marks) || 35;
+
+//                 if (existingSubjectMap[subId]) {
+//                     await conn.execute(
+//                         `UPDATE exam_group_subjects SET max_marks=?, passing_marks=?, has_theory=?, has_lab=?, has_oral=?, theory_max_marks=?, lab_max_marks=?, oral_max_marks=? WHERE id=?`,
+//                         [
+//                             calculatedMax,
+//                             passMarks,
+//                             hasTheory,
+//                             hasLab,
+//                             hasOral,
+//                             hasTheory ? thMax : null,
+//                             hasLab ? lbMax : null,
+//                             hasOral ? orMax : null,
+//                             existingSubjectMap[subId]
+//                         ]
+//                     );
+//                 } else {
+//                     await conn.execute(
+//                         `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+//                         [
+//                             id, 
+//                             subId, 
+//                             calculatedMax, 
+//                             passMarks,
+//                             hasTheory,
+//                             hasLab,
+//                             hasOral,
+//                             hasTheory ? thMax : null,
+//                             hasLab ? lbMax : null,
+//                             hasOral ? orMax : null
+//                         ]
+//                     );
+//                 }
+//             }
+//         }
+
+//         await conn.commit();
+//         conn.release();
+//         return res.json({ success: true });
+//     } catch (err) {
+//         await conn.rollback();
+//         conn.release();
+//         console.error('PUT /api/exam/groups/:id error', err);
+//         return res.status(500).json({ error: 'Internal server error' });
+//     }
+// }
+
+
 const UpdateExamGroup = async (req, res) => {
     const id = toInt(req.params.id);
-    const { name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects } = req.body;
 
     const updates = []; const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
     if (exam_type !== undefined) { updates.push('exam_type = ?'); params.push(exam_type); }
-    if (class_id !== undefined) { updates.push('class_id = ?'); params.push(class_id === '' || class_id === null ? null : toInt(class_id)); }
+    if (class_id !== undefined && !class_ids) { updates.push('class_id = ?'); params.push(class_id === '' || class_id === null ? null : toInt(class_id)); }
+    if (class_ids !== undefined && Array.isArray(class_ids)) {
+        updates.push('section_ids = ?');
+        params.push(JSON.stringify(class_ids.map(c => parseInt(c, 10))));
+        updates.push('class_id = ?');
+        params.push(null);
+    }
     if (grade_id !== undefined) { updates.push('grade_id = ?'); params.push(toInt(grade_id)); }
     if (academic_year_id !== undefined) { updates.push('academic_year_id = ?'); params.push(toInt(academic_year_id)); }
     if (custom_exam_name !== undefined) { updates.push('custom_exam_name = ?'); params.push(custom_exam_name); }
@@ -179,6 +326,76 @@ const UpdateExamGroup = async (req, res) => {
     try {
         await conn.beginTransaction();
 
+        let shouldNotifyResult = false;
+        let examInfo = null;
+
+        if (is_results_published === true || is_results_published === 1 || is_results_published === 'true') {
+            const [rows] = await conn.execute(`
+                SELECT eg.is_results_published, eg.name, eg.exam_type, eg.start_date, eg.end_date, eg.class_id, eg.section_ids, eg.grade_id, eg.academic_year_id, c.name as class_name 
+                FROM exam_groups eg
+                LEFT JOIN classes c ON c.id = eg.class_id
+                WHERE eg.id = ?
+            `, [id]);
+            if (rows.length > 0) {
+                const examRecord = rows[0];
+                if (!examRecord.is_results_published) {
+
+                    // Verify if all target students have marks
+                    let countSql = `
+                        SELECT COUNT(st.id) as count 
+                        FROM students st 
+                        JOIN student_academic_records sar ON sar.student_id = st.id 
+                        JOIN (
+                            SELECT student_id, MAX(id) latest_id
+                            FROM student_academic_records
+                            GROUP BY student_id
+                        ) latest ON latest.student_id = st.id AND latest.latest_id = sar.id
+                        WHERE sar.academic_year_id = ?`;
+                    const countParams = [examRecord.academic_year_id];
+
+                    let sectionIds = [];
+                    if (examRecord.section_ids && Array.isArray(examRecord.section_ids) && examRecord.section_ids.length > 0) {
+                        sectionIds = examRecord.section_ids;
+                    } else if (examRecord.class_id) {
+                        sectionIds = [examRecord.class_id];
+                    }
+
+                    if (sectionIds.length > 0) {
+                        const placeholders = sectionIds.map(() => '?').join(',');
+                        countSql += ` AND sar.class_id IN (${placeholders})`;
+                        countParams.push(...sectionIds);
+                    } else if (examRecord.grade_id) {
+                        countSql += ' AND sar.grade_id = ?';
+                        countParams.push(examRecord.grade_id);
+                    }
+
+                    const [targetStudents] = await conn.execute(countSql, countParams);
+                    const targetStudentsCount = targetStudents[0].count;
+
+                    const [subjectsCountRows] = await conn.execute('SELECT COUNT(id) as count FROM exam_group_subjects WHERE exam_group_id = ?', [id]);
+                    const subjectsCount = subjectsCountRows[0].count;
+
+                    const expectedMarksCount = targetStudentsCount * subjectsCount;
+
+                    const [actualMarksCount] = await conn.execute(`
+                        SELECT COUNT(egr.id) as count 
+                        FROM exam_group_results egr
+                        JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+                        WHERE egs.exam_group_id = ?
+                    `, [id]);
+
+                    if (targetStudentsCount > 0 && subjectsCount > 0 && actualMarksCount[0].count < expectedMarksCount) {
+                        await conn.rollback();
+                        conn.release();
+                        return res.status(400).json({ error: 'add marks to all student before publish result' });
+                    }
+
+                    shouldNotifyResult = true;
+                    examInfo = examRecord;
+                }
+            }
+        }
+
         if (updates.length > 0) {
             const updateParams = [...params, id];
             await conn.execute(`UPDATE exam_groups SET ${updates.join(', ')} WHERE id = ?`, updateParams);
@@ -187,13 +404,13 @@ const UpdateExamGroup = async (req, res) => {
         if (subjects && Array.isArray(subjects)) {
             const [existingSubjects] = await conn.execute(`SELECT id, subject_id FROM exam_group_subjects WHERE exam_group_id = ?`, [id]);
             const existingSubjectMap = {};
-            for(let s of existingSubjects) {
+            for (let s of existingSubjects) {
                 existingSubjectMap[s.subject_id] = s.id;
             }
 
             const newSubjectIds = subjects.map(s => toInt(s.subject_id));
             const subjectsToDelete = existingSubjects.filter(s => !newSubjectIds.includes(s.subject_id)).map(s => s.id);
-            
+
             if (subjectsToDelete.length > 0) {
                 await conn.execute(`DELETE FROM exam_group_subjects WHERE id IN (${subjectsToDelete.join(',')})`);
             }
@@ -203,11 +420,11 @@ const UpdateExamGroup = async (req, res) => {
                 const hasTheory = sub.has_theory === undefined ? 1 : (sub.has_theory ? 1 : 0);
                 const hasLab = sub.has_lab ? 1 : 0;
                 const hasOral = sub.has_oral ? 1 : 0;
-                
+
                 const thMax = hasTheory ? (toInt(sub.theory_max_marks) || 0) : 0;
                 const lbMax = hasLab ? (toInt(sub.lab_max_marks) || 0) : 0;
                 const orMax = hasOral ? (toInt(sub.oral_max_marks) || 0) : 0;
-                
+
                 const calculatedMax = (thMax + lbMax + orMax) || toInt(sub.max_marks) || 100;
                 const passMarks = toInt(sub.passing_marks) || 35;
 
@@ -230,9 +447,9 @@ const UpdateExamGroup = async (req, res) => {
                     await conn.execute(
                         `INSERT INTO exam_group_subjects (exam_group_id, subject_id, max_marks, passing_marks, has_theory, has_lab, has_oral, theory_max_marks, lab_max_marks, oral_max_marks) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
                         [
-                            id, 
-                            subId, 
-                            calculatedMax, 
+                            id,
+                            subId,
+                            calculatedMax,
                             passMarks,
                             hasTheory,
                             hasLab,
@@ -248,11 +465,639 @@ const UpdateExamGroup = async (req, res) => {
 
         await conn.commit();
         conn.release();
+
+        if (shouldNotifyResult) {
+            try {
+                const [subRows] = await db.execute(`
+                    SELECT s.name 
+                    FROM exam_group_subjects egs
+                    JOIN subjects s ON s.id = egs.subject_id
+                    WHERE egs.exam_group_id = ?
+                `, [id]);
+                const subjectsList = subRows.map(r => r.name);
+
+                let sectionIds = [];
+                if (examInfo.section_ids && Array.isArray(examInfo.section_ids) && examInfo.section_ids.length > 0) {
+                    sectionIds = examInfo.section_ids;
+                } else if (examInfo.class_id) {
+                    sectionIds = [examInfo.class_id];
+                }
+
+                let className = 'All Classes';
+                let gradeName = examInfo.grade_name || '';
+                if (sectionIds.length > 0) {
+                    const placeholders = sectionIds.map(() => '?').join(',');
+                    const [classRows] = await db.execute(`SELECT name FROM classes WHERE id IN (${placeholders})`, sectionIds);
+                    if (classRows.length > 0) className = classRows.map(c => c.name).join(', ');
+                } else if (examInfo.grade_id) {
+                    const [gradeRows] = await db.execute('SELECT name FROM grades WHERE id = ?', [examInfo.grade_id]);
+                    if (gradeRows.length > 0) {
+                        gradeName = gradeRows[0].name;
+                        className = `Grade: ${gradeName}`;
+                    }
+                }
+
+                const payload = {
+                    exam_id: id,
+                    exam_name: examInfo.name,
+                    exam_type: examInfo.exam_type,
+                    class_name: className,
+                    grade_name: gradeName,
+                    custom_exam_name: examInfo.custom_exam_name,
+                    subjects: subjectsList,
+                    start_date: examInfo.start_date,
+                    end_date: examInfo.end_date
+                };
+
+                const formattedStartDate = examInfo.start_date ? new Date(examInfo.start_date).toLocaleDateString('en-GB') : '';
+                const formattedEndDate = examInfo.end_date ? new Date(examInfo.end_date).toLocaleDateString('en-GB') : '';
+                const msgBody = `Results for ${examInfo.name}${examInfo.custom_exam_name ? ' - ' + examInfo.custom_exam_name : ''} have been published for class ${gradeName ? gradeName + ' ' : ''}section ${className} start from ${formattedStartDate} to ${formattedEndDate}.`;
+
+                // if (sectionIds.length > 0) {
+                //     for (const sid of sectionIds) {
+                //         await notificationService.sendSchoolNotification({
+                //             title: 'Exam Results Published',
+                //             message: msgBody,
+                //             type: 'exam_result',
+                //             targetType: 'class',
+                //             targetValue: sid,
+                //             metadata: payload,
+                //             deepLink: '/school/exam/exams_student',
+                //             priority: 'high',
+                //             createdBy: req.user ? req.user.id : null
+                //         });
+                //     }
+                // } else if (examInfo.grade_id) {
+                //     const [classesInGrade] = await db.execute('SELECT id FROM classes WHERE grade_id = ?', [examInfo.grade_id]);
+                //     for (const c of classesInGrade) {
+                //         await notificationService.sendSchoolNotification({
+                //             title: 'Exam Results Published',
+                //             message: msgBody,
+                //             type: 'exam_result',
+                //             targetType: 'class',
+                //             targetValue: c.id,
+                //             metadata: payload,
+                //             deepLink: '/school/exam/exams_student',
+                //             priority: 'high',
+                //             createdBy: req.user ? req.user.id : null
+                //         });
+                //     }
+                // } else {
+                //     await notificationService.sendSchoolNotification({
+                //         title: 'Exam Results Published',
+                //         message: msgBody,
+                //         type: 'exam_result',
+                //         targetType: 'all',
+                //         targetValue: null,
+                //         metadata: payload,
+                //         deepLink: '/school/exam/exams_student',
+                //         priority: 'high',
+                //         createdBy: req.user ? req.user.id : null
+                //     });
+                // }
+
+                // Notify Teachers via Socket
+                // await notificationService.sendSchoolNotification({
+                //     title: 'Exam Results Published (Teachers)',
+                //     message: msgBody,
+                //     type: 'exam_result',
+                //     targetType: 'role',
+                //     targetValue: 'teacher',
+                //     metadata: payload,
+                //     deepLink: '/school/exam/exams_student',
+                //     priority: 'normal',
+                //     createdBy: req.user ? req.user.id : null
+                // });
+
+                // WhatsApp queue
+                let usersQuery = '';
+                const usersParams = [];
+                if (sectionIds.length > 0) {
+                    const placeholders = sectionIds.map(() => '?').join(',');
+                    usersQuery = `
+                        SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                        FROM users u
+                        JOIN students s ON s.user_id = u.id
+                        JOIN student_academic_records sar ON sar.student_id = s.id
+                        WHERE sar.class_id IN (${placeholders}) AND sar.academic_year_id = ?
+                    `;
+                    usersParams.push(...sectionIds, examInfo.academic_year_id);
+                } else if (examInfo.grade_id) {
+                    usersQuery = `
+                        SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                        FROM users u
+                        JOIN students s ON s.user_id = u.id
+                        JOIN student_academic_records sar ON sar.student_id = s.id
+                        WHERE sar.grade_id = ? AND sar.academic_year_id = ?
+                    `;
+                    usersParams.push(examInfo.grade_id, examInfo.academic_year_id);
+                } else {
+                    usersQuery = `
+                        SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                        FROM users u
+                        JOIN students s ON s.user_id = u.id
+                    `;
+                }
+
+                const [contacts] = await db.execute(usersQuery, usersParams);
+
+                let whatsappMsg = '';
+                whatsappMsg += `🔔 *Exam Results Published!* 🔔\n\n`;
+                whatsappMsg += `✨ *${examInfo.name}* ✨\n\n`;
+                whatsappMsg += `*${examInfo.exam_type}*\n\n`;
+                if (examInfo.custom_exam_name) {
+                    whatsappMsg += `*${examInfo.custom_exam_name}*\n\n`;
+                }
+                if (className !== 'All Classes') {
+                    whatsappMsg += `📚 *Class:* ${className}\n`;
+                }
+                if (examInfo.start_date) {
+                    whatsappMsg += `📅 *Starts:* ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
+                }
+                if (examInfo.end_date) {
+                    whatsappMsg += `📅 *Ends:* ${new Date(examInfo.end_date).toLocaleDateString('en-IN')}\n`;
+                }
+                whatsappMsg += `\nPlease check the application for the detailed results.\n`;
+                whatsappMsg += `\nBest regards,\n`;
+                whatsappMsg += `TIMES INTERNATIONAL SCHOOL`;
+
+                const processedPhones = new Set();
+
+                for (const c of contacts) {
+                    const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
+
+                    for (const phone of phonesToNotify) {
+                        if (!processedPhones.has(phone)) {
+                            processedPhones.add(phone);
+                            await whatsappQueue.add('examNotification', {
+                                contact: phone,
+                                jobType: 'examNotification',
+                                message: {
+                                    fallbackText: whatsappMsg
+                                }
+                            });
+                        }
+                    }
+                }
+
+                // Teachers Whatsapp
+                const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
+                let teacherMsg = `🔔 *Exam Results Published (Teachers)* 🔔\n\nExam: ${examInfo.name}\nClass: ${className}\n`;
+                if (examInfo.start_date) teacherMsg += `Starts: ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
+                teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
+
+                for (const t of teacherContacts) {
+                    if (t.phone && !processedPhones.has(t.phone)) {
+                        processedPhones.add(t.phone);
+                        await whatsappQueue.add('examNotification', {
+                            contact: t.phone,
+                            jobType: 'examNotification',
+                            message: { fallbackText: teacherMsg }
+                        });
+                    }
+                }
+            } catch (notifyErr) {
+                console.error('Failed to send result publish notification:', notifyErr);
+            }
+        }
         return res.json({ success: true });
     } catch (err) {
         await conn.rollback();
         conn.release();
         console.error('PUT /api/exam/groups/:id error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+}
+
+// const PublishExam = async (req, res) => {
+//     const id = toInt(req.params.id);
+
+//     const conn = await db.getConnection();
+//     try {
+//         await conn.beginTransaction();
+
+//         // 1. Get exam details
+//         const [examRows] = await conn.execute(`SELECT * FROM exam_groups WHERE id = ?`, [id]);
+//         if (examRows.length === 0) {
+//             conn.release();
+//             return res.status(404).json({ error: 'Exam not found' });
+//         }
+//         const exam = examRows[0];
+
+//         if (exam.status === 'Published') {
+//             conn.release();
+//             return res.status(400).json({ error: 'Exam is already published' });
+//         }
+
+//         // 2. Update status
+//         await conn.execute(`UPDATE exam_groups SET status = 'Published' WHERE id = ?`, [id]);
+
+//         await conn.commit();
+//         conn.release();
+
+//         // 3. Send Notifications
+//         const classId = exam.class_id;
+//         const gradeId = exam.grade_id;
+//         const academicYearId = exam.academic_year_id;
+
+//         let sectionIds = [];
+//         if (exam.section_ids && Array.isArray(exam.section_ids) && exam.section_ids.length > 0) {
+//             sectionIds = exam.section_ids;
+//         } else if (exam.class_id) {
+//             sectionIds = [exam.class_id];
+//         }
+
+//         let className = 'All Classes';
+//         let gradeName = '';
+//         if (sectionIds.length > 0) {
+//             const placeholders = sectionIds.map(() => '?').join(',');
+//             const [classRows] = await db.execute(`SELECT name FROM classes WHERE id IN (${placeholders})`, sectionIds);
+//             if (classRows.length > 0) className = classRows.map(c => c.name).join(', ');
+//         } else if (gradeId) {
+//             const [gradeRows] = await db.execute('SELECT name FROM grades WHERE id = ?', [gradeId]);
+//             if (gradeRows.length > 0) {
+//                 gradeName = gradeRows[0].name;
+//                 className = `Grade: ${gradeName}`;
+//             }
+//         }
+
+//         // Notify Students/Parents of the Class or Grade
+//         // if (classId) {
+//         //     await notificationService.sendSchoolNotification({
+//         //         title: 'New Exam Published',
+//         //         message: `The exam schedule for ${exam.name} has been published.`,
+//         //         type: 'exam',
+//         //         targetType: 'class',
+//         //         targetValue: classId,
+//         //         metadata: { exam_id: exam.id },
+//         //         priority: 'high',
+//         //         createdBy: req.user ? req.user.id : null
+//         //     });
+//         // } else if (gradeId) {
+//         //     // Find all classes in this grade
+//         //     const [classesInGrade] = await db.execute('SELECT id FROM classes WHERE grade_id = ?', [gradeId]);
+//         //     for (const c of classesInGrade) {
+//         //         await notificationService.sendSchoolNotification({
+//         //             title: 'New Exam Published',
+//         //             message: `The exam schedule for ${exam.name} has been published.`,
+//         //             type: 'exam',
+//         //             targetType: 'class',
+//         //             targetValue: c.id,
+//         //             metadata: { exam_id: exam.id },
+//         //             priority: 'high',
+//         //             createdBy: req.user ? req.user.id : null
+//         //         });
+//         //     }
+//         // } else {
+//         //     // Notify All if both are null
+//         //     await notificationService.sendSchoolNotification({
+//         //         title: 'New Exam Published',
+//         //         message: `The exam schedule for ${exam.name} has been published.`,
+//         //         type: 'exam',
+//         //         targetType: 'all',
+//         //         targetValue: null,
+//         //         metadata: { exam_id: exam.id },
+//         //         priority: 'high',
+//         //         createdBy: req.user ? req.user.id : null
+//         //     });
+//         // }
+
+//         // // Notify Teachers
+//         // await notificationService.sendSchoolNotification({
+//         //     title: 'New Exam Published',
+//         //     message: `The exam schedule for ${exam.name} (${className}) has been published.`,
+//         //     type: 'exam',
+//         //     targetType: 'role',
+//         //     targetValue: 'teacher',
+//         //     metadata: { exam_id: exam.id },
+//         //     priority: 'normal',
+//         //     createdBy: req.user ? req.user.id : null
+//         // });
+
+//         // WhatsApp queue
+//         let usersQuery = '';
+//         const usersParams = [];
+//         if (sectionIds.length > 0) {
+//             const placeholders = sectionIds.map(() => '?').join(',');
+//             usersQuery = `
+//                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+//                 FROM users u
+//                 JOIN students s ON s.user_id = u.id
+//                 JOIN student_academic_records sar ON sar.student_id = s.id
+//                 WHERE sar.class_id IN (${placeholders}) AND sar.academic_year_id = ?
+//             `;
+//             usersParams.push(...sectionIds, academicYearId);
+//         } else if (gradeId) {
+//             usersQuery = `
+//                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+//                 FROM users u
+//                 JOIN students s ON s.user_id = u.id
+//                 JOIN student_academic_records sar ON sar.student_id = s.id
+//                 WHERE sar.grade_id = ? AND sar.academic_year_id = ?
+//             `;
+//             params.push(gradeId, academicYearId);
+//         } else {
+//             usersQuery = `
+//                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+//                 FROM users u
+//                 JOIN students s ON s.user_id = u.id
+//             `;
+//         }
+
+//         const [contacts] = await db.execute(usersQuery, usersParams);
+
+//         let msg = '';
+//         msg += `🔔 *Exam Schedule Published!* 🔔\n\n`;
+//         msg += `✨ *${exam.name}* ✨\n\n`;
+//         msg += `*${exam.exam_type}*\n\n`;
+//         if (exam.custom_exam_name) {
+//             msg += `*${exam.custom_exam_name}*\n\n`;
+//         }
+//         if (className !== 'All Classes') {
+//             msg += `📚 *Class:* ${className}\n`;
+//         }
+//         if (exam.start_date) {
+//             msg += `📅 *Starts:* ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+//         }
+//         if (exam.end_date) {
+//             msg += `📅 *Ends:* ${new Date(exam.end_date).toLocaleDateString('en-IN')}\n`;
+//         }
+//         msg += `\nPlease check the application for the detailed routine.\n`;
+//         msg += `\nBest regards,\n`;
+//         msg += `TIMES INTERNATIONAL SCHOOL`;
+
+
+//         const processedPhones = new Set();
+
+//         for (const c of contacts) {
+//             const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
+
+//             for (const phone of phonesToNotify) {
+//                 if (!processedPhones.has(phone)) {
+//                     processedPhones.add(phone);
+//                     await whatsappQueue.add('examNotification', {
+//                         contact: phone,
+//                         jobType: 'examNotification',
+//                         message: {
+//                             fallbackText: msg
+//                         }
+//                     });
+//                 }
+//             }
+//         }
+
+//         // Teachers Whatsapp
+//         const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
+//         let teacherMsg = `🔔 *Exam Published (Teachers)* 🔔\n\nExam: ${exam.name}\nClass: ${className}\n`;
+//         if (exam.start_date) teacherMsg += `Starts: ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+//         teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
+
+//         for (const t of teacherContacts) {
+//             if (t.phone && !processedPhones.has(t.phone)) {
+//                 processedPhones.add(t.phone);
+//                 await whatsappQueue.add('examNotification', {
+//                     contact: t.phone,
+//                     jobType: 'examNotification',
+//                     message: { fallbackText: teacherMsg }
+//                 });
+//             }
+//         }
+
+//         return res.json({ success: true, message: 'Exam published successfully' });
+//     } catch (err) {
+//         console.error('PUT /api/exam/publish/exams/:id error', err);
+//         return res.status(500).json({ error: 'Internal server error' });
+//     }
+// }
+
+
+const PublishExam = async (req, res) => {
+    const id = toInt(req.params.id);
+
+    const conn = await db.getConnection();
+    try {
+        await conn.beginTransaction();
+
+        // 1. Get exam details
+        const [examRows] = await conn.execute(`SELECT * FROM exam_groups WHERE id = ?`, [id]);
+        if (examRows.length === 0) {
+            conn.release();
+            return res.status(404).json({ error: 'Exam not found' });
+        }
+        const exam = examRows[0];
+
+        if (exam.status === 'Published') {
+            conn.release();
+            return res.status(400).json({ error: 'Exam is already published' });
+        }
+
+        // 2. Update status
+        await conn.execute(`UPDATE exam_groups SET status = 'Published' WHERE id = ?`, [id]);
+
+        await conn.commit();
+        conn.release();
+
+        // 3. Send Notifications
+        const classId = exam.class_id;
+        const gradeId = exam.grade_id;
+        const academicYearId = exam.academic_year_id;
+
+        let sectionIds = [];
+        if (exam.section_ids && Array.isArray(exam.section_ids) && exam.section_ids.length > 0) {
+            sectionIds = exam.section_ids;
+        } else if (exam.class_id) {
+            sectionIds = [exam.class_id];
+        }
+
+        let className = 'All Classes';
+        let gradeName = '';
+        if (sectionIds.length > 0) {
+            const placeholders = sectionIds.map(() => '?').join(',');
+            const [classRows] = await db.execute(`SELECT name FROM classes WHERE id IN (${placeholders})`, sectionIds);
+            if (classRows.length > 0) className = classRows.map(c => c.name).join(', ');
+        } else if (gradeId) {
+            const [gradeRows] = await db.execute('SELECT name FROM grades WHERE id = ?', [gradeId]);
+            if (gradeRows.length > 0) {
+                gradeName = gradeRows[0].name;
+                className = `Grade: ${gradeName}`;
+            }
+        }
+
+        // Fetch subjects for metadata
+        const [subRows] = await db.execute(`
+            SELECT s.name 
+            FROM exam_group_subjects egs
+            JOIN subjects s ON s.id = egs.subject_id
+            WHERE egs.exam_group_id = ?
+        `, [id]);
+        const subjectsList = subRows.map(r => r.name);
+
+        const payload = {
+            exam_id: exam.id,
+            exam_name: exam.name,
+            exam_type: exam.exam_type,
+            custom_exam_name: exam.custom_exam_name,
+            class_name: className,
+            subjects: subjectsList,
+            start_date: exam.start_date,
+            end_date: exam.end_date
+        };
+
+        // Notify Students/Parents of the Class or Grade
+        const formattedStartDate = exam.start_date ? new Date(exam.start_date).toLocaleDateString('en-GB') : '';
+        const formattedEndDate = exam.end_date ? new Date(exam.end_date).toLocaleDateString('en-GB') : '';
+        const msgBody = `The exam schedule for ${exam.name} has been published for class ${gradeName ? gradeName + ' ' : ''}section ${className} starts from ${formattedStartDate} to ${formattedEndDate}.`;
+
+        // if (sectionIds.length > 0) {
+        //     for (const sid of sectionIds) {
+        //         await notificationService.sendSchoolNotification({
+        //             title: 'New Exam Published',
+        //             message: msgBody,
+        //             type: 'exam',
+        //             targetType: 'class',
+        //             targetValue: sid,
+        //             metadata: payload,
+        //             deepLink: '/school/exam/exams_student',
+        //             priority: 'high',
+        //             createdBy: req.user ? req.user.id : null
+        //         });
+        //     }
+        // } else if (gradeId) {
+        //     // Find all classes in this grade
+        //     const [classesInGrade] = await db.execute('SELECT id FROM classes WHERE grade_id = ?', [gradeId]);
+        //     for (const c of classesInGrade) {
+        //         await notificationService.sendSchoolNotification({
+        //             title: 'New Exam Published',
+        //             message: msgBody,
+        //             type: 'exam',
+        //             targetType: 'class',
+        //             targetValue: c.id,
+        //             metadata: payload,
+        //             deepLink: '/school/exam/exams_student',
+        //             priority: 'high',
+        //             createdBy: req.user ? req.user.id : null
+        //         });
+        //     }
+        // } else {
+        //     // Notify All if both are null
+        //     await notificationService.sendSchoolNotification({
+        //         title: 'New Exam Published',
+        //         message: msgBody,
+        //         type: 'exam',
+        //         targetType: 'all',
+        //         targetValue: null,
+        //         metadata: payload,
+        //         deepLink: '/school/exam/exams_student',
+        //         priority: 'high',
+        //         createdBy: req.user ? req.user.id : null
+        //     });
+        // }
+
+        // // Notify Teachers
+        // await notificationService.sendSchoolNotification({
+        //     title: 'New Exam Published',
+        //     message: msgBody,
+        //     type: 'exam',
+        //     targetType: 'role',
+        //     targetValue: 'teacher',
+        //     metadata: payload,
+        //     deepLink: '/school/exam/create_exam',
+        //     priority: 'normal',
+        //     createdBy: req.user ? req.user.id : null
+        // });
+
+        // WhatsApp queue
+        let usersQuery = '';
+        const usersParams = [];
+        if (sectionIds.length > 0) {
+            const placeholders = sectionIds.map(() => '?').join(',');
+            usersQuery = `
+                SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                FROM users u
+                JOIN students s ON s.user_id = u.id
+                JOIN student_academic_records sar ON sar.student_id = s.id
+                WHERE sar.class_id IN (${placeholders}) AND sar.academic_year_id = ?
+            `;
+            usersParams.push(...sectionIds, academicYearId);
+        } else if (gradeId) {
+            usersQuery = `
+                SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                FROM users u
+                JOIN students s ON s.user_id = u.id
+                JOIN student_academic_records sar ON sar.student_id = s.id
+                WHERE sar.grade_id = ? AND sar.academic_year_id = ?
+            `;
+            usersParams.push(gradeId, academicYearId);
+        } else {
+            usersQuery = `
+                SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
+                FROM users u
+                JOIN students s ON s.user_id = u.id
+            `;
+        }
+
+        const [contacts] = await db.execute(usersQuery, usersParams);
+
+        let msg = '';
+        msg += `🔔 *Exam Schedule Published!* 🔔\n\n`;
+        msg += `✨ *${exam.name}* ✨\n\n`;
+        msg += `*${exam.exam_type}*\n\n`;
+        if (exam.custom_exam_name) {
+            msg += `*${exam.custom_exam_name}*\n\n`;
+        }
+        if (className !== 'All Classes') {
+            msg += `📚 *Class:* ${className}\n`;
+        }
+        if (exam.start_date) {
+            msg += `📅 *Starts:* ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+        }
+        if (exam.end_date) {
+            msg += `📅 *Ends:* ${new Date(exam.end_date).toLocaleDateString('en-IN')}\n`;
+        }
+        msg += `\nPlease check the application for the detailed routine.\n`;
+        msg += `\nBest regards,\n`;
+        msg += `TIMES INTERNATIONAL SCHOOL`;
+
+
+        const processedPhones = new Set();
+
+        for (const c of contacts) {
+            const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
+
+            for (const phone of phonesToNotify) {
+                if (!processedPhones.has(phone)) {
+                    processedPhones.add(phone);
+                    await whatsappQueue.add('examNotification', {
+                        contact: phone,
+                        jobType: 'examNotification',
+                        message: {
+                            fallbackText: msg
+                        }
+                    });
+                }
+            }
+        }
+
+        // Teachers Whatsapp
+        const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
+        let teacherMsg = `🔔 *Exam Published (Teachers)* 🔔\n\nExam: ${exam.name}\nClass: ${className}\n`;
+        if (exam.start_date) teacherMsg += `Starts: ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+        teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
+
+        for (const t of teacherContacts) {
+            if (t.phone && !processedPhones.has(t.phone)) {
+                processedPhones.add(t.phone);
+                await whatsappQueue.add('examNotification', {
+                    contact: t.phone,
+                    jobType: 'examNotification',
+                    message: { fallbackText: teacherMsg }
+                });
+            }
+        }
+
+        return res.json({ success: true, message: 'Exam published successfully' });
+    } catch (err) {
+        console.error('PUT /api/exam/publish/exams/:id error', err);
         return res.status(500).json({ error: 'Internal server error' });
     }
 }
@@ -338,7 +1183,7 @@ const AddExamGroupMarks = async (req, res) => {
                 thMarks = hasTheory && m.theory_marks_obtained !== undefined && m.theory_marks_obtained !== null && m.theory_marks_obtained !== '' ? parseFloat(m.theory_marks_obtained) : null;
                 lbMarks = hasLab && m.lab_marks_obtained !== undefined && m.lab_marks_obtained !== null && m.lab_marks_obtained !== '' ? parseFloat(m.lab_marks_obtained) : null;
                 orMarks = hasOral && m.oral_marks_obtained !== undefined && m.oral_marks_obtained !== null && m.oral_marks_obtained !== '' ? parseFloat(m.oral_marks_obtained) : null;
-                
+
                 if (thMarks === null && lbMarks === null && orMarks === null) {
                     totalObtained = null;
                 } else {
@@ -429,9 +1274,11 @@ const GetExamsForStudent = async (req, res) => {
 
         // 1. Get the student's ID and current academic record (class_id, grade_id)
         const [studentRows] = await conn.execute(
-            `SELECT s.id as student_id, sar.id as student_academic_id, sar.class_id, sar.grade_id 
+            `SELECT s.id as student_id, sar.id as student_academic_id, sar.class_id, sar.grade_id, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
              FROM students s
              JOIN student_academic_records sar ON sar.student_id = s.id
+             JOIN classes c ON c.id = sar.class_id
+             JOIN grades g ON g.id = c.grade_id
              WHERE s.user_id = ? 
              ORDER BY sar.academic_year_id DESC LIMIT 1`,
             [userId]
@@ -446,13 +1293,17 @@ const GetExamsForStudent = async (req, res) => {
 
         // 2. Fetch exam groups that are Published or Over for this class
         const [examRows] = await conn.execute(`
-            SELECT eg.*, ay.name AS academic_year_name
+            SELECT eg.*, ay.name AS academic_year_name, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
             FROM exam_groups eg
+            JOIN students s ON s.user_id = ?
             LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
-            WHERE (eg.class_id = ? OR (eg.class_id IS NULL AND eg.grade_id = ?)) 
+            LEFT JOIN student_academic_records sar ON sar.student_id = s.id
+            JOIN classes c ON c.id = sar.class_id
+            JOIN grades g ON g.id = c.grade_id
+            WHERE (eg.class_id = ? OR JSON_CONTAINS(COALESCE(eg.section_ids, "[]"), CAST(? AS CHAR)) OR (eg.class_id IS NULL AND eg.section_ids IS NULL AND eg.grade_id = ?)) 
             AND eg.status IN ('Published', 'Over')
             ORDER BY eg.created_at DESC
-        `, [class_id, grade_id]);
+        `, [student_id, class_id, class_id, grade_id]);
 
         // Fetch subjects and results for these exams
         if (examRows.length > 0) {
@@ -577,7 +1428,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
         const total = countRows[0].total;
 
         const [studentRows] = await db.execute(`SELECT st.id ${studentBaseSql} ORDER BY u.name ASC LIMIT ${limit} OFFSET ${offset}`, params);
-        
+
         if (studentRows.length === 0) {
             return res.json({ studentSummaries: [], total, limit, offset });
         }
@@ -963,7 +1814,7 @@ const GenerateExamRoutinePDF = async (req, res) => {
 
 const GenerateCombinedMarksheetPDF = async (req, res) => {
     const { student_id, type, academic_year_id } = req.body;
-    
+
     if (!student_id || !type || !academic_year_id) {
         return res.status(400).json({ error: 'student_id, type, and academic_year_id are required' });
     }
@@ -1110,14 +1961,14 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
                 const percentageVal = sub.max > 0 ? (sub.total / sub.max) * 100 : 0;
                 percentage = sub.max > 0 ? percentageVal.toFixed(2) : '-';
                 yearly_avg = sub.max > 0 ? Math.round(percentageVal) : '-';
-                
+
                 if (percentageVal >= 90) grade = 'A+';
                 else if (percentageVal >= 80) grade = 'A';
                 else if (percentageVal >= 70) grade = 'B';
                 else if (percentageVal >= 60) grade = 'C';
                 else if (percentageVal >= 35) grade = 'P'; // assuming 35% passing
                 else grade = 'F';
-                
+
                 if (sub.hasFailedSubject) grade = 'F';
 
                 t1_pct = sub.exam1_max > 0 ? ((sub.exam1_marks === 'AB' || sub.exam1_marks === '-' ? 0 : sub.exam1_marks) / sub.exam1_max) * 100 : 0;
@@ -1148,29 +1999,29 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         const svgWidth = 450;
         const svgHeight = 150;
         const padding = 30;
-        
+
         let t1Points = [];
         let t2Points = [];
         let xLabels = [];
-        
+
         if (academicSubjects.length > 0) {
             const xStep = (svgWidth - padding * 2) / Math.max(1, (academicSubjects.length - 1));
             academicSubjects.forEach((sub, idx) => {
                 const x = padding + (idx * xStep);
                 const y1 = svgHeight - padding - (sub.t1_pct / 100) * (svgHeight - padding * 2);
                 const y2 = svgHeight - padding - (sub.t2_pct / 100) * (svgHeight - padding * 2);
-                
+
                 t1Points.push(`${x},${y1}`);
                 t2Points.push(`${x},${y2}`);
                 xLabels.push({ x, name: sub.subject_name.substring(0, 10) }); // truncate long names
             });
         }
-        
+
         const chartData = {
             t1Path: t1Points.join(' '),
             t2Path: t2Points.join(' '),
-            points1: t1Points.map(p => { const [x, y] = p.split(','); return {x, y}; }),
-            points2: t2Points.map(p => { const [x, y] = p.split(','); return {x, y}; }),
+            points1: t1Points.map(p => { const [x, y] = p.split(','); return { x, y }; }),
+            points2: t2Points.map(p => { const [x, y] = p.split(','); return { x, y }; }),
             labels: xLabels,
             width: svgWidth,
             height: svgHeight
@@ -1189,9 +2040,9 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         if (hasFailed || !isPassingTotal) {
             finalResult = 'Fail';
         }
-        
-        let promotionStatus = type === 'FINAL_TERM_COMBINED' 
-            ? (finalResult === 'Pass' ? 'Promoted' : 'Not Promoted') 
+
+        let promotionStatus = type === 'FINAL_TERM_COMBINED'
+            ? (finalResult === 'Pass' ? 'Promoted' : 'Not Promoted')
             : null;
 
         let logoData = null;
@@ -1307,19 +2158,19 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
 
         // Process subjects for columns
         const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
-        
+
         let totalMaxAll = 0;
         const formattedSubjects = subjects.map(sub => {
             const hasTheory = checkTrue(sub.has_theory);
             const hasLab = checkTrue(sub.has_lab);
             const hasOral = checkTrue(sub.has_oral);
-            
+
             let colSpan = 0;
             if (hasTheory) colSpan++;
             if (hasLab) colSpan++;
             if (hasOral) colSpan++;
             colSpan++; // For total of the subject
-            
+
             totalMaxAll += Number(sub.max_marks || 0);
 
             return {
@@ -1365,11 +2216,11 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                     teacherRemark: null
                 };
             }
-            
+
             if (row.attendance_status !== 'Absent') {
                 studentsMap[row.student_id].isAbsent = false;
             }
-            
+
             if (row.grade === 'F' || row.attendance_status === 'Absent') {
                 studentsMap[row.student_id].hasFailed = true;
             }
@@ -1385,7 +2236,7 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                 total: row.marks_obtained,
                 attendance_status: row.attendance_status
             };
-            
+
             if (row.marks_obtained !== null && row.attendance_status !== 'Absent') {
                 studentsMap[row.student_id].grandTotal += Number(row.marks_obtained);
             }
@@ -1411,9 +2262,9 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
                     isAbsent: false
                 };
             });
-            
+
             const defaultRemark = student.isAbsent ? '-' : (student.hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
-            
+
             return {
                 rollNo: student.rollNo,
                 name: student.name,
@@ -1435,7 +2286,7 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
         };
 
         const templatePath = 'uploads/templates/consolidated_marksheet.hbs';
-        
+
         // Render HBS to PDF buffer
         const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
             width: 1123,
@@ -1627,6 +2478,7 @@ module.exports = {
     AddExamGroup,
     GetExamGroups,
     UpdateExamGroup,
+    PublishExam,
     DeleteExamGroup,
     UpdateExamRoutine,
     AddExamGroupMarks,

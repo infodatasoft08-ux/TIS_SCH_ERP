@@ -156,12 +156,48 @@ exports.updateAcademicRecord = async (req, res) => {
 
 // Delete Academic Record
 exports.deleteAcademicRecord = async (req, res) => {
+    const conn = await db.getConnection();
     try {
         const { id } = req.params;
-        await db.query('DELETE FROM student_academic_records WHERE id = ?', [id]);
-        res.status(200).json({ message: 'Academic record deleted successfully' });
+        await conn.beginTransaction();
+
+        // 1. Get the student_id from the academic record
+        const [acRows] = await conn.query('SELECT student_id FROM student_academic_records WHERE id = ? FOR UPDATE', [id]);
+        if (acRows.length === 0) {
+            await conn.rollback();
+            conn.release();
+            return res.status(404).json({ error: 'Academic record not found' });
+        }
+        const studentId = acRows[0].student_id;
+
+        // 2. Get the user_id from the student record
+        const [stRows] = await conn.query('SELECT user_id FROM students WHERE id = ? FOR UPDATE', [studentId]);
+        let userId = null;
+        if (stRows.length > 0) {
+            userId = stRows[0].user_id;
+        }
+
+        // 3. Delete parent_children links if any
+        await conn.query('DELETE FROM parent_children WHERE student_id = ?', [studentId]);
+
+        // 4. Delete all academic records for this student
+        await conn.query('DELETE FROM student_academic_records WHERE student_id = ?', [studentId]);
+
+        // 5. Delete the student record
+        await conn.query('DELETE FROM students WHERE id = ?', [studentId]);
+
+        // 6. Delete the user record
+        if (userId) {
+            await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+        }
+
+        await conn.commit();
+        res.status(200).json({ message: 'Academic record and associated student deleted successfully' });
     } catch (error) {
-        console.error(error);
+        if (conn) await conn.rollback();
+        console.error('Error deleting academic record:', error);
         res.status(500).json({ error: 'Server error', details: error.message });
+    } finally {
+        if (conn) conn.release();
     }
 };

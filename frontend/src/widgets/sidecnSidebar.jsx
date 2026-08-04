@@ -9,6 +9,7 @@ import {
   SidebarMenuButton,
   useSidebar,
   SidebarMenuSkeleton,
+  SidebarFooter,
 } from "@/components/ui/sidebar";
 
 import {
@@ -389,6 +390,16 @@ export default function AppSidebar({ user }) {
           })}
         </SidebarContent>
       </ScrollArea>
+
+
+      <SidebarFooter className="p-3 border-t border-sidebar-border/30 group-data-[collapsible=icon]:hidden">
+        <div className="text-[10px] text-muted-foreground text-center leading-tight">
+          &copy; 2026 School Management System <br />
+          <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
+        </div>
+      </SidebarFooter>
+
+
 
 
     </Sidebar>

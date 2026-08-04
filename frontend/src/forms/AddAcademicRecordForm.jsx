@@ -67,6 +67,13 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
         }
     }, [open, recordToEdit, form]);
 
+    const selectedGradeId = form.watch("grade_id");
+
+    const filteredSections = React.useMemo(() => {
+        if (!selectedGradeId) return classes;
+        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+    }, [classes, selectedGradeId]);
+
     useEffect(() => {
         async function fetchAcademicYears() {
             try {
@@ -157,18 +164,38 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
 
                                 <FormField
                                     control={form.control}
-                                    name="class_id"
+                                    name="grade_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={{ ...field, error: fieldState.error }}
-                                            items={classes}
+                                            field={{
+                                                ...field,
+                                                onChange: (newGradeId) => {
+                                                    field.onChange(newGradeId);
+                                                    if (newGradeId) {
+                                                        const availableSections = classes.filter(cls => cls.grade_id.toString() === newGradeId.toString());
+                                                        if (availableSections.length === 1) {
+                                                            form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
+                                                        } else if (availableSections.length > 1) {
+                                                            const currentSection = form.getValues("class_id");
+                                                            if (currentSection) {
+                                                                const belongs = availableSections.some(cls => cls.id.toString() === currentSection.toString());
+                                                                if (!belongs) {
+                                                                    form.setValue("class_id", "", { shouldValidate: true });
+                                                                }
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            fieldState={fieldState}
+                                            items={grades}
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
                                             placeholder="Select Class"
-                                            searchPlaceholder="Search class..."
-                                            emptyMessage="No class found."
-                                            label="Class Section *"
+                                            searchPlaceholder="Search Class..."
+                                            emptyMessage="No Class found."
+                                            label="Class *"
                                             required
                                         />
                                     )}
@@ -176,18 +203,32 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
 
                                 <FormField
                                     control={form.control}
-                                    name="grade_id"
+                                    name="class_id"
                                     render={({ field, fieldState }) => (
                                         <ComboboxFormField
-                                            field={{ ...field, error: fieldState.error }}
-                                            items={grades}
+                                            field={{
+                                                ...field,
+                                                onChange: (newClassId) => {
+                                                    field.onChange(newClassId);
+                                                    if (newClassId) {
+                                                        const selectedClassData = classes.find(cls => cls.id.toString() === newClassId.toString());
+                                                        if (selectedClassData) {
+                                                            if (form.getValues("grade_id") !== selectedClassData.grade_id.toString()) {
+                                                                form.setValue("grade_id", selectedClassData.grade_id.toString(), { shouldValidate: true });
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }}
+                                            fieldState={fieldState}
+                                            items={filteredSections}
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
-                                            placeholder="Select Grade"
-                                            searchPlaceholder="Search grade..."
-                                            emptyMessage="No grade found."
-                                            label="Grade *"
+                                            placeholder="Select Class"
+                                            searchPlaceholder="Search class..."
+                                            emptyMessage="No class found."
+                                            label="Class Section *"
                                             required
                                         />
                                     )}
@@ -260,9 +301,10 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                 <FormField
                                     control={form.control}
                                     name="promoted_from_grade_id"
-                                    render={({ field }) => (
+                                    render={({ field, fieldState }) => (
                                         <ComboboxFormField
                                             field={field}
+                                            fieldState={fieldState}
                                             items={grades}
                                             valueKey="id"
                                             labelKey="name"

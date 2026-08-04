@@ -12,11 +12,13 @@ import { ScheduleXCalendar } from '@schedule-x/react';
 import { createCalendar, createViewDay, createViewList, createViewMonthAgenda, createViewMonthGrid, createViewWeek } from '@schedule-x/calendar';
 import { createEventsServicePlugin } from '@schedule-x/events-service';
 import { Temporal } from 'temporal-polyfill';
+import { useThemeAnimation } from '@space-man/react-theme-animation';
 
 import '@schedule-x/theme-default/dist/time-picker.css'
 import '@schedule-x/theme-shadcn/dist/index.css'
 
 export default function UpcomingActivities() {
+    const { theme } = useThemeAnimation();
     const [notices, setNotices] = useState([]);
     const [events, setEvents] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -66,6 +68,7 @@ export default function UpcomingActivities() {
     // Create ScheduleX calendar instance
     const calendar = useMemo(() => {
         return createCalendar({
+            isDark: theme === 'dark',
             views: [createViewMonthAgenda(), createViewMonthGrid(), createViewWeek(), createViewList()],
             events: calendarEvents,
             defaultView: 'month-grid',
@@ -87,7 +90,7 @@ export default function UpcomingActivities() {
             },
             theme: 'shadcn'
         });
-    }, [calendarEvents, eventsService]);
+    }, [calendarEvents, eventsService, theme]);
 
     // Format date for display
     const formatDate = (dateString) => {
