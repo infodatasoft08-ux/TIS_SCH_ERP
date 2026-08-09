@@ -1,0 +1,30 @@
+<div class="card card-highlight mb-2">
+  <div class="section-heading mb-2">Result Summary</div>
+  
+  <div class="grid grid-cols-3 gap-4 text-center">
+    <div class="border-r border-white/20">
+      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Percentage</div>
+      <div class="font-bold text-white" style="font-size: 16px;">{{percentage}}%</div>
+    </div>
+    
+    <div class="border-r border-white/20">
+      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Final Result</div>
+      <div class="font-bold {{#if (eq finalResult 'Pass')}}text-success{{else}}text-danger{{/if}}" style="font-size: 16px; background: rgba(255,255,255,0.9); display: inline-block; padding: 2px 8px; border-radius: 4px; margin-top: -2px;">
+        {{finalResult}}
+      </div>
+    </div>
+    
+    <div>
+      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Promotion Status</div>
+      <div class="font-bold text-white" style="font-size: 16px;">
+        {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
+      </div>
+    </div>
+  </div>
+  
+  {{#if promotionStatus}}
+  <div class="mt-2 pt-2 border-t border-white/20 text-center text-white font-semibold">
+    Promoted to Class: <span class="text-gold">{{nextGrade}}</span>
+  </div>
+  {{/if}}
+</div>

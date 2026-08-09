@@ -42,11 +42,13 @@ export default function ExamDataTable() {
 
     const [filterGrade, setFilterGrade] = useState("all");
     const [filterAcademicYear, setFilterAcademicYear] = useState("all");
+    const [filterType, setFilterType] = useState("all");
     const [filterSearch, setFilterSearch] = useState("");
 
     // Filter states for Exams tab
     const [filterExamsGrade, setFilterExamsGrade] = useState("all");
     const [filterExamsAcademicYear, setFilterExamsAcademicYear] = useState("all");
+    const [filterExamsType, setFilterExamsType] = useState("all");
     const [filterExamsSearch, setFilterExamsSearch] = useState("");
 
     // Pagination states
@@ -75,6 +77,7 @@ export default function ExamDataTable() {
             let examsUrl = `/exam/list/exams?limit=${limit}&offset=${newOffset}`;
             if (filterExamsGrade !== "all") examsUrl += `&grade_id=${filterExamsGrade}`;
             if (filterExamsAcademicYear !== "all") examsUrl += `&academic_year_id=${filterExamsAcademicYear}`;
+            if (filterExamsType !== "all") examsUrl += `&exam_type=${encodeURIComponent(filterExamsType)}`;
             if (filterExamsSearch) examsUrl += `&q=${encodeURIComponent(filterExamsSearch)}`;
 
             const promises = [
@@ -141,6 +144,7 @@ export default function ExamDataTable() {
             let url = `/exam/list/all-student-summaries?limit=${summariesLimit}&offset=${newOffset}`;
             if (filterGrade !== "all") url += `&grade_id=${filterGrade}`;
             if (filterAcademicYear !== "all") url += `&academic_year_id=${filterAcademicYear}`;
+            if (filterType !== "all") url += `&exam_type=${encodeURIComponent(filterType)}`;
             if (filterSearch) url += `&q=${encodeURIComponent(filterSearch)}`;
 
             const res = await API.get(url);
@@ -169,11 +173,11 @@ export default function ExamDataTable() {
 
     useEffect(() => {
         loadExams(true);
-    }, [filterExamsGrade, filterExamsAcademicYear, filterExamsSearch, limit]);
+    }, [filterExamsGrade, filterExamsAcademicYear, filterExamsType, filterExamsSearch, limit]);
 
     useEffect(() => {
         loadStudentSummaries(true);
-    }, [filterGrade, filterAcademicYear, filterSearch, summariesLimit]);
+    }, [filterGrade, filterAcademicYear, filterType, filterSearch, summariesLimit]);
 
     async function deleteExam(id) {
         if (!confirm("Are you sure you want to delete this exam?")) return;
@@ -182,6 +186,7 @@ export default function ExamDataTable() {
             await API.delete(`/exam/delete/exam/${id}`);
             toast.success("Exam deleted successfully");
             loadExams(true);
+            loadStudentSummaries(true);
         } catch (err) {
             const msg = err.response?.data?.error || "Failed to delete exam";
             toast.error(msg);
@@ -207,6 +212,7 @@ export default function ExamDataTable() {
             await API.put(`/exam/update/exams/${exam.id}`, { status: newStatus });
             toast.success(`Exam ${newStatus} successfully`);
             loadExams(true);
+            loadStudentSummaries(true);
         } catch (err) {
             toast.error("Failed to update status");
         }
@@ -218,6 +224,7 @@ export default function ExamDataTable() {
             await API.put(`/exam/update/exams/${exam.id}`, { is_results_published: newState });
             toast.success(`Results ${newState ? 'published' : 'unpublished'} successfully`);
             loadExams(true);
+            loadStudentSummaries(true);
         } catch (err) {
             toast.error(err.response?.data?.error || "Failed to update results publication status");
         }
@@ -684,10 +691,6 @@ export default function ExamDataTable() {
     };
 
     const handleBulkMarksheetAction = async (exam, action) => {
-        if (filterGrade === "all") {
-            toast.warning("Please select a single class for bulk print");
-            return;
-        }
         setIsGenerating(true);
         const loadingToast = toast.loading(`Generating bulk marksheets for ${exam.name}...`);
         try {
@@ -732,6 +735,87 @@ export default function ExamDataTable() {
                     const link = document.createElement('a');
                     link.href = blobUrl;
                     link.download = `BulkMarksheets_${exam.name}.pdf`;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    setTimeout(() => window.URL.revokeObjectURL(blobUrl), 100);
+                } else if (action === 'print') {
+                    const iframe = document.createElement('iframe');
+                    iframe.style.display = 'none';
+                    iframe.src = blobUrl;
+                    document.body.appendChild(iframe);
+                    iframe.onload = () => {
+                        setTimeout(() => {
+                            iframe.contentWindow.focus();
+                            iframe.contentWindow.print();
+                        }, 500);
+                    };
+                }
+                setSelectedStudentIds([]); // Clear selection after generating
+            }
+        } catch (err) {
+            toast.dismiss(loadingToast);
+            let errMsg = 'Generation failed.';
+            if (err.response?.data instanceof Blob) {
+                try {
+                    const text = await err.response.data.text();
+                    const obj = JSON.parse(text);
+                    errMsg = obj.error || obj.message || errMsg;
+                } catch (_) { }
+            } else {
+                errMsg = err.response?.data?.error || err.message || errMsg;
+            }
+            toast.error('Generation failed: ' + errMsg);
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handleBulkAdmitCardAction = async (exam, action) => {
+        setIsGenerating(true);
+        const loadingToast = toast.loading(`Generating bulk admit cards for ${exam.name}...`);
+        try {
+            const res = await API.post('/exam/generate-bulk-admit-card', {
+                student_ids: selectedStudentIds,
+                exam_id: exam.id
+            }, {
+                responseType: 'blob'
+            });
+
+            toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: "application/pdf" });
+
+            if (isMobileApp && res.data) {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                    try {
+                        const base64 = reader.result.split(",")[1];
+                        window.ReactNativeWebView.postMessage(
+                            JSON.stringify({
+                                type: action,
+                                fileName: `BulkAdmitCards_${exam.name}.pdf`,
+                                payload: { base64 }
+                            })
+                        );
+                        toast.success(`Bulk admit cards sent to mobile app for ${action}.`);
+                    } catch (e) {
+                        toast.error("Failed to process PDF for mobile app.");
+                    }
+                };
+                reader.readAsDataURL(blob);
+                return;
+            } else if (!res.data) {
+                toast.error("Failed to generate bulk admit cards.");
+                return;
+            }
+
+            if (res.data) {
+                const blobUrl = window.URL.createObjectURL(blob);
+                if (action === 'download') {
+                    const link = document.createElement('a');
+                    link.href = blobUrl;
+                    link.download = `BulkAdmitCards_${exam.name}.pdf`;
                     document.body.appendChild(link);
                     link.click();
                     document.body.removeChild(link);
@@ -827,7 +911,11 @@ export default function ExamDataTable() {
             </div>
 
             <div className="px-2 md:px-6 max-w-7xl mx-auto w-full">
-                <Tabs defaultValue="exams" className="w-full">
+                <Tabs defaultValue="exams" className="w-full" onValueChange={(val) => {
+                    if (val === 'reports') {
+                        loadStudentSummaries(true);
+                    }
+                }}>
                     <TabsList className="flex flex-col md:grid md:grid-cols-2 mb-6 md:mb-8 bg-gray-100/50 dark:bg-gray-800/70 p-1.5 rounded-2xl h-auto md:h-13 gap-1.5 shadow-inner">
                         <TabsTrigger value="exams" className="w-full rounded-xl text-sm md:text-xl py-3 md:py-2 data-[state=active]:bg-white dark:data-[state=active]:bg-gray-900 data-[state=active]:shadow-lg transition-all duration-300">
                             Management & Exams
@@ -870,7 +958,7 @@ export default function ExamDataTable() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
-                                        <div className="w-full lg:w-56">
+                                        <div className="w-full lg:w-48">
                                             <Select value={filterExamsAcademicYear} onValueChange={setFilterExamsAcademicYear}>
                                                 <SelectTrigger className="bg-gray-50/50 dark:bg-gray-950/50 border-2 border-gray-100 dark:border-gray-800 rounded-2xl h-full py-3 md:py-4 shadow-none focus:ring-4 focus:ring-primary/10">
                                                     <div className="flex items-center gap-2 overflow-hidden">
@@ -883,6 +971,24 @@ export default function ExamDataTable() {
                                                     {academicYears.map(y => (
                                                         <SelectItem key={y.id} value={y.id.toString()}>{y.name}</SelectItem>
                                                     ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="col-span-2 lg:col-span-1 w-full lg:w-48">
+                                            <Select value={filterExamsType} onValueChange={setFilterExamsType}>
+                                                <SelectTrigger className="bg-gray-50/50 dark:bg-gray-950/50 border-2 border-gray-100 dark:border-gray-800 rounded-2xl h-full py-3 md:py-4 shadow-none focus:ring-4 focus:ring-primary/10">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <Filter className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
+                                                        <SelectValue placeholder="Exam Type" className="truncate" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-2xl">
+                                                    <SelectItem value="all">All Types</SelectItem>
+                                                    <SelectItem value="UNIT_TEST_1">Unit Test 1</SelectItem>
+                                                    <SelectItem value="UNIT_TEST_2">Unit Test 2</SelectItem>
+                                                    <SelectItem value="TERM_1">Term 1</SelectItem>
+                                                    <SelectItem value="TERM_2">Term 2</SelectItem>
+                                                    <SelectItem value="OTHER">Other</SelectItem>
                                                 </SelectContent>
                                             </Select>
                                         </div>
@@ -972,6 +1078,24 @@ export default function ExamDataTable() {
                                                 </SelectContent>
                                             </Select>
                                         </div>
+                                        <div className="col-span-2 lg:col-span-1 w-full lg:w-48">
+                                            <Select value={filterType} onValueChange={setFilterType}>
+                                                <SelectTrigger className="bg-gray-50/50 dark:bg-gray-950/50 border-2 border-gray-100 dark:border-gray-800 rounded-2xl h-full py-3 md:py-4 shadow-none focus:ring-4 focus:ring-primary/10">
+                                                    <div className="flex items-center gap-2 overflow-hidden">
+                                                        <Filter className="h-4 w-4 md:h-5 md:w-5 flex-shrink-0 text-muted-foreground" />
+                                                        <SelectValue placeholder="Exam Type" className="truncate" />
+                                                    </div>
+                                                </SelectTrigger>
+                                                <SelectContent className="rounded-2xl shadow-2xl">
+                                                    <SelectItem value="all">All Types</SelectItem>
+                                                    <SelectItem value="UNIT_TEST_1">Unit Test 1</SelectItem>
+                                                    <SelectItem value="UNIT_TEST_2">Unit Test 2</SelectItem>
+                                                    <SelectItem value="TERM_1">Term 1</SelectItem>
+                                                    <SelectItem value="TERM_2">Term 2</SelectItem>
+                                                    <SelectItem value="OTHER">Other</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -987,10 +1111,7 @@ export default function ExamDataTable() {
                                                     variant="default"
                                                     className="bg-indigo-600 hover:bg-indigo-700"
                                                     onClick={(e) => {
-                                                        if (filterGrade === "all") {
-                                                            e.preventDefault();
-                                                            toast.warning("Please select a single class");
-                                                        } else if (selectedStudentIds.length > 10) {
+                                                        if (selectedStudentIds.length > 10) {
                                                             e.preventDefault();
                                                             toast.warning("You can only bulk print up to 10 marksheets at a time.");
                                                         }
@@ -1000,7 +1121,7 @@ export default function ExamDataTable() {
                                                     Bulk Print Marksheet
                                                 </Button>
                                             </PopoverTrigger>
-                                            {filterGrade !== "all" && selectedStudentIds.length <= 10 && (
+                                            {selectedStudentIds.length <= 10 && (
                                                 <PopoverContent className="w-64 p-2" align="start">
                                                     <div className="space-y-1">
                                                         <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam for Bulk Print</p>
@@ -1023,6 +1144,60 @@ export default function ExamDataTable() {
                                                                         size="icon"
                                                                         className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
                                                                         onClick={() => handleBulkMarksheetAction(ex, 'print')}
+                                                                        title="Print directly"
+                                                                        disabled={isGenerating}
+                                                                    >
+                                                                        <Printer className="h-4 w-4" />
+                                                                    </Button>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                        {getCommonExams().length === 0 && (
+                                                            <div className="p-2 text-sm text-gray-500">No common exams found.</div>
+                                                        )}
+                                                    </div>
+                                                </PopoverContent>
+                                            )}
+                                        </Popover>
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    variant="default"
+                                                    className="bg-emerald-600 hover:bg-emerald-700"
+                                                    onClick={(e) => {
+                                                        if (selectedStudentIds.length > 10) {
+                                                            e.preventDefault();
+                                                            toast.warning("You can only bulk print up to 10 admit cards at a time.");
+                                                        }
+                                                    }}
+                                                >
+                                                    <FileText className="h-4 w-4 mr-2" />
+                                                    Bulk Admit Card
+                                                </Button>
+                                            </PopoverTrigger>
+                                            {selectedStudentIds.length <= 10 && (
+                                                <PopoverContent className="w-64 p-2" align="start">
+                                                    <div className="space-y-1">
+                                                        <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam for Bulk Admit Card</p>
+                                                        {getCommonExams().map(ex => (
+                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-900/20 p-1.5 transition-colors">
+                                                                <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
+                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                        onClick={() => handleBulkAdmitCardAction(ex, 'download')}
+                                                                        title="Download PDF"
+                                                                        disabled={isGenerating}
+                                                                    >
+                                                                        <Download className="h-4 w-4" />
+                                                                    </Button>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                        onClick={() => handleBulkAdmitCardAction(ex, 'print')}
                                                                         title="Print directly"
                                                                         disabled={isGenerating}
                                                                     >
@@ -1150,42 +1325,52 @@ export default function ExamDataTable() {
 
                                                                             <p className="text-xs font-semibold px-2 py-1.5 border-b border-t mt-2 mb-1.5 text-muted-foreground uppercase tracking-wider">Combined Marksheets</p>
 
-                                                                            {/* Unit Test Combined */}
-                                                                            <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                <span className={`text-sm font-medium pl-1 ${student.exams.some(e => e.exam_type === 'UNIT_TEST_1') && student.exams.some(e => e.exam_type === 'UNIT_TEST_2') ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Unit Test Combined</span>
-                                                                                {(student.exams.some(e => e.exam_type === 'UNIT_TEST_1') && student.exams.some(e => e.exam_type === 'UNIT_TEST_2')) ? (
-                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'download')} disabled={isGenerating}>
-                                                                                            <Download className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'print')} disabled={isGenerating}>
-                                                                                            <Printer className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="text-[10px] text-gray-400">Missing UT1/UT2</span>
-                                                                                )}
-                                                                            </div>
+                                                                             {/* Unit Test Combined */}
+                                                                             {(() => {
+                                                                                 const hasUT = student.exams.some(e => e.exam_type === 'UNIT_TEST_1' || e.exam_type === 'UNIT_TEST_2');
+                                                                                 return (
+                                                                                     <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                         <span className={`text-sm font-medium pl-1 ${hasUT ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Unit Test Combined</span>
+                                                                                         {hasUT ? (
+                                                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'download')} disabled={isGenerating}>
+                                                                                                     <Download className="h-4 w-4" />
+                                                                                                 </Button>
+                                                                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'UNIT_TEST_COMBINED', 'print')} disabled={isGenerating}>
+                                                                                                     <Printer className="h-4 w-4" />
+                                                                                                 </Button>
+                                                                                             </div>
+                                                                                         ) : (
+                                                                                             <span className="text-[10px] text-gray-400">No UT Exam</span>
+                                                                                         )}
+                                                                                     </div>
+                                                                                 );
+                                                                             })()}
 
-                                                                            {/* Final Term Combined */}
-                                                                            <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                <span className={`text-sm font-medium pl-1 ${student.exams.some(e => e.exam_type === 'TERM_1') && student.exams.some(e => e.exam_type === 'TERM_2') ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Final Term Combined</span>
-                                                                                {(student.exams.some(e => e.exam_type === 'TERM_1') && student.exams.some(e => e.exam_type === 'TERM_2')) ? (
-                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'download')} disabled={isGenerating}>
-                                                                                            <Download className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                        <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'print')} disabled={isGenerating}>
-                                                                                            <Printer className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <span className="text-[10px] text-gray-400">Missing Term1/2</span>
-                                                                                )}
+                                                                             {/* Final Term Combined */}
+                                                                             {(() => {
+                                                                                 const hasTerm = student.exams.some(e => e.exam_type === 'TERM_1' || e.exam_type === 'TERM_2' || e.exam_type === 'FINAL_TERM');
+                                                                                 return (
+                                                                                     <div className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                         <span className={`text-sm font-medium pl-1 ${hasTerm ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>Final Term Combined</span>
+                                                                                         {hasTerm ? (
+                                                                                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'download')} disabled={isGenerating}>
+                                                                                                     <Download className="h-4 w-4" />
+                                                                                                 </Button>
+                                                                                                 <Button variant="ghost" size="icon" className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40" onClick={() => handleCombinedMarksheetAction(student, 'FINAL_TERM_COMBINED', 'print')} disabled={isGenerating}>
+                                                                                                     <Printer className="h-4 w-4" />
+                                                                                                 </Button>
+                                                                                             </div>
+                                                                                         ) : (
+                                                                                             <span className="text-[10px] text-gray-400">No Term Exam</span>
+                                                                                         )}
+                                                                                     </div>
+                                                                                 );
+                                                                             })()}
                                                                             </div>
-                                                                        </div>
-                                                                    </PopoverContent>
-                                                                </Popover>
+                                                                        </PopoverContent>
+                                                                    </Popover>
 
                                                                 {!isTeacher && (
                                                                     student.due_cleared ? (
@@ -1486,7 +1671,7 @@ export default function ExamDataTable() {
                     open={isDialogOpen}
                     onOpenChange={handleDialogClose}
                     examToEdit={selectedExam}
-                    onSuccess={() => loadExams(true)}
+                    onSuccess={() => { loadExams(true); loadStudentSummaries(true); }}
                     classes={classes}
                     subjects={subjects}
                     grades={grades}
@@ -1498,7 +1683,7 @@ export default function ExamDataTable() {
                     onOpenChange={handleAddMarksDialogClose}
                     exam={selectedExam}
                     initialMode={marksDialogMode}
-                    onSuccess={() => loadExams(true)}
+                    onSuccess={() => { loadExams(true); loadStudentSummaries(true); }}
                 />
 
                 <CreateRoutineDialog
@@ -1506,7 +1691,7 @@ export default function ExamDataTable() {
                     open={isRoutineDialogOpen}
                     onOpenChange={handleRoutineDialogClose}
                     exam={selectedExam}
-                    onSuccess={() => loadExams(true)}
+                    onSuccess={() => { loadExams(true); loadStudentSummaries(true); }}
                 />
 
                 <StudentPerformanceReport

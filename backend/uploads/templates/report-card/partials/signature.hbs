@@ -1,0 +1,37 @@
+<div class="flex justify-between items-end mt-2 pt-1">
+  <div class="flex-col items-center">
+    {{#if signatures.parent}}
+      <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
+    {{else}}
+      <div style="height: 30px;"></div>
+    {{/if}}
+    <div class="signature-box">Parent / Guardian</div>
+  </div>
+
+  <div class="flex-col items-center">
+    {{#if signatures.teacher}}
+      <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
+    {{else}}
+      <div style="height: 30px;"></div>
+    {{/if}}
+    <div class="signature-box">Class Teacher</div>
+  </div>
+
+  <div class="flex-col items-center">
+    {{#if signatures.controller}}
+      <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
+    {{else}}
+      <div style="height: 30px;"></div>
+    {{/if}}
+    <div class="signature-box">Exam Controller</div>
+  </div>
+
+  <div class="flex-col items-center">
+    {{#if signatures.principal}}
+      <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
+    {{else}}
+      <div style="height: 30px;"></div>
+    {{/if}}
+    <div class="signature-box">Principal</div>
+  </div>
+</div>

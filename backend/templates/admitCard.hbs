@@ -4,359 +4,519 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admit Card</title>
+    <title>Admit Card - {{student.name}}</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 
-        :root {
-            --primary-color: #203b82;
-            --text-main: #1f2937;
-            --text-muted: #6b7280;
-            --border-color: #e5e7eb;
-            --bg-light: #f9fafb;
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        html,
+        body {
+            height: 100%;
+            overflow: hidden;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
-            color: var(--text-main);
-            line-height: 1.4;
-            margin: 0;
-            padding: 30px 40px;
-            background: white;
-            font-size: 12px;
+            font-family: 'Poppins', sans-serif;
+            color: #1e293b;
+            background: #ffffff;
+            padding: 8mm 10mm;
+            font-size: 11px;
+            line-height: 1.35;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            height: 297mm;
+            width: 210mm;
         }
 
         @page {
-            size: A4;
+            size: A4 portrait;
             margin: 0;
         }
 
-        .admit-card-container {
-            max-width: 800px;
-            margin: auto;
-            margin-top: 4px;
+        .container {
+            width: 100%;
+            height: calc(297mm - 16mm);
+            border: 2px solid #1e3a8a;
+            border-radius: 12px;
+            padding: 12px 14px;
+            margin: 0 auto;
+            background: #ffffff;
             position: relative;
-            min-height: 90vh;
-            /* Takes up most of the page height */
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
             display: flex;
             flex-direction: column;
         }
 
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            border-bottom: 2px solid var(--primary-color);
-            padding-bottom: 15px;
-            margin-bottom: 15px;
-        }
-
-        .school-info {
-            flex: 2;
-        }
-
-        .school-name {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-color);
-            margin: 0;
-            text-transform: uppercase;
-        }
-
-        .school-tagline {
-            font-style: italic;
-            color: var(--text-muted);
-            font-size: 12px;
-            margin-bottom: 8px;
-        }
-
-        .school-address {
-            font-size: 11px;
-            color: var(--text-muted);
-            max-width: 400px;
-        }
-
-        .logo-container {
-            width: 100px;
-            height: 100px;
-            flex: 1;
-            text-align: right;
-        }
-
-        .logo {
-            max-width: 65%;
-            height: auto;
-        }
-
-        .title-section {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 15px;
-            border-bottom: 1px dashed var(--border-color);
-            padding-bottom: 10px;
-        }
-
-        .admit-card-title {
-            font-size: 20px;
-            font-weight: 700;
-            color: var(--primary-color);
-            border-left: 4px solid var(--primary-color);
-            padding-left: 12px;
-            text-transform: uppercase;
-        }
-
-        .exam-session {
-            text-align: right;
-            font-weight: 600;
-            color: var(--text-main);
-            background: #eef2ff;
-            padding: 6px 12px;
-            border-radius: 6px;
-            font-size: 12px;
-        }
-
-        .details-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin-bottom: 15px;
-            background: var(--bg-light);
-            padding: 15px;
-            border-radius: 8px;
-            border: 1px solid var(--border-color);
-        }
-
-        .section-title {
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            color: var(--text-muted);
-            margin: 0 0 12px 0;
-            border-bottom: 1px solid var(--border-color);
-            padding-bottom: 4px;
-            font-weight: 700;
-        }
-
-        .detail-row {
-            display: flex;
-            margin-bottom: 4px;
-        }
-
-        .detail-label {
-            width: 120px;
-            font-weight: 600;
-            color: var(--text-muted);
-        }
-
-        .detail-value {
-            flex: 1;
-            font-weight: 600;
-            color: var(--text-main);
-        }
-
-        table {
+        /* Header Layout */
+        .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 15px;
+            margin-bottom: 10px;
         }
 
-        th {
-            background: var(--primary-color);
-            text-align: left;
-            padding: 8px;
-            font-weight: 600;
-            color: white;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 11px;
+        .header-table td {
+            border: none;
+            padding: 0;
+            vertical-align: middle;
+        }
+
+        .logo-img {
+            width: 26mm;
+            height: 26mm;
+            object-fit: contain;
+        }
+
+        .school-title {
+            font-size: 23px;
+            font-weight: 800;
             text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-
-        td {
-            padding: 8px;
-            border-bottom: 1px solid var(--border-color);
-            font-size: 11px;
-        }
-
-        .items-table tbody tr:nth-child(even) {
-            background: #fafafa;
-        }
-
-        .instructions {
-            margin-top: 15px;
-            padding: 15px;
-            background: #fffbeb;
-            border: 1px solid #fef3c7;
-            border-radius: 8px;
-        }
-
-        .instructions h4 {
-            margin: 0 0 10px 0;
-            color: #b45309;
-            font-size: 13px;
-            font-weight: 700;
-            text-transform: uppercase;
-        }
-
-        .instructions ol {
-            margin: 0;
-            padding-left: 20px;
-            color: #78350f;
-            font-size: 11px;
-        }
-
-        .instructions li {
-            margin-bottom: 6px;
-        }
-
-        .footer {
-            margin-top: auto;
-            padding-top: 15px;
-            border-top: 1px solid var(--border-color);
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-        }
-
-        .footer-note {
-            font-size: 11px;
-            color: var(--text-muted);
-        }
-
-        .signature-area {
-            text-align: right;
-        }
-
-        .signature-line {
-            border-top: 1px solid var(--text-main);
-            width: 200px;
-            margin-top: 30px;
-            padding-top: 8px;
-            font-weight: 700;
-            font-size: 12px;
+            letter-spacing: 0.5px;
+            color: #0d2873;
             text-align: center;
         }
 
-        /* Watermark */
-        .watermark {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%) rotate(-30deg);
-            opacity: 0.06;
-            width: 40%;
-            z-index: 0;
-            pointer-events: none;
+        .school-subtitle {
+            font-size: 10.5px;
+            font-weight: 500;
+            text-align: center;
+            color: #475569;
+            margin-top: 2px;
+            line-height: 1.4;
+        }
+
+        .tagline-banner {
+            margin: 6px auto 0 auto;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 4px;
+            max-width: 460px;
+        }
+
+        .tagline-text {
+            background: linear-gradient(180deg, #0d2873 0%, #061543 100%);
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 10px;
+            padding: 3px 20px;
+            clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+            letter-spacing: 0.4px;
+        }
+
+        .tagline-diamond {
+            width: 6px;
+            height: 6px;
+            background: #eab308;
+            transform: rotate(45deg);
+            flex-shrink: 0;
+        }
+
+        .tagline-line {
+            flex: 1;
+            height: 1.5px;
+        }
+
+        .session-badge {
+            background: #e0f2fe;
+            border: 1px solid #7dd3fc;
+            border-radius: 20px;
+            padding: 4px 10px;
+            text-align: center;
+            font-size: 9.5px;
+            font-weight: 700;
+            color: #0369a1;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Admit Card Title Box */
+        .title-box {
+            background: linear-gradient(135deg, #1e3a8a 0%, #0d2873 100%);
+            color: #ffffff;
+            border-radius: 8px;
+            text-align: center;
+            padding: 6px 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 4px rgba(13, 40, 115, 0.2);
+        }
+
+        .title-main {
+            font-size: 16px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+
+        .title-sub {
+            font-size: 10px;
+            font-weight: 500;
+            color: #fef08a;
+        }
+
+        /* Student Details Box */
+        .details-card {
+            border: 1px solid #cbd5e1;
+            border-radius: 8px;
+            background: #f8fafc;
+            margin-bottom: 10px;
+            overflow: hidden;
+        }
+
+        .info-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td {
+            border: 1px solid #e2e8f0;
+            padding: 6px 10px;
+            font-size: 11px;
+            vertical-align: middle;
+        }
+
+        .label-muted {
+            font-size: 9px;
+            text-transform: uppercase;
+            color: #64748b;
+            font-weight: 600;
+            display: block;
+            margin-bottom: 1px;
+        }
+
+        .value-bold {
+            font-size: 11.5px;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .photo-td {
+            width: 30mm;
+            height: 36mm;
+            text-align: center;
+            padding: 3px !important;
+            background: #ffffff;
+        }
+
+        .photo-img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+            border: 1.5px solid #3b82f6;
+        }
+
+        /* Section Banner Header */
+        .section-header {
+            text-align: center;
+            font-size: 12.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            padding: 5px;
+            background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
+            color: #ffffff;
+            border-radius: 6px 6px 0 0;
+            margin-top: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        /* Routine Tables */
+        .routine-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 0 0 6px 6px;
+            overflow: hidden;
+        }
+
+        .routine-table th,
+        .routine-table td {
+            border: 1px solid #cbd5e1;
+            padding: 6px 10px;
+            text-align: center;
+            font-size: 10.5px;
+        }
+
+        .routine-table th {
+            background: #f1f5f9;
+            color: #1e3a8a;
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 9.5px;
+        }
+
+        .routine-table tbody tr:nth-child(even) {
+            background-color: #f8fafc;
+        }
+
+        .routine-table td.subject-col {
+            text-align: left;
+            font-weight: 600;
+            color: #0f172a;
+        }
+
+        .sitting-header {
+            color: #1e3a8a;
+            font-weight: 700;
+        }
+
+        .sitting-timing {
+            font-size: 8.5px;
+            font-weight: 500;
+            color: #475569;
+            text-transform: none;
+            display: block;
+            margin-top: 1px;
+        }
+
+        /* Instructions Box */
+        .instructions-box {
+            border: 1px solid #fde047;
+            background: #fffbeb;
+            border-radius: 8px;
+            padding: 8px 12px;
+            margin-top: 8px;
+        }
+
+        .instructions-title {
+            text-align: center;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            color: #b45309;
+            letter-spacing: 0.5px;
+            margin-bottom: 4px;
+        }
+
+        .instructions-list {
+            padding-left: 18px;
+            font-size: 9px;
+            color: #78350f;
+            line-height: 1.45;
+        }
+
+        .instructions-list li {
+            margin-bottom: 2px;
+        }
+
+        /* Footer Signatures */
+        .footer-signatures {
+            margin-top: auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            padding: 10px 10px 4px 10px;
+        }
+
+        .sig-box {
+            text-align: center;
+            width: 130px;
+            border-top: 2px solid #1e3a8a;
+            padding-top: 4px;
+            font-weight: 700;
+            font-size: 10px;
+            color: #1e3a8a;
+            text-transform: uppercase;
         }
     </style>
 </head>
 
 <body>
-    <div class="admit-card-container">
-        {{#if cmcLogo}}
-        <img src="{{cmcLogo}}" class="watermark" alt="Watermark">
-        {{/if}}
+    <div class="container">
+        <!-- School Header -->
+        <table class="header-table">
+            <tr>
+                <td style="width: 18%;">
+                    {{#if logoData}}
+                    <img src="{{logoData}}" class="logo-img" alt="Logo">
+                    {{/if}}
+                </td>
+                <td style="width: 64%; text-align: center;">
+                    <div class="school-title">{{school.name}}</div>
+                    <div class="school-subtitle">
+                        Address : {{school.address}}<br>
+                        Cont.: {{school.phone}}<br>
+                        Email : {{school.email}} | Website : {{school.website}}
+                    </div>
+                    {{#if school.tagline}}
+                    <div class="tagline-banner">
+                        <div class="tagline-line" style="background: linear-gradient(to right, transparent, #eab308);">
+                        </div>
+                        <div class="tagline-diamond"></div>
+                        <div class="tagline-text">{{school.tagline}}</div>
+                        <div class="tagline-diamond"></div>
+                        <div class="tagline-line" style="background: linear-gradient(to left, transparent, #eab308);">
+                        </div>
+                    </div>
+                    {{/if}}
+                </td>
+                <td style="width: 18%; text-align: right;">
+                    <div class="session-badge">
+                        Session<br><span style="font-size: 11px;">{{student.academic_year_name}}</span>
+                    </div>
+                </td>
+            </tr>
+        </table>
 
-        <!-- Header -->
-        <div class="header">
-            <div class="school-info">
-                <h1 class="school-name">Times International School</h1>
-                <p class="school-tagline">Commited to Excellence</p>
-                <p class="school-address">
-                    TIMES INTERNATIONAL SCHOOL<br>
-                    J57H+PG6, Mohammadpur Rd, Sultanganj,<br>
-                    Muhammadpur, Patna, Bihar 800006<br>
-                    MOB:- 6200491833. Email :- timesschoolpatna3@gmail.com
-                </p>
-            </div>
-            <div class="logo-container">
-                {{#if logoData}}
-                <img src="{{logoData}}" alt="School Logo" class="logo">
-                {{/if}}
-            </div>
+        <!-- Admit Card Title Box -->
+        <div class="title-box">
+            <div class="title-main">{{exam_name}} Admit Card</div>
+            <div class="title-sub">Academic Session {{student.academic_year_name}}</div>
         </div>
 
-        <!-- Title Section -->
-        <div class="title-section">
-            <div class="admit-card-title">EXAMINATION ADMIT CARD</div>
-            <div class="exam-session">{{student.academic_year_name}}</div>
+        <!-- Student Info Details -->
+        <div class="details-card">
+            <table class="info-table">
+                <tr>
+                    <td style="width: 45%;">
+                        <span class="label-muted">Student's Name</span>
+                        <span class="value-bold">{{student.name}}</span>
+                    </td>
+                    <td style="width: 25%;">
+                        <span class="label-muted">Class</span>
+                        <span class="value-bold">{{student.class_name}}</span>
+                    </td>
+                    <td style="width: 15%;">
+                        <span class="label-muted">Roll No.</span>
+                        <span class="value-bold">{{student.roll_no}}</span>
+                    </td>
+                    <td rowspan="2" class="photo-td">
+                        {{#if student.photo}}
+                        <img src="{{student.photo}}" class="photo-img" alt="Photo">
+                        {{else}}
+                        <div style="font-size: 8.5px; color: #94a3b8; margin-top: 15px; font-weight: 600;">PHOTO</div>
+                        {{/if}}
+                    </td>
+                </tr>
+                <tr>
+                    <td>
+                        <span class="label-muted">Father's Name</span>
+                        <span class="value-bold">{{student.fathers_name}}</span>
+                    </td>
+                    <td>
+                        <span class="label-muted">Mother's Name</span>
+                        <span class="value-bold">{{#if
+                            student.mothers_name}}{{student.mothers_name}}{{else}}{{student.mother_name}}{{/if}}</span>
+                    </td>
+                    <td>
+                        <span class="label-muted">Date of Issue</span>
+                        <span class="value-bold">{{issueDate}}</span>
+                    </td>
+                </tr>
+            </table>
         </div>
 
-        <!-- Student Details Grid -->
-        <div class="details-grid">
-            <div>
-                <h3 class="section-title">Student Details</h3>
-                <div class="detail-row">
-                    <div class="detail-label">Student Name:</div>
-                    <div class="detail-value">{{student.name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Father's Name:</div>
-                    <div class="detail-value">{{student.fathers_name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Roll Number:</div>
-                    <div class="detail-value">{{student.roll_no}}</div>
-                </div>
-            </div>
-            <div>
-                <h3 class="section-title">Examination Details</h3>
-                <div class="detail-row">
-                    <div class="detail-label">Exam Name:</div>
-                    <div class="detail-value">{{exam_name}}</div>
-                </div>
-                <div class="detail-row">
-                    <div class="detail-label">Grade / Class:</div>
-                    <div class="detail-value">{{student.grade_name}} / {{student.class_name}}</div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Exam Routine Table -->
-        <h3 class="section-title" style="border: none; margin-bottom: 8px;">Examination Schedule</h3>
-        <table class="items-table">
+        <!-- Oral Examination Section (If Oral exists) -->
+        {{#if hasOral}}
+        <div class="section-header">Oral Examination</div>
+        <table class="routine-table">
             <thead>
                 <tr>
-                    <th width="10%">S.No</th>
-                    <th width="40%">Subject</th>
-                    <th width="25%">Date</th>
-                    <th width="25%">Time</th>
+                    <th style="width: 20%;">Date</th>
+                    <th style="width: 20%;">Day</th>
+                    <th style="width: 60%; text-align: left; padding-left: 12px;">Subjects</th>
                 </tr>
             </thead>
             <tbody>
-                {{#each routine}}
+                {{#each oralRoutine}}
                 <tr>
-                    <td>{{add @index 1}}</td>
-                    <td><strong>{{subject_name}}</strong></td>
-                    <td>{{exam_date}}</td>
-                    <td>{{time}}</td>
+                    <td><strong style="color: #1e3a8a;">{{this.date}}</strong></td>
+                    <td>{{this.day}}</td>
+                    <td class="subject-col" style="padding-left: 12px;">{{this.subjects}}</td>
                 </tr>
                 {{/each}}
             </tbody>
         </table>
+        {{#if hasWritten}}<div style="margin-top: 6px;"></div>{{/if}}
+        {{/if}}
 
-        <!-- Instructions -->
-        <div class="instructions">
-            <h4>Instructions to Candidates</h4>
-            <ol>
-                <li>Candidates must carry this Admit Card to the examination hall for every session.</li>
-                <li>Please report to the examination hall at least 15 minutes before the start time.</li>
-                <li>No electronic devices, calculators, or mobile phones are allowed inside the examination hall.</li>
-                <li>Candidates found using unfair means will be disqualified immediately.</li>
-                <li>Ensure all fee dues are fully cleared; otherwise, entry to the examination may be restricted.</li>
+        <!-- Written Examination Section -->
+        {{#if hasWritten}}
+        <div class="section-header">Written Examination</div>
+        {{#if hasSittings}}
+        <table class="routine-table">
+            <thead>
+                <tr>
+                    <th style="width: 18%;">Date</th>
+                    <th style="width: 18%;">Day</th>
+                    <th style="width: 32%;">
+                        <span class="sitting-header">1<sup>st</sup> Sitting</span>
+                        <span class="sitting-timing">Timing : {{firstSittingTiming}}</span>
+                    </th>
+                    <th style="width: 32%;">
+                        <span class="sitting-header">2<sup>nd</sup> Sitting</span>
+                        <span class="sitting-timing">Timing : {{secondSittingTiming}}</span>
+                    </th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each writtenRoutine}}
+                <tr>
+                    <td><strong style="color: #1e3a8a;">{{this.date}}</strong></td>
+                    <td>{{this.day}}</td>
+                    <td style="font-weight: 600; color: #0f172a;">{{this.sitting1}}</td>
+                    <td style="font-weight: 600; color: #0f172a;">{{this.sitting2}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        {{else}}
+        <table class="routine-table">
+            <thead>
+                <tr>
+                    <th style="width: 20%;">Date</th>
+                    <th style="width: 20%;">Day</th>
+                    <th style="width: 35%; text-align: left; padding-left: 12px;">Subject</th>
+                    <th style="width: 25%;">Timing</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#each writtenRoutine}}
+                <tr>
+                    <td><strong style="color: #1e3a8a;">{{this.date}}</strong></td>
+                    <td>{{this.day}}</td>
+                    <td style="font-weight: 600; color: #0f172a; text-align: left; padding-left: 12px;">{{this.subject}}
+                    </td>
+                    <td style="font-weight: 600; color: #475569;">{{this.time}}</td>
+                </tr>
+                {{/each}}
+            </tbody>
+        </table>
+        {{/if}}
+        {{/if}}
+
+        <!-- Instructions Box -->
+        <div class="instructions-box">
+            <div class="instructions-title">General / Exam Instructions for Students</div>
+            <ol class="instructions-list">
+                <li>Reporting Timing : 8:00am</li>
+                <li>Check the exam timetable carefully.</li>
+                <li>Students must bring the 'Admit Card' and show it to the invigilator(s) on duty and should preserve
+                    it for future requirements.</li>
+                <li>Mobile Phone, Calculator, Digital Watch or any Electronic Device is <strong>NOT ALLOWED</strong>.
+                </li>
+                <li>Arrive at the school at least 15 minutes before the start of the examination.</li>
+                <li>Students are barred from entering the examination hall 15 minutes after the written examination
+                    starts.</li>
+                <li>Ensure that you use the washroom before arriving for your exam as you will not be permitted to leave
+                    during the first hour.</li>
+                <li>Normally, you are required to answer using pencil. Make sure you bring some spare pencil with you.
+                </li>
+                <li>Keep your eyes on your own paper. Remember, copying is cheating!</li>
+                <li>You must remain silent until after you have exited the school building.</li>
             </ol>
         </div>
 
-        <!-- Footer -->
-        <div class="footer">
-            <div class="footer-note">
-                Generated internally by Infodatasoft Management System<br>
-                Verification Code: {{admitCardCode}}
-            </div>
-            <div class="signature-area">
-                <div class="signature-line">Controller of Examinations</div>
-            </div>
+        <!-- Footer Signatures -->
+        <div class="footer-signatures">
+            <div class="sig-box">Signature of Guardian</div>
+            <div class="sig-box">Class Teacher</div>
+            <div class="sig-box">Exam Controller</div>
+            <div class="sig-box">Principal</div>
         </div>
     </div>
 </body>

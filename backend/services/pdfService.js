@@ -156,7 +156,6 @@ class PdfService {
         width: `${width}px`,
         height: `${height}px`,
         printBackground: true,
-        pageRanges: options.pageRanges !== undefined ? options.pageRanges : '1',
         preferCSSPageSize: true,
         margin: options.margin || {
           top: '0',
@@ -165,6 +164,10 @@ class PdfService {
           left: '0'
         }
       };
+
+      if (options.pageRanges) {
+        pdfOptions.pageRanges = options.pageRanges;
+      }
 
       if (options.displayHeaderFooter) {
         pdfOptions.displayHeaderFooter = true;
@@ -231,7 +234,7 @@ class PdfService {
           const bgBuffer = fs.readFileSync(bgPath);
           processedData.background_image = `data:image/png;base64,${bgBuffer.toString('base64')}`;
         } else {
-          console.warn("Default background image NOT found at:", bgPath);
+          // console.warn("Default background image NOT found at:", bgPath);
         }
       } catch (e) {
         console.error("Error injecting default background image:", e.message);

@@ -1,0 +1,43 @@
+<div class="flex justify-between items-start mb-2 pb-1 border-b-2 border-gray-200">
+  <!-- School Logo -->
+  <div style="width: 20%;">
+    {{#if logoData}}
+      <img src="{{logoData}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
+    {{else if school.logo}}
+      <img src="{{school.logo}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
+    {{/if}}
+  </div>
+
+  <!-- School Details (Centered) -->
+  <div style="width: 60%; text-align: center;">
+    <h1 class="school-name font-bold" style="color: var(--dark-blue); font-size: 22px; margin-bottom: 2px;">{{school.name}}</h1>
+    <div class="school-details mt-1 font-semibold" style="color: #4b5563; font-size: 11px; line-height: 1.4;">
+      <p>Address : {{school.address}}</p>
+      <p>Cont.: {{school.phone}}</p>
+      <p>Email : {{school.email}} | Website : {{school.website}}</p>
+    </div>
+    {{#if school.tagline}}
+      <div class="mt-2 flex items-center justify-center gap-1 w-full" style="max-width: 480px; margin-left: auto; margin-right: auto;">
+        <div class="flex-1" style="height: 1.5px; background: linear-gradient(to right, transparent, #eab308);"></div>
+        <div style="width: 7px; height: 7px; background: #eab308; transform: rotate(45deg); flex-shrink: 0; margin-right: 2px;"></div>
+        
+        <div style="background: linear-gradient(180deg, #0d2873 0%, #061543 100%); color: #ffffff; font-weight: 700; font-size: 10.5px; padding: 3px 22px; clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0 100%); letter-spacing: 0.4px;">
+          {{school.tagline}}
+        </div>
+
+        <div style="width: 7px; height: 7px; background: #eab308; transform: rotate(45deg); flex-shrink: 0; margin-left: 2px;"></div>
+        <div class="flex-1" style="height: 1.5px; background: linear-gradient(to left, transparent, #eab308);"></div>
+      </div>
+    {{/if}}
+  </div>
+
+  <!-- Right Side Badges -->
+  <div style="width: 20%;" class="flex flex-col items-end text-right">
+    <div class="font-bold uppercase" style="color: var(--dark-blue); font-size: 12px; letter-spacing: 0.5px;">
+      {{reportTitle}}
+    </div>
+    <div class="badge badge-primary mt-2" style="font-size: 10px;">
+      Session: {{student.academic_year_name}}
+    </div>
+  </div>
+</div>

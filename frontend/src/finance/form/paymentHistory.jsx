@@ -178,20 +178,33 @@ export default function PaymentHistory() {
   };
 
   const getMethodBadge = (method) => {
-    switch (method) {
-      case 'cash':
-        return <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40">Cash</Badge>;
-      case 'bank_transfer':
-        return <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40">Bank Transfer</Badge>;
-      case 'cheque':
-        return <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40">Cheque</Badge>;
-      case 'card':
-        return <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/40">Card</Badge>;
-      case 'online':
-        return <Badge className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">Online</Badge>;
-      default:
-        return <Badge variant="outline" className="capitalize">{method}</Badge>;
+    if (!method) return null;
+    
+    if (method.includes(',')) {
+      return (
+        <div className="flex flex-col gap-1 items-start">
+          {method.split(',').map((m, i) => (
+             <Badge key={i} variant="outline" className="whitespace-nowrap bg-muted/50">
+               {m.trim()}
+             </Badge>
+          ))}
+        </div>
+      );
     }
+
+    const mLower = method.toLowerCase();
+    if (mLower.includes('cash'))
+      return <Badge className="bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-400 hover:bg-green-100 dark:hover:bg-green-900/40">{method}</Badge>;
+    if (mLower.includes('bank_transfer') || mLower.includes('transfer'))
+      return <Badge className="bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40">{method}</Badge>;
+    if (mLower.includes('cheque'))
+      return <Badge className="bg-purple-100 dark:bg-purple-900/30 text-purple-800 dark:text-purple-400 hover:bg-purple-100 dark:hover:bg-purple-900/40">{method}</Badge>;
+    if (mLower.includes('card'))
+      return <Badge className="bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-400 hover:bg-yellow-100 dark:hover:bg-yellow-900/40">{method}</Badge>;
+    if (mLower.includes('online') || mLower.includes('upi'))
+      return <Badge className="bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40">{method}</Badge>;
+    
+    return <Badge variant="outline" className="capitalize">{method}</Badge>;
   };
 
   const formatCurrency = (amount) => {

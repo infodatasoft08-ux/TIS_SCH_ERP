@@ -19,6 +19,7 @@ const {
     GenerateCombinedMarksheetPDF,
     GenerateConsolidatedMarksheetPDF,
     GenerateBulkMarksheetPDF,
+    GenerateBulkAdmitCardPDF,
     PublishExam
 } = require('../controller/examController');
 
@@ -42,6 +43,7 @@ router.post('/generate-exam-routine', auth, GenerateExamRoutinePDF);
 router.post('/generate-combined-marksheet', auth, GenerateCombinedMarksheetPDF);
 router.post('/generate-consolidated-marksheet', auth, GenerateConsolidatedMarksheetPDF);
 router.post('/generate-bulk-marksheet', auth, GenerateBulkMarksheetPDF);
+router.post('/generate-bulk-admit-card', auth, GenerateBulkAdmitCardPDF);
 
 // Student View
 router.get('/student/exams', auth, GetExamsForStudent);

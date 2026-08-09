@@ -1,0 +1,57 @@
+<div class="card mb-2">
+  <div class="flex justify-between gap-4">
+    <!-- Left Side: Student Info Grid -->
+    <div class="flex-1 grid grid-cols-3 gap-x-4 gap-y-2">
+      <div>
+        <div class="info-label">Admission No</div>
+        <div class="info-value">{{student.admission_no}}</div>
+      </div>
+      <div>
+        <div class="info-label">Roll No</div>
+        <div class="info-value">{{student.roll_no}}</div>
+      </div>
+      <div>
+        <div class="info-label">Class & Section</div>
+        <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else}}{{student.class}}{{#if student.section}} - {{student.section}}{{/if}}{{/if}}</div>
+      </div>
+      
+      <div>
+        <div class="info-label">Student Name</div>
+        <div class="info-value">{{student.name}}</div>
+      </div>
+      <div>
+        <div class="info-label">Date of Birth</div>
+        <div class="info-value">{{student.dob}}</div>
+      </div>
+      <div>
+        <div class="info-label">Gender / Blood Group</div>
+        <div class="info-value">{{student.gender}} / {{student.blood_group}}</div>
+      </div>
+
+      <div>
+        <div class="info-label">Father's Name</div>
+        <div class="info-value">{{#if student.father_name}}{{student.father_name}}{{else}}{{student.fathers_name}}{{/if}}</div>
+      </div>
+      <div>
+        <div class="info-label">Mother's Name</div>
+        <div class="info-value">{{#if student.mother_name}}{{student.mother_name}}{{else}}{{student.mothers_name}}{{/if}}</div>
+      </div>
+      <div class="grid-col-span-2" style="grid-column: span 3;">
+        <div class="info-label">Address</div>
+        <div class="info-value">{{student.address}}</div>
+      </div>
+    </div>
+
+    <!-- Right Side: Photo and Status -->
+    <div class="flex-col items-center justify-center border-l" style="padding-left: 16px; border-left: 1px solid var(--border-color);">
+      {{#if student.photo}}
+        <img src="{{student.photo}}" alt="Student Photo" class="student-photo mb-2">
+      {{else}}
+        <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
+      {{/if}}
+      <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
+        {{student.status}}
+      </div>
+    </div>
+  </div>
+</div>

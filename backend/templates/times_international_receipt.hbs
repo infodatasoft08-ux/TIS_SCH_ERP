@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Niyati Payment Receipt</title>
+    <title>Times International School Payment Receipt</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Crimson+Pro:ital,wght@0,400;0,700;1,700&display=swap');
 
@@ -49,9 +49,9 @@
             text-align: center;
             font-weight: bold;
             text-decoration: underline;
-            font-size: 10px;
+            font-size: 9px;
             /*margin-bottom: 5px;*/
-            margin-bottom: 1px;
+            margin-bottom: 0.5px;
             color: var(--bill-blue);
         }
 
@@ -65,12 +65,12 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 2px;
+            margin-bottom: 1px;
         }
 
         .logo-box {
-            width: 60px;
-            height: 60px;
+            width: 50px;
+            height: 50px;
         }
 
         .logo {
@@ -81,16 +81,16 @@
         .school-info {
             flex: 1;
             text-align: center;
-            margin-right: 40px;
+            margin-right: 20px;
         }
 
         .school-name {
-            font-size: 20px;
+            font-size: 19px;
             font-weight: 700;
             font-style: italic;
             color: var(--bill-blue);
             margin: 0;
-            line-height: 1.2;
+            line-height: 1.1;
             text-transform: uppercase;
         }
 
@@ -187,8 +187,8 @@
         }
 
         .note-section {
-            font-size: 10px;
-            line-height: 1.3;
+            font-size: 8px;
+            line-height: 1.1;
             margin-bottom: 20px;
         }
 
@@ -244,20 +244,22 @@
             <div class="top-label">PAYMENT RECEIPT</div>
 
             <div class="header">
-                {{!-- <div class="logo-box">
+                <div class="logo-box">
                     {{#if logoData}}
                     <img src="{{logoData}}" alt="Logo" class="logo">
                     {{/if}}
-                </div> --}}
+                </div>
                 <div class="school-info">
                     <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
-                    <div class="tagline">Commited to Excellence</div>
+                    {{!-- <div class="tagline">Commited to Excellence</div> --}}
                 </div>
             </div>
 
             <div class="contact-info">
-                <strong>ADD:-</strong> J57H+PG6, Mohammadpur Rd, Sultanganj, Muhammadpur, Patna, Bihar 800006<br>
-                <strong>MOB:-</strong> 8102657225. <strong>Email :-</strong> timesschoolpatna3@gmail.com
+                <strong>ADD:-</strong> Times School Road, Muhammadpur, Shahganj, Mahendru, Patna - 800006<br>
+                <strong>MOB:-</strong> 0612-4089151 | 8700186374 | 8102657225 <strong>Email :-</strong>
+                timesschoolpatna@gmail.com
+                <strong>Web:-</strong> www.timesinternationalschool.co.in
             </div>
 
             <div class="metadata-section">
@@ -376,21 +378,30 @@
             </div>
 
             <div class="note-section">
-                <span class="note-label">Note :</span> This is a computer-generated receipt for the payment recorded
-                against
-                Invoice INV-{{payment.invoice_id}}.
+                <span class="note-label">Note :</span>
+                {{!-- This is a computer-generated receipt for the payment recorded against
+                Invoice INV-{{payment.invoice_id}}. --}}
+                <ul style="padding-left: 15px; margin-left: 0px;">
+                    <li>It is mandatory that School fee paid monthly by 10th of the every months.</li>
+                    <li>A grace period of five days will be allowed during the session beyond the above mentioned due
+                        date. After 15th of the every moths a late fine of Rs. 10/- per day will be levied.</li>
+                </ul>
             </div>
 
         </div>
 
         <div class="signature-section">
             <div class="sig-box">
-                <span class="sig-line"></span>
-                <span class="sig-label">Receiver's Sign</span>
+                {{!-- <span class="sig-line"></span>
+                <span class="sig-label">Receiver's Sign</span> --}}
             </div>
-            <div class="sig-box">
+            {{!-- <div class="sig-box">
                 <span class="sig-line"></span>
                 <span class="sig-label">Office Seal</span>
+            </div> --}}
+            <div class="sig-box">
+                <span class="sig-line"></span>
+                <span class="sig-label">Cashier's Sign:</span>
             </div>
         </div>
     </div>

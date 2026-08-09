@@ -66,12 +66,20 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
 
   const selectedGradeId = form.watch("grade_id");
   const selectedExamType = form.watch("exam_type");
+  const [prevGradeId, setPrevGradeId] = useState(null);
 
   useEffect(() => {
     if (selectedGradeId) {
       fetchGradeSubjects(selectedGradeId);
+      if (prevGradeId && prevGradeId !== selectedGradeId) {
+        form.setValue("class_ids", [], { shouldValidate: true });
+        setSelectedSubjectsMap({});
+        form.setValue("subjects", []);
+      }
+      setPrevGradeId(selectedGradeId);
     } else {
       setFilteredSubjects([]);
+      form.setValue("class_ids", []);
     }
   }, [selectedGradeId]);
 
@@ -86,6 +94,8 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
 
   useEffect(() => {
     if (open) {
+      const isTrue = (val) => val === 1 || val === true || val === '1' || val === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+
       if (examToEdit) {
         form.reset({
           name: examToEdit.name || "",
@@ -103,12 +113,24 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
             subject_id: s.subject_id,
             max_marks: s.max_marks,
             passing_marks: s.passing_marks,
-            has_theory: s.has_theory === 1 || s.has_theory === true,
-            has_lab: s.has_lab === 1 || s.has_lab === true,
-            has_oral: s.has_oral === 1 || s.has_oral === true,
+            has_theory: isTrue(s.has_theory),
+            has_lab: isTrue(s.has_lab),
+            has_oral: isTrue(s.has_oral),
+            has_written: isTrue(s.has_written),
+            has_reading: isTrue(s.has_reading),
+            has_writing_comp: isTrue(s.has_writing_comp),
+            has_dictation: isTrue(s.has_dictation),
+            has_recitation: isTrue(s.has_recitation),
+            has_ia_pr: isTrue(s.has_ia_pr),
             theory_max_marks: s.theory_max_marks || 0,
             lab_max_marks: s.lab_max_marks || 0,
-            oral_max_marks: s.oral_max_marks || 0
+            oral_max_marks: s.oral_max_marks || 0,
+            written_max_marks: s.written_max_marks || 0,
+            reading_max_marks: s.reading_max_marks || 0,
+            writing_comp_max_marks: s.writing_comp_max_marks || 0,
+            dictation_max_marks: s.dictation_max_marks || 0,
+            recitation_max_marks: s.recitation_max_marks || 0,
+            ia_pr_max_marks: s.ia_pr_max_marks || 0
           })) : []
         });
 
@@ -128,16 +150,29 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
               checked: true,
               max_marks: s.max_marks,
               passing_marks: s.passing_marks,
-              has_theory: s.has_theory === 1 || s.has_theory === true,
-              has_lab: s.has_lab === 1 || s.has_lab === true,
-              has_oral: s.has_oral === 1 || s.has_oral === true,
+              has_theory: isTrue(s.has_theory),
+              has_lab: isTrue(s.has_lab),
+              has_oral: isTrue(s.has_oral),
+              has_written: isTrue(s.has_written),
+              has_reading: isTrue(s.has_reading),
+              has_writing_comp: isTrue(s.has_writing_comp),
+              has_dictation: isTrue(s.has_dictation),
+              has_recitation: isTrue(s.has_recitation),
+              has_ia_pr: isTrue(s.has_ia_pr),
               theory_max_marks: s.theory_max_marks || 0,
               lab_max_marks: s.lab_max_marks || 0,
-              oral_max_marks: s.oral_max_marks || 0
+              oral_max_marks: s.oral_max_marks || 0,
+              written_max_marks: s.written_max_marks || 0,
+              reading_max_marks: s.reading_max_marks || 0,
+              writing_comp_max_marks: s.writing_comp_max_marks || 0,
+              dictation_max_marks: s.dictation_max_marks || 0,
+              recitation_max_marks: s.recitation_max_marks || 0,
+              ia_pr_max_marks: s.ia_pr_max_marks || 0
             };
           });
         }
         setSelectedSubjectsMap(initialMap);
+        setPrevGradeId(examToEdit.grade_id ? examToEdit.grade_id.toString() : null);
       } else {
         form.reset({
           name: "",
@@ -152,6 +187,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
           subjects: []
         });
         setSelectedSubjectsMap({});
+        setPrevGradeId(null);
       }
     }
   }, [open, examToEdit, form, classes]);
@@ -198,27 +234,23 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     if (checked) {
       if (isNonAcademic(subject)) {
         updatedMap[subject.id] = {
-          checked: true,
-          max_marks: 0,
-          passing_marks: 0,
-          has_theory: false,
-          has_lab: false,
-          has_oral: false,
-          theory_max_marks: 0,
-          lab_max_marks: 0,
-          oral_max_marks: 0
+          checked: true, max_marks: 0, passing_marks: 0,
+          has_theory: false, has_lab: false, has_oral: false,
+          has_written: false, has_reading: false, has_writing_comp: false,
+          has_dictation: false, has_recitation: false, has_ia_pr: false,
+          theory_max_marks: 0, lab_max_marks: 0, oral_max_marks: 0,
+          written_max_marks: 0, reading_max_marks: 0, writing_comp_max_marks: 0,
+          dictation_max_marks: 0, recitation_max_marks: 0, ia_pr_max_marks: 0
         };
       } else {
         updatedMap[subject.id] = {
-          checked: true,
-          max_marks: 100,
-          passing_marks: 35,
-          has_theory: true,
-          has_lab: false,
-          has_oral: false,
-          theory_max_marks: 100,
-          lab_max_marks: 0,
-          oral_max_marks: 0
+          checked: true, max_marks: 100, passing_marks: 35,
+          has_theory: true, has_lab: false, has_oral: false,
+          has_written: false, has_reading: false, has_writing_comp: false,
+          has_dictation: false, has_recitation: false, has_ia_pr: false,
+          theory_max_marks: 100, lab_max_marks: 0, oral_max_marks: 0,
+          written_max_marks: 0, reading_max_marks: 0, writing_comp_max_marks: 0,
+          dictation_max_marks: 0, recitation_max_marks: 0, ia_pr_max_marks: 0
         };
       }
     } else {
@@ -231,17 +263,21 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
   const handleMarksChange = (subjectId, field, value) => {
     const updatedMap = { ...selectedSubjectsMap };
     if (updatedMap[subjectId]) {
-      updatedMap[subjectId] = {
-        ...updatedMap[subjectId],
-        [field]: value
-      };
+      updatedMap[subjectId] = { ...updatedMap[subjectId], [field]: value };
 
-      // Recompute total max_marks based on enabled components
-      const thMax = updatedMap[subjectId].has_theory ? (parseInt(updatedMap[subjectId].theory_max_marks) || 0) : 0;
-      const lbMax = updatedMap[subjectId].has_lab ? (parseInt(updatedMap[subjectId].lab_max_marks) || 0) : 0;
-      const orMax = updatedMap[subjectId].has_oral ? (parseInt(updatedMap[subjectId].oral_max_marks) || 0) : 0;
+      // Recompute total max_marks from all enabled sub-fields
+      const s = updatedMap[subjectId];
+      const thMax = s.has_theory ? (parseInt(s.theory_max_marks) || 0) : 0;
+      const lbMax = s.has_lab ? (parseInt(s.lab_max_marks) || 0) : 0;
+      const orMax = s.has_oral ? (parseInt(s.oral_max_marks) || 0) : 0;
+      const wrMax = s.has_written ? (parseInt(s.written_max_marks) || 0) : 0;
+      const rdMax = s.has_reading ? (parseInt(s.reading_max_marks) || 0) : 0;
+      const wcMax = s.has_writing_comp ? (parseInt(s.writing_comp_max_marks) || 0) : 0;
+      const dcMax = s.has_dictation ? (parseInt(s.dictation_max_marks) || 0) : 0;
+      const rcMax = s.has_recitation ? (parseInt(s.recitation_max_marks) || 0) : 0;
+      const iaMax = s.has_ia_pr ? (parseInt(s.ia_pr_max_marks) || 0) : 0;
 
-      updatedMap[subjectId].max_marks = thMax + lbMax + orMax;
+      updatedMap[subjectId].max_marks = thMax + lbMax + orMax + wrMax + rdMax + wcMax + dcMax + rcMax + iaMax;
 
       setSelectedSubjectsMap(updatedMap);
       syncFormSubjects(updatedMap);
@@ -256,9 +292,21 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       has_theory: !!map[id].has_theory,
       has_lab: !!map[id].has_lab,
       has_oral: !!map[id].has_oral,
+      has_written: !!map[id].has_written,
+      has_reading: !!map[id].has_reading,
+      has_writing_comp: !!map[id].has_writing_comp,
+      has_dictation: !!map[id].has_dictation,
+      has_recitation: !!map[id].has_recitation,
+      has_ia_pr: !!map[id].has_ia_pr,
       theory_max_marks: map[id].has_theory ? parseInt(map[id].theory_max_marks) || 0 : 0,
       lab_max_marks: map[id].has_lab ? parseInt(map[id].lab_max_marks) || 0 : 0,
-      oral_max_marks: map[id].has_oral ? parseInt(map[id].oral_max_marks) || 0 : 0
+      oral_max_marks: map[id].has_oral ? parseInt(map[id].oral_max_marks) || 0 : 0,
+      written_max_marks: map[id].has_written ? parseInt(map[id].written_max_marks) || 0 : 0,
+      reading_max_marks: map[id].has_reading ? parseInt(map[id].reading_max_marks) || 0 : 0,
+      writing_comp_max_marks: map[id].has_writing_comp ? parseInt(map[id].writing_comp_max_marks) || 0 : 0,
+      dictation_max_marks: map[id].has_dictation ? parseInt(map[id].dictation_max_marks) || 0 : 0,
+      recitation_max_marks: map[id].has_recitation ? parseInt(map[id].recitation_max_marks) || 0 : 0,
+      ia_pr_max_marks: map[id].has_ia_pr ? parseInt(map[id].ia_pr_max_marks) || 0 : 0,
     }));
     form.setValue("subjects", subjectsArray, { shouldValidate: true });
   };
@@ -274,7 +322,33 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       data.end_date = formattedEndDate;
     }
 
-    // Note: Non-academic subjects are no longer auto-appended, they are selected explicitly by the user
+    // Ensure subjects payload is generated directly from selectedSubjectsMap
+    data.subjects = Object.keys(selectedSubjectsMap).map(id => {
+      const mapItem = selectedSubjectsMap[id];
+      return {
+        subject_id: parseInt(id),
+        max_marks: mapItem.max_marks,
+        passing_marks: mapItem.passing_marks,
+        has_theory: !!mapItem.has_theory,
+        has_lab: !!mapItem.has_lab,
+        has_oral: !!mapItem.has_oral,
+        has_written: !!mapItem.has_written,
+        has_reading: !!mapItem.has_reading,
+        has_writing_comp: !!mapItem.has_writing_comp,
+        has_dictation: !!mapItem.has_dictation,
+        has_recitation: !!mapItem.has_recitation,
+        has_ia_pr: !!mapItem.has_ia_pr,
+        theory_max_marks: mapItem.has_theory ? (parseInt(mapItem.theory_max_marks) || 0) : 0,
+        lab_max_marks: mapItem.has_lab ? (parseInt(mapItem.lab_max_marks) || 0) : 0,
+        oral_max_marks: mapItem.has_oral ? (parseInt(mapItem.oral_max_marks) || 0) : 0,
+        written_max_marks: mapItem.has_written ? (parseInt(mapItem.written_max_marks) || 0) : 0,
+        reading_max_marks: mapItem.has_reading ? (parseInt(mapItem.reading_max_marks) || 0) : 0,
+        writing_comp_max_marks: mapItem.has_writing_comp ? (parseInt(mapItem.writing_comp_max_marks) || 0) : 0,
+        dictation_max_marks: mapItem.has_dictation ? (parseInt(mapItem.dictation_max_marks) || 0) : 0,
+        recitation_max_marks: mapItem.has_recitation ? (parseInt(mapItem.recitation_max_marks) || 0) : 0,
+        ia_pr_max_marks: mapItem.has_ia_pr ? (parseInt(mapItem.ia_pr_max_marks) || 0) : 0,
+      };
+    });
 
     if (isExamLocked && examToEdit) {
       data.name = examToEdit.name;
@@ -552,7 +626,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
 
                           {isChecked && (
                             <div className="flex flex-col gap-3 mt-3 w-full border-t pt-3 ml-6 md:ml-3">
-                              <div className="flex flex-wrap gap-4 items-center">
+                              <div className="flex flex-wrap gap-2.5 w-full items-center">
                                 <div className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 p-2.5 rounded-lg border">
                                   <Checkbox
                                     id={`theory-${subject.id}`}
@@ -609,6 +683,35 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                                     />
                                   )}
                                 </div>
+
+                                {/* ---- New Sub-Fields ---- */}
+                                {[
+                                  { flag: 'has_ia_pr', maxKey: 'ia_pr_max_marks', label: 'I.A./PR' },
+                                  { flag: 'has_written', maxKey: 'written_max_marks', label: 'Written' },
+                                  { flag: 'has_reading', maxKey: 'reading_max_marks', label: 'Reading' },
+                                  { flag: 'has_writing_comp', maxKey: 'writing_comp_max_marks', label: 'Writing (Comp.)' },
+                                  { flag: 'has_dictation', maxKey: 'dictation_max_marks', label: 'Dictation' },
+                                  { flag: 'has_recitation', maxKey: 'recitation_max_marks', label: 'Recitation' },
+                                ].map(({ flag, maxKey, label }) => (
+                                  <div key={flag} className="flex items-center space-x-1.5 bg-white dark:bg-slate-800 p-2.5 rounded-lg border">
+                                    <Checkbox
+                                      id={`${flag}-${subject.id}`}
+                                      checked={!!selectedSubjectsMap[subject.id][flag]}
+                                      onCheckedChange={(checked) => handleMarksChange(subject.id, flag, !!checked)}
+                                    />
+                                    <label htmlFor={`${flag}-${subject.id}`} className="text-xs font-semibold mr-2 cursor-pointer">{label}</label>
+                                    {selectedSubjectsMap[subject.id][flag] && (
+                                      <Input
+                                        type="number"
+                                        className="w-16 h-7 text-xs px-2 py-0.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded text-center focus:outline-none focus:ring-1 focus:ring-primary"
+                                        placeholder="Max"
+                                        value={selectedSubjectsMap[subject.id][maxKey] || ''}
+                                        onChange={(e) => handleMarksChange(subject.id, maxKey, parseInt(e.target.value) || 0)}
+                                        min="0"
+                                      />
+                                    )}
+                                  </div>
+                                ))}
                               </div>
 
                               <div className="flex gap-4">

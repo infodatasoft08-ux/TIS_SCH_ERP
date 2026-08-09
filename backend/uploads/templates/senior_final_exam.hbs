@@ -33,7 +33,7 @@ body {
   color: var(--text-dark);
   font-family: 'Poppins', sans-serif;
   font-size: 10px; /* Base size for A4 printing */
-  line-height: 1.4;
+  line-height: 1.3;
   /* A4 Dimensions */
   width: 210mm;
   height: 297mm;
@@ -76,26 +76,26 @@ body {
 .school-name {
   font-family: 'Montserrat', sans-serif;
   font-weight: 800;
-  font-size: 20px;
+  font-size: 24px;
   color: var(--dark-blue);
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }
 
 .school-details {
-  font-size: 9px;
+  font-size: 12.5px;
   color: var(--text-muted);
 }
 
 .section-heading {
   font-family: 'Poppins', sans-serif;
   font-weight: 600;
-  font-size: 11px;
+  font-size: 12px;
   color: var(--primary-blue);
   background: var(--section-bg);
-  padding: 4px 10px;
+  padding: 3px 8px;
   border-radius: 4px;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   border-left: 3px solid var(--primary-blue);
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -177,18 +177,18 @@ body {
 /* Tables */
 table {
   width: 100%;
-  border-collapse: separate;
-  border-spacing: 0;
+  border-collapse: collapse;
+  
   border: 1px solid var(--border-color);
   border-radius: 6px;
   overflow: hidden;
 }
 
 th, td {
-  padding: 4px 6px;
-  border-bottom: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
-  font-size: 9px;
+  padding: 3px 4px;
+  border: 1px solid var(--border-color);
+  font-size: 11px;
+  text-align: center;
 }
 
 th {
@@ -200,12 +200,11 @@ th {
   vertical-align: middle;
 }
 
-th:last-child, td:last-child {
-  border-right: none;
+
+thead tr:nth-child(2) th:last-child {
+  border-right: 1px solid var(--border-color);
 }
-tr:last-child th, tr:last-child td {
-  border-bottom: none;
-}
+
 
 tbody tr:nth-child(even) {
   background-color: #FAFAFA;
@@ -237,13 +236,13 @@ tbody tr:nth-child(even) {
 }
 
 .info-label {
-  font-size: 8.5px;
+  font-size: 10.5px;
   color: var(--text-muted);
   text-transform: uppercase;
   margin-bottom: 2px;
 }
 .info-value {
-  font-size: 9.5px;
+  font-size: 12px;
   font-weight: 600;
   color: var(--text-dark);
 }
@@ -290,9 +289,9 @@ tbody tr:nth-child(even) {
   border-top: 1px solid var(--border-color);
   width: 35mm;
   text-align: center;
-  padding-top: 4px;
-  margin-top: 15px; /* space for signature */
-  font-size: 9px;
+  padding-top: 2px;
+  margin-top: 5px; /* space for signature */
+  font-size: 8.5px;
   font-weight: 600;
   color: var(--text-dark);
 }
@@ -362,7 +361,7 @@ tbody tr:nth-child(even) {
   <!-- School Details (Centered) -->
   <div style="width: 60%; text-align: center;">
     <h1 class="school-name font-bold" style="color: var(--dark-blue); font-size: 22px; margin-bottom: 2px;">{{school.name}}</h1>
-    <div class="school-details mt-1 font-semibold" style="color: #4b5563; font-size: 11px; line-height: 1.4;">
+    <div class="school-details mt-1 font-semibold" style="color: #4b5563; font-size: 12.5px; line-height: 1.4;">
       <p>Address : {{school.address}}</p>
       <p>Cont.: {{school.phone}}</p>
       <p>Email : {{school.email}} | Website : {{school.website}}</p>
@@ -384,10 +383,10 @@ tbody tr:nth-child(even) {
 
   <!-- Right Side Badges -->
   <div style="width: 20%;" class="flex flex-col items-end text-right">
-    <div class="font-bold uppercase" style="color: var(--dark-blue); font-size: 12px; letter-spacing: 0.5px;">
+    <div class="font-bold uppercase" style="color: var(--dark-blue); font-size: 13.5px; letter-spacing: 0.5px;">
       {{reportTitle}}
     </div>
-    <div class="badge badge-primary mt-2" style="font-size: 10px;">
+    <div class="badge badge-primary mt-2" style="font-size: 11.5px;">
       Session: {{student.academic_year_name}}
     </div>
   </div>
@@ -470,32 +469,15 @@ tbody tr:nth-child(even) {
             <th colspan="{{examColSpan}}">Marks / Grade</th>
         {{/if}}
         <th rowspan="2">Grade</th>
-        <th rowspan="2">Remarks</th>
       </tr>
       <tr>
         <!-- Term 1 columns -->
-        {{#if showTheory}}<th>Theory</th>{{/if}}
-        {{#if showLab}}<th>Prac/IA</th>{{/if}}
-        {{#if showOral}}<th>Oral</th>{{/if}}
-        {{#if showWritten}}<th>Written</th>{{/if}}
-        {{#if showReading}}<th>Reading</th>{{/if}}
-        {{#if showWritingComp}}<th>Writing Comp.</th>{{/if}}
-        {{#if showDictation}}<th>Dictation</th>{{/if}}
-        {{#if showRecitation}}<th>Recitation</th>{{/if}}
-        {{#if showIaPr}}<th>IA/PR</th>{{/if}}
+        {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
         <th>Total</th>
         
         <!-- Term 2 columns -->
         {{#if showFinalResult}}
-            {{#if showTheory}}<th>Theory</th>{{/if}}
-            {{#if showLab}}<th>Prac/IA</th>{{/if}}
-            {{#if showOral}}<th>Oral</th>{{/if}}
-            {{#if showWritten}}<th>Written</th>{{/if}}
-            {{#if showReading}}<th>Reading</th>{{/if}}
-            {{#if showWritingComp}}<th>Writing Comp.</th>{{/if}}
-            {{#if showDictation}}<th>Dictation</th>{{/if}}
-            {{#if showRecitation}}<th>Recitation</th>{{/if}}
-            {{#if showIaPr}}<th>IA/PR</th>{{/if}}
+            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
             <th>Total</th>
         {{/if}}
       </tr>
@@ -506,35 +488,18 @@ tbody tr:nth-child(even) {
         <td style="text-align: left; font-weight: 600; color: var(--dark-blue);">{{this.subject_name}}</td>
         <td>{{this.max}}</td>
         <!-- Term 1 marks -->
-        {{#if ../showTheory}}<td>{{this.exam1_theory}}</td>{{/if}}
-        {{#if ../showLab}}<td>{{this.exam1_lab}}</td>{{/if}}
-        {{#if ../showOral}}<td>{{this.exam1_oral}}</td>{{/if}}
-        {{#if ../showWritten}}<td>{{this.exam1_written}}</td>{{/if}}
-        {{#if ../showReading}}<td>{{this.exam1_reading}}</td>{{/if}}
-        {{#if ../showWritingComp}}<td>{{this.exam1_writing_comp}}</td>{{/if}}
-        {{#if ../showDictation}}<td>{{this.exam1_dictation}}</td>{{/if}}
-        {{#if ../showRecitation}}<td>{{this.exam1_recitation}}</td>{{/if}}
-        {{#if ../showIaPr}}<td>{{this.exam1_ia_pr}}</td>{{/if}}
+        {{#each this.exam1_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
         <td class="font-semibold">{{this.exam1_marks}}</td>
         
         <!-- Term 2 marks -->
         {{#if ../showFinalResult}}
-            {{#if ../showTheory}}<td>{{this.exam2_theory}}</td>{{/if}}
-            {{#if ../showLab}}<td>{{this.exam2_lab}}</td>{{/if}}
-            {{#if ../showOral}}<td>{{this.exam2_oral}}</td>{{/if}}
-            {{#if ../showWritten}}<td>{{this.exam2_written}}</td>{{/if}}
-            {{#if ../showReading}}<td>{{this.exam2_reading}}</td>{{/if}}
-            {{#if ../showWritingComp}}<td>{{this.exam2_writing_comp}}</td>{{/if}}
-            {{#if ../showDictation}}<td>{{this.exam2_dictation}}</td>{{/if}}
-            {{#if ../showRecitation}}<td>{{this.exam2_recitation}}</td>{{/if}}
-            {{#if ../showIaPr}}<td>{{this.exam2_ia_pr}}</td>{{/if}}
+            {{#each this.exam2_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
             <td class="font-semibold">{{this.exam2_marks}}</td>
             
             <!-- Final Total -->
             <td class="font-bold text-primary">{{this.total}}</td>
         {{/if}}
         <td class="font-bold" style="color: {{gradeColor this.grade}};">{{this.grade}}</td>
-        <td>-</td>
       </tr>
       {{/each}}
       
@@ -546,14 +511,12 @@ tbody tr:nth-child(even) {
             <td colspan="{{exam1ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
             <td colspan="{{exam2ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
             <td class="text-primary font-bold">{{totalObtained}} / {{totalMax}}</td>
-            <td>-</td>
         {{else}}
             {{#if baseNewFields}}
                 <td colspan="{{baseNewFields}}"></td>
             {{/if}}
             <td class="text-primary font-bold">{{totalObtained}}</td>
             <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if grandGrade}}{{grandGrade}}{{else}}-{{/if}}</td>
-            <td>-</td>
         {{/if}}
       </tr>
     </tbody>
@@ -641,7 +604,7 @@ tbody tr:nth-child(even) {
     }
     .att-val {
       color: #1e293b;
-      font-size: 11px;
+      font-size: 12.5px;
       font-weight: 600;
       margin-top: 3px;
     }
@@ -738,29 +701,7 @@ tbody tr:nth-child(even) {
     </div>
   {{/if}}
 
-  <!-- Overall / Final -->
-  <div class="att-card" style="margin-bottom: 0;">
-    <div class="att-title">{{#if attendanceStats.hasTerm2}}Final {{else}}{{reportTitle}} {{/if}}Attendance Record</div>
-    <div class="att-grid">
-      <div>
-        <div class="att-label">Total Working Days:</div>
-        <div class="att-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalWorking}}{{else}}{{attendanceStats.term1Working}}{{/if}}</div>
-      </div>
-      <div>
-        <div class="att-label">Days Present:</div>
-        <div class="att-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalAttended}}{{else}}{{attendanceStats.term1Attended}}{{/if}}</div>
-      </div>
-      <div class="att-percent-col">
-        <div class="att-percent-label">Attendance %</div>
-        <div class="att-percent-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalPercentage}}{{else}}{{attendanceStats.term1Percentage}}{{/if}}%</div>
-      </div>
-      <div class="att-bar-wrap">
-        <div class="att-bar-bg">
-          <div class="att-bar-fill" style="width: {{#if attendanceStats.hasTerm2}}{{attendanceStats.totalPercentage}}{{else}}{{attendanceStats.term1Percentage}}{{/if}}%;"></div>
-        </div>
-      </div>
-    </div>
-  </div>
+
 </div>
 
         
@@ -820,7 +761,7 @@ tbody tr:nth-child(even) {
     <div class="flex-1"></div>
 
     <!-- 7. SIGNATURES -->
-    <div class="flex justify-between items-end mt-2 pt-1">
+    <div class="flex justify-between items-end mt-1 pt-1">
   <div class="flex-col items-center">
     {{#if signatures.parent}}
       <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
@@ -860,7 +801,7 @@ tbody tr:nth-child(even) {
 
 
     <!-- 8. FOOTER -->
-    <div class="mt-4 pt-3 border-t border-border-color flex justify-between items-center footer-text">
+    <div class="mt-2 pt-2 border-t border-border-color flex justify-between items-center footer-text">
   <div class="flex gap-3 items-center">
     {{#if qr_code}}
       <img src="{{qr_code}}" alt="QR Code" class="qr-code">

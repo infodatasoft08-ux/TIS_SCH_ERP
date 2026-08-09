@@ -1,15 +1,35 @@
 const convertToYYYYMMDD = (dateValue) => {
   if (!dateValue) return null;
 
+  if (dateValue instanceof Date) {
+    if (isNaN(dateValue.getTime())) return null;
+    const year = dateValue.getFullYear();
+    const month = String(dateValue.getMonth() + 1).padStart(2, '0');
+    const day = String(dateValue.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+
   // If already in yyyy-mm-dd format
-  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue)) {
-    return dateValue;
+  if (typeof dateValue === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(dateValue.trim())) {
+    return dateValue.trim();
   }
 
   // If it's an ISO string
   if (typeof dateValue === 'string' && dateValue.includes('T')) {
     return dateValue.split('T')[0];
   }
+
+  try {
+    const d = new Date(dateValue);
+    if (!isNaN(d.getTime())) {
+      const year = d.getFullYear();
+      const month = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+  } catch (e) {}
+
+  return null;
 }
 
 const formatDateTimeTo12Hour = (datetimeString) => {

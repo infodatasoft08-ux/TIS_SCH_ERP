@@ -94,6 +94,15 @@ export default function Invoices() {
     discount_amount: "",
     discount_reason: ""
   });
+  const [selectedMethods, setSelectedMethods] = useState(["cash"]);
+  const [methodAmounts, setMethodAmounts] = useState({ cash: "" });
+  const [availableMethods] = useState([
+    { id: 'cash', label: 'Cash' },
+    { id: 'card', label: 'Card' },
+    { id: 'upi', label: 'UPI' },
+    { id: 'cheque', label: 'Cheque' },
+    { id: 'bank_transfer', label: 'Bank Transfer' }
+  ]);
   const [availableFeeTypes, setAvailableFeeTypes] = useState([]);
   const [loadingFeeTypes, setLoadingFeeTypes] = useState(false);
   const [printingId, setPrintingId] = useState(null);
@@ -528,7 +537,21 @@ export default function Invoices() {
   const handleRecordPayment = async (e) => {
     e.preventDefault();
 
-    const pAmt = parseFloat(paymentData.paid_amount) || 0;
+    // Calculate total paid amount from methodAmounts
+    let totalPaid = 0;
+    let paymentMethodStringArray = [];
+    if (selectedMethods.length > 0) {
+      selectedMethods.forEach(methodId => {
+        const amount = parseFloat(methodAmounts[methodId]) || 0;
+        if (amount > 0) {
+          totalPaid += amount;
+          const label = availableMethods.find(m => m.id === methodId)?.label || methodId;
+          paymentMethodStringArray.push(`${amount} ${label}`);
+        }
+      });
+    }
+
+    const pAmt = totalPaid;
     const dAmt = parseFloat(paymentData.discount_amount) || 0;
 
     if (pAmt <= 0 && dAmt <= 0) {
@@ -536,12 +559,16 @@ export default function Invoices() {
       return;
     }
 
+    const finalPaymentMethodString = paymentMethodStringArray.length > 0 
+      ? paymentMethodStringArray.join(', ') 
+      : "None";
+
     setProcessingPayment(true);
     try {
       const response = await API.post(`/fee/add/invoices/${selectedInvoice.id}/pay`, {
         invoice_id: selectedInvoice.id,
         paid_amount: pAmt,
-        payment_method: paymentData.payment_method,
+        payment_method: finalPaymentMethodString,
         reference: paymentData.reference,
         discount_amount: dAmt,
         discount_reason: paymentData.discount_reason
@@ -564,6 +591,8 @@ export default function Invoices() {
         discount_amount: "",
         discount_reason: ""
       });
+      setSelectedMethods(["cash"]);
+      setMethodAmounts({ cash: "" });
       loadInvoices();
     } catch (err) {
       console.error("Failed to record payment", err);
@@ -1873,7 +1902,7 @@ export default function Invoices() {
       </Dialog>
 
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
-        <DialogContent className="sm:max-w-md"
+        <DialogContent className="w-full max-w-2xl"
           onInteractOutside={(e) => e.preventDefault()}
           onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
@@ -1882,28 +1911,81 @@ export default function Invoices() {
               Record payment for invoice INV-{selectedInvoice?.id.toString().padStart(4, '0')}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Invoice Balance</label>
-              <div className="p-2 border rounded bg-muted text-foreground font-mono text-lg font-bold">
-                {formatCurrency(calculateBalance())}
-              </div>
-            </div>
+          <ScrollArea className="max-h-[75vh] pr-2">
+          <div className="space-y-4 py-2">
             <form onSubmit={handleRecordPayment} className="space-y-4">
+              {/* Balance summary bar */}
+              <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-0.5">Invoice Balance</p>
+                  <p className="text-xl font-bold font-mono">{formatCurrency(calculateBalance())}</p>
+                </div>
+                <div className="h-8 w-px bg-border" />
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground mb-0.5">Amount Being Paid</p>
+                  <p className="text-xl font-bold font-mono text-green-600 dark:text-green-400">
+                    {formatCurrency(selectedMethods.reduce((sum, id) => sum + (parseFloat(methodAmounts[id]) || 0), 0))}
+                  </p>
+                </div>
+              </div>
+
               <div className="space-y-2">
-                <Label>Amount to Pay</Label>
-                <Input
-                  type="number"
-                  name="paid_amount"
-                  value={paymentData.paid_amount}
-                  onChange={handlePaymentInputChange}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                />
-                <p className="text-xs text-muted-foreground">
-                  Maximum: {formatCurrency(calculateBalance())}
-                </p>
+                <Label className="font-semibold">Payment Methods</Label>
+                <div className="grid grid-cols-3 gap-2 border p-3 rounded-md">
+                  {availableMethods.map((method) => {
+                    const isSelected = selectedMethods.includes(method.id);
+                    return (
+                      <div
+                        key={method.id}
+                        onClick={() => {
+                          setSelectedMethods(prev => {
+                            if (isSelected) return prev.filter(m => m !== method.id);
+                            return [...prev, method.id];
+                          });
+                          if (isSelected) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                        }}
+                        className={`flex flex-col gap-2 p-2 border-2 rounded-md cursor-pointer transition-colors ${
+                          isSelected
+                            ? 'border-primary bg-primary/10'
+                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                          <Checkbox
+                            id={`method-${method.id}`}
+                            checked={isSelected}
+                            onCheckedChange={(checked) => {
+                              setSelectedMethods(prev => {
+                                if (checked) return [...prev, method.id];
+                                return prev.filter(m => m !== method.id);
+                              });
+                              if (!checked) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                            }}
+                          />
+                          <label
+                            htmlFor={`method-${method.id}`}
+                            className="text-sm font-semibold cursor-pointer select-none whitespace-nowrap"
+                          >
+                            {method.label}
+                          </label>
+                        </div>
+                        {isSelected && (
+                          <Input
+                            type="number"
+                            placeholder="₹ Amount"
+                            className="h-8 text-sm"
+                            value={methodAmounts[method.id] || ""}
+                            onClick={e => e.stopPropagation()}
+                            onChange={(e) => setMethodAmounts(prev => ({ ...prev, [method.id]: e.target.value }))}
+                            min="0"
+                            step="0.01"
+                            autoFocus
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
 
               <div className="space-y-2">
@@ -1931,26 +2013,6 @@ export default function Invoices() {
                   />
                 </div>
               )}
-
-              <div className="space-y-2">
-                <Label>Payment Method</Label>
-                <Select
-                  name="payment_method"
-                  value={paymentData.payment_method}
-                  onValueChange={(value) => handlePaymentSelectChange('payment_method', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select payment method" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="cash">Cash</SelectItem>
-                    <SelectItem value="card">Card</SelectItem>
-                    <SelectItem value="upi">UPI</SelectItem>
-                    <SelectItem value="cheque">Cheque</SelectItem>
-                    <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
 
               <div className="space-y-2">
                 <Label>Reference Number</Label>
@@ -1990,8 +2052,7 @@ export default function Invoices() {
               </DialogFooter>
             </form>
           </div>
-
-
+          </ScrollArea>
         </DialogContent>
       </Dialog>
     </div >

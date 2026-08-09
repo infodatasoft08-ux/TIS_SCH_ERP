@@ -1,0 +1,40 @@
+<div class="mb-2">
+  <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
+  <table class="table-marks data-table" style="margin-bottom: 0;">
+    <thead>
+      <tr>
+        <th style="text-align: left;">Activity / Area</th>
+        {{#if attendanceStats.hasTerm1}}
+        <th>Term I</th>
+        {{/if}}
+        {{#if attendanceStats.hasTerm2}}
+        <th>Term II</th>
+        {{/if}}
+      </tr>
+    </thead>
+    <tbody>
+      {{#each coScholastic}}
+      <tr>
+        <td style="text-align: left; font-weight: 500;">{{this.name}}</td>
+        {{#if ../attendanceStats.hasTerm1}}
+        <td class="font-bold text-center">{{this.term1}}</td>
+        {{/if}}
+        {{#if ../attendanceStats.hasTerm2}}
+        <td class="font-bold text-center">{{this.term2}}</td>
+        {{/if}}
+      </tr>
+      {{/each}}
+      {{#each skillBased}}
+      <tr>
+        <td style="text-align: left; font-weight: 500;">{{this.name}}</td>
+        {{#if ../attendanceStats.hasTerm1}}
+        <td class="font-bold text-center">{{this.term1}}</td>
+        {{/if}}
+        {{#if ../attendanceStats.hasTerm2}}
+        <td class="font-bold text-center">{{this.term2}}</td>
+        {{/if}}
+      </tr>
+      {{/each}}
+    </tbody>
+  </table>
+</div>

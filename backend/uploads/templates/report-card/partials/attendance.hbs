@@ -1,0 +1,155 @@
+<div class="mb-2">
+  <style>
+    .att-card {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      background: #ffffff;
+      margin-bottom: 6px;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+    .att-title {
+      color: #1d4ed8;
+      font-weight: 700;
+      font-size: 10.5px;
+      text-transform: uppercase;
+      margin-bottom: 6px;
+      letter-spacing: 0.5px;
+    }
+    .att-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
+      column-gap: 16px;
+      align-items: start;
+    }
+    .att-label {
+      color: #64748b;
+      font-size: 8px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+    .att-val {
+      color: #1e293b;
+      font-size: 11px;
+      font-weight: 600;
+      margin-top: 3px;
+    }
+    .att-percent-col {
+      text-align: right;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-end;
+      justify-content: flex-start;
+      padding-left: 8px;
+    }
+    .att-percent-label {
+      color: #64748b;
+      font-size: 8px;
+      text-transform: uppercase;
+      font-weight: 600;
+      letter-spacing: 0.3px;
+      line-height: 1.2;
+    }
+    .att-percent-val {
+      color: #0f172a;
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.2;
+      margin-top: 2px;
+    }
+    .att-bar-wrap {
+      grid-column: span 2;
+      margin-top: 6px;
+    }
+    .att-bar-bg {
+      background: #e2e8f0;
+      border-radius: 9999px;
+      height: 6px;
+      width: 100%;
+      overflow: hidden;
+    }
+    .att-bar-fill {
+      background: #1d4ed8;
+      height: 100%;
+      border-radius: 9999px;
+    }
+  </style>
+
+  {{#if attendanceStats.hasTerm1}}
+    {{#if attendanceStats.hasTerm2}}
+    <div class="att-card">
+      <div class="att-title" style="font-size: 9.5px;">{{exam1Name}} Attendance Record</div>
+      <div class="att-grid">
+        <div>
+          <div class="att-label">Total Working Days:</div>
+          <div class="att-val">{{attendanceStats.term1Working}}</div>
+        </div>
+        <div>
+          <div class="att-label">Days Present:</div>
+          <div class="att-val">{{attendanceStats.term1Attended}}</div>
+        </div>
+        <div class="att-percent-col">
+          <div class="att-percent-label">Attendance %</div>
+          <div class="att-percent-val">{{attendanceStats.term1Percentage}}%</div>
+        </div>
+        <div class="att-bar-wrap">
+          <div class="att-bar-bg">
+            <div class="att-bar-fill" style="width: {{attendanceStats.term1Percentage}}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    {{/if}}
+  {{/if}}
+
+  {{#if attendanceStats.hasTerm2}}
+    <div class="att-card">
+      <div class="att-title" style="font-size: 9.5px;">{{exam2Name}} Attendance Record</div>
+      <div class="att-grid">
+        <div>
+          <div class="att-label">Total Working Days:</div>
+          <div class="att-val">{{attendanceStats.term2Working}}</div>
+        </div>
+        <div>
+          <div class="att-label">Days Present:</div>
+          <div class="att-val">{{attendanceStats.term2Attended}}</div>
+        </div>
+        <div class="att-percent-col">
+          <div class="att-percent-label">Attendance %</div>
+          <div class="att-percent-val">{{attendanceStats.term2Percentage}}%</div>
+        </div>
+        <div class="att-bar-wrap">
+          <div class="att-bar-bg">
+            <div class="att-bar-fill" style="width: {{attendanceStats.term2Percentage}}%;"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  {{/if}}
+
+  <!-- Overall / Final -->
+  <div class="att-card" style="margin-bottom: 0;">
+    <div class="att-title">{{#if attendanceStats.hasTerm2}}Final {{else}}{{reportTitle}} {{/if}}Attendance Record</div>
+    <div class="att-grid">
+      <div>
+        <div class="att-label">Total Working Days:</div>
+        <div class="att-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalWorking}}{{else}}{{attendanceStats.term1Working}}{{/if}}</div>
+      </div>
+      <div>
+        <div class="att-label">Days Present:</div>
+        <div class="att-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalAttended}}{{else}}{{attendanceStats.term1Attended}}{{/if}}</div>
+      </div>
+      <div class="att-percent-col">
+        <div class="att-percent-label">Attendance %</div>
+        <div class="att-percent-val">{{#if attendanceStats.hasTerm2}}{{attendanceStats.totalPercentage}}{{else}}{{attendanceStats.term1Percentage}}{{/if}}%</div>
+      </div>
+      <div class="att-bar-wrap">
+        <div class="att-bar-bg">
+          <div class="att-bar-fill" style="width: {{#if attendanceStats.hasTerm2}}{{attendanceStats.totalPercentage}}{{else}}{{attendanceStats.term1Percentage}}{{/if}}%;"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

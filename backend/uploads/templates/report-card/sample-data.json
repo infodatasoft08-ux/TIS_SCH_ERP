@@ -1,0 +1,118 @@
+{
+  "showWatermark": true,
+  "school": {
+    "name": "Times International School",
+    "address": "123 Education Hub, Knowledge City, State - 110001",
+    "phone": "+91-9876543210",
+    "email": "info@timesinternational.edu.in",
+    "website": "www.timesinternational.edu.in",
+    "affiliation_no": "1234567",
+    "school_code": "09876",
+    "session": "2023-2024",
+    "logo": "https://upload.wikimedia.org/wikipedia/commons/thumb/a/ab/Logo_of_the_Ministry_of_Education_%28India%29.svg/1024px-Logo_of_the_Ministry_of_Education_%28India%29.svg.png"
+  },
+  "student": {
+    "admission_no": "TIS/23/001",
+    "roll_no": "101",
+    "class": "XII",
+    "section": "A (Science)",
+    "name": "Rahul Sharma",
+    "dob": "15-Aug-2006",
+    "gender": "Male",
+    "blood_group": "O+",
+    "father_name": "Rajesh Sharma",
+    "mother_name": "Sunita Sharma",
+    "category": "General",
+    "house": "Red House",
+    "address": "45, Green Park Avenue, City Center, District - 110001",
+    "transport": "Route No. 5",
+    "status": "Active",
+    "photo": "https://i.pravatar.cc/150?img=11"
+  },
+  "exam": {
+    "subjects": [
+      {
+        "name": "English Core",
+        "max_marks": 100,
+        "term1": { "theory": 65, "practical": 18, "total": 83 },
+        "term2": { "theory": 68, "practical": 19, "total": 87 },
+        "final": { "total": 85, "grade": "A2", "remarks": "Excellent" }
+      },
+      {
+        "name": "Physics",
+        "max_marks": 100,
+        "term1": { "theory": 58, "practical": 28, "total": 86 },
+        "term2": { "theory": 62, "practical": 29, "total": 91 },
+        "final": { "total": 89, "grade": "A1", "remarks": "Outstanding" }
+      },
+      {
+        "name": "Chemistry",
+        "max_marks": 100,
+        "term1": { "theory": 52, "practical": 26, "total": 78 },
+        "term2": { "theory": 60, "practical": 29, "total": 89 },
+        "final": { "total": 84, "grade": "A2", "remarks": "Very Good" }
+      },
+      {
+        "name": "Mathematics",
+        "max_marks": 100,
+        "term1": { "theory": 72, "practical": 19, "total": 91 },
+        "term2": { "theory": 75, "practical": 20, "total": 95 },
+        "final": { "total": 93, "grade": "A1", "remarks": "Outstanding" }
+      },
+      {
+        "name": "Computer Science",
+        "max_marks": 100,
+        "term1": { "theory": 64, "practical": 29, "total": 93 },
+        "term2": { "theory": 66, "practical": 30, "total": 96 },
+        "final": { "total": 95, "grade": "A1", "remarks": "Outstanding" }
+      }
+    ],
+    "summary": {
+      "max_marks_total": 500,
+      "term1_total": 431,
+      "term2_total": 458,
+      "grand_total": 446
+    }
+  },
+  "grading": {
+    "co_scholastic": [
+      { "area": "Work Education", "grade": "A", "remarks": "Very creative" },
+      { "area": "Art Education", "grade": "B", "remarks": "Good effort" },
+      { "area": "Health & Physical Education", "grade": "A", "remarks": "Active participant" },
+      { "area": "Discipline", "grade": "A", "remarks": "Well behaved" }
+    ]
+  },
+  "attendance": {
+    "working_days": 210,
+    "present": 198,
+    "absent": 12,
+    "percentage": 94.2
+  },
+  "result": {
+    "percentage": 89.2,
+    "overall_grade": "A2",
+    "division": "First",
+    "rank": "3rd",
+    "status": "Promoted",
+    "promoted_to": "Higher Education"
+  },
+  "remarks": {
+    "teacher": "Rahul is a very sincere and hardworking student. He has shown excellent performance in academics. Keep up the good work!",
+    "principal": "Congratulations on the excellent result. Wishing you a bright future ahead."
+  },
+  "signatures": {
+    "parent": "",
+    "teacher": "",
+    "controller": "",
+    "principal": ""
+  },
+  "qr_code": "https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=TIS/23/001-VERIFIED",
+  "meta": {
+    "report_id": "REP-2324-XIIA-101",
+    "generated_on": "15-Mar-2024",
+    "generated_by": "System Admin",
+    "erp_name": "eSchool ERP",
+    "erp_version": "2.4.1",
+    "year": "2024"
+  }
+}

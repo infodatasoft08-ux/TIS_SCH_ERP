@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Report Card - {{student.name}}</title>
+  
+  <!-- Embedding CSS exactly where it belongs for Handlebars Puppeteer, avoiding external file loading issues -->
+  <style>
+    {{{cssContent}}}
+  </style>
+</head>
+<body>
+  
+  {{#if showWatermark}}
+  <div class="watermark-container">
+    {{#if school.logo}}
+      <img src="{{school.logo}}" alt="Watermark">
+    {{/if}}
+  </div>
+  {{/if}}
+
+  <div class="page-container">
+    
+    <!-- 1. HEADER -->
+    {{> header}}
+
+    <!-- 2. STUDENT PROFILE -->
+    {{> student-info}}
+
+    <!-- 3. MARKS TABLE -->
+    {{> marks-table}}
+
+    <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE -->
+    <div class="grid grid-cols-2 gap-4">
+      <div style="grid-column: span 1;">
+        {{> co-scholastic}}
+      </div>
+      <div style="grid-column: span 1;" class="flex-col gap-3">
+        {{> attendance}}
+        
+        <!-- 5. RESULT SUMMARY -->
+        {{> result-summary}}
+      </div>
+    </div>
+
+    <!-- 6. REMARKS -->
+    {{> remarks}}
+
+    <!-- Fill remaining space to push footer to bottom if needed -->
+    <div class="flex-1"></div>
+
+    <!-- 7. SIGNATURES -->
+    {{> signature}}
+
+    <!-- 8. FOOTER -->
+    {{> footer}}
+
+  </div>
+</body>
+</html>

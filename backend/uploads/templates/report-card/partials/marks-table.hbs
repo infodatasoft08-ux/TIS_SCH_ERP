@@ -1,0 +1,104 @@
+<div class="mb-2">
+  <div class="section-heading">Part 1: Scholastic Areas</div>
+  <table class="table-marks data-table" style="margin-bottom: 0;">
+    <thead>
+      <tr class="table-header-group">
+        <th rowspan="2" style="text-align: left;">Subjects</th>
+        <th rowspan="2">Max Marks</th>
+        {{#if showFinalResult}}
+            <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
+            <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
+            <th rowspan="2">Final Total</th>
+        {{else}}
+            <th colspan="{{examColSpan}}">Marks / Grade</th>
+        {{/if}}
+        <th rowspan="2">Grade</th>
+        <th rowspan="2">Remarks</th>
+      </tr>
+      <tr>
+        <!-- Term 1 columns -->
+        {{#if showTheory}}<th>Theory</th>{{/if}}
+        {{#if showLab}}<th>Prac/IA</th>{{/if}}
+        {{#if showOral}}<th>Oral</th>{{/if}}
+        {{#if showWritten}}<th>Written</th>{{/if}}
+        {{#if showReading}}<th>Reading</th>{{/if}}
+        {{#if showWritingComp}}<th>Writing Comp.</th>{{/if}}
+        {{#if showDictation}}<th>Dictation</th>{{/if}}
+        {{#if showRecitation}}<th>Recitation</th>{{/if}}
+        {{#if showIaPr}}<th>IA/PR</th>{{/if}}
+        <th>Total</th>
+        
+        <!-- Term 2 columns -->
+        {{#if showFinalResult}}
+            {{#if showTheory}}<th>Theory</th>{{/if}}
+            {{#if showLab}}<th>Prac/IA</th>{{/if}}
+            {{#if showOral}}<th>Oral</th>{{/if}}
+            {{#if showWritten}}<th>Written</th>{{/if}}
+            {{#if showReading}}<th>Reading</th>{{/if}}
+            {{#if showWritingComp}}<th>Writing Comp.</th>{{/if}}
+            {{#if showDictation}}<th>Dictation</th>{{/if}}
+            {{#if showRecitation}}<th>Recitation</th>{{/if}}
+            {{#if showIaPr}}<th>IA/PR</th>{{/if}}
+            <th>Total</th>
+        {{/if}}
+      </tr>
+    </thead>
+    <tbody>
+      {{#each subjects}}
+      <tr>
+        <td style="text-align: left; font-weight: 600; color: var(--dark-blue);">{{this.subject_name}}</td>
+        <td>{{this.max}}</td>
+        <!-- Term 1 marks -->
+        {{#if ../showTheory}}<td>{{this.exam1_theory}}</td>{{/if}}
+        {{#if ../showLab}}<td>{{this.exam1_lab}}</td>{{/if}}
+        {{#if ../showOral}}<td>{{this.exam1_oral}}</td>{{/if}}
+        {{#if ../showWritten}}<td>{{this.exam1_written}}</td>{{/if}}
+        {{#if ../showReading}}<td>{{this.exam1_reading}}</td>{{/if}}
+        {{#if ../showWritingComp}}<td>{{this.exam1_writing_comp}}</td>{{/if}}
+        {{#if ../showDictation}}<td>{{this.exam1_dictation}}</td>{{/if}}
+        {{#if ../showRecitation}}<td>{{this.exam1_recitation}}</td>{{/if}}
+        {{#if ../showIaPr}}<td>{{this.exam1_ia_pr}}</td>{{/if}}
+        <td class="font-semibold">{{this.exam1_marks}}</td>
+        
+        <!-- Term 2 marks -->
+        {{#if ../showFinalResult}}
+            {{#if ../showTheory}}<td>{{this.exam2_theory}}</td>{{/if}}
+            {{#if ../showLab}}<td>{{this.exam2_lab}}</td>{{/if}}
+            {{#if ../showOral}}<td>{{this.exam2_oral}}</td>{{/if}}
+            {{#if ../showWritten}}<td>{{this.exam2_written}}</td>{{/if}}
+            {{#if ../showReading}}<td>{{this.exam2_reading}}</td>{{/if}}
+            {{#if ../showWritingComp}}<td>{{this.exam2_writing_comp}}</td>{{/if}}
+            {{#if ../showDictation}}<td>{{this.exam2_dictation}}</td>{{/if}}
+            {{#if ../showRecitation}}<td>{{this.exam2_recitation}}</td>{{/if}}
+            {{#if ../showIaPr}}<td>{{this.exam2_ia_pr}}</td>{{/if}}
+            <td class="font-semibold">{{this.exam2_marks}}</td>
+            
+            <!-- Final Total -->
+            <td class="font-bold text-primary">{{this.total}}</td>
+        {{/if}}
+        <td class="font-bold" style="color: {{gradeColor this.grade}};">{{this.grade}}</td>
+        <td>-</td>
+      </tr>
+      {{/each}}
+      
+      <!-- Totals Row -->
+      <tr class="row-total">
+        <td style="text-align: left;">Grand Total</td>
+        <td>{{totalMax}}</td>
+        {{#if showFinalResult}}
+            <td colspan="{{exam1ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
+            <td colspan="{{exam2ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
+            <td class="text-primary font-bold">{{totalObtained}} / {{totalMax}}</td>
+            <td>-</td>
+        {{else}}
+            {{#if baseNewFields}}
+                <td colspan="{{baseNewFields}}"></td>
+            {{/if}}
+            <td class="text-primary font-bold">{{totalObtained}}</td>
+            <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if grandGrade}}{{grandGrade}}{{else}}-{{/if}}</td>
+            <td>-</td>
+        {{/if}}
+      </tr>
+    </tbody>
+  </table>
+</div>
