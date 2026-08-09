@@ -1856,7 +1856,7 @@ const GetPayments = async (req, res) => {
     if (academicYearId) { where.push('sar.academic_year_id = ?'); params.push(academicYearId); }
     if (gradeId) { where.push('si.grade_id = ?'); params.push(gradeId); }
     if (classId) { where.push('si.class_id = ?'); params.push(classId); }
-    if (paymentMethod && paymentMethod !== 'all') { where.push('sp.payment_method = ?'); params.push(paymentMethod); }
+    if (paymentMethod && paymentMethod !== 'all') { where.push('LOWER(sp.payment_method) LIKE LOWER(?)'); params.push(`%${paymentMethod}%`); }
     if (search) {
       where.push('(u.name LIKE ? OR sp.reference LIKE ? OR sp.invoice_id LIKE ?)');
       const searchTerm = `%${search}%`;
@@ -2529,7 +2529,7 @@ const ExportPaymentHistoryCSV = async (req, res) => {
     if (classId) { where.push('si.class_id = ?'); params.push(classId); }
     if (startDate) { where.push('sp.payment_date >= ?'); params.push(startDate); }
     if (endDate) { where.push('sp.payment_date <= ?'); params.push(endDate); }
-    if (paymentMethod && paymentMethod !== 'all') { where.push('sp.payment_method = ?'); params.push(paymentMethod); }
+    if (paymentMethod && paymentMethod !== 'all') { where.push('sp.payment_method LIKE ?'); params.push(`%${paymentMethod}%`); }
     if (studentNameSearch) { where.push('u.name LIKE ?'); params.push(`%${studentNameSearch}%`); }
 
     let sql = `

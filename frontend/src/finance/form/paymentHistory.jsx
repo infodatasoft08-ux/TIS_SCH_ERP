@@ -364,11 +364,11 @@ export default function PaymentHistory() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Methods</SelectItem>
-                <SelectItem value="cash">Cash</SelectItem>
-                <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
-                <SelectItem value="cheque">Cheque</SelectItem>
-                <SelectItem value="card">Card</SelectItem>
-                <SelectItem value="online">Online</SelectItem>
+                <SelectItem value="Cash">Cash</SelectItem>
+                <SelectItem value="UPI">UPI</SelectItem>
+                <SelectItem value="Card">Card</SelectItem>
+                <SelectItem value="Cheque">Cheque</SelectItem>
+                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
               </SelectContent>
             </Select>
             <Select value={filterMonth} onValueChange={setFilterMonth}>
