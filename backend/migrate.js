@@ -55,6 +55,8 @@ async function migrate() {
 
         // Sub-fields for exam_group_subjects
         const newSubjectCols = [
+            { col: 'sitting', def: "VARCHAR(50) DEFAULT '1st Sitting'" },
+            { col: 'exam_category', def: "VARCHAR(50) DEFAULT 'Written'" },
             { col: 'has_written', def: 'TINYINT(1) DEFAULT 0' },
             { col: 'has_reading', def: 'TINYINT(1) DEFAULT 0' },
             { col: 'has_writing_comp', def: 'TINYINT(1) DEFAULT 0' },
