@@ -1678,7 +1678,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
         const studentIds = studentRows.map(r => r.id);
 
         const [rows] = await db.query(`
-            SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+            SELECT st.id as student_id, u.name as student_name, sar.roll_no, u.avatar_url,
                    COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
                    COALESCE(g.name, eg_g.name) as grade_name, 
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
@@ -1750,6 +1750,7 @@ const GetAllStudentExamSummaries = async (req, res) => {
             if (!studentMap[row.student_id]) {
                 studentMap[row.student_id] = {
                     id: row.student_id,
+                    avatar_url: row.avatar_url,
                     name: row.student_name,
                     roll_no: row.roll_no,
                     grade_id: row.grade_id,
@@ -1847,7 +1848,7 @@ const GenerateMarksheetPDF = async (req, res) => {
 
     try {
         const [rows] = await db.execute(`
-            SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+            SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
                    COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
                    COALESCE(g.name, eg_g.name) as grade_name, 
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
@@ -1946,6 +1947,7 @@ const GenerateMarksheetPDF = async (req, res) => {
         const student = {
             id: rows[0].student_id,
             name: rows[0].student_name,
+            avatar_url: rows[0].avatar_url,
             roll_no: rows[0].roll_no || 'N/A',
             class: classSectionDisplay,
             class_name: className,
@@ -2245,7 +2247,7 @@ const GenerateAdmitCardPDF = async (req, res) => {
     try {
         // 1. Fetch student info
         const [[student]] = await db.execute(`
-            SELECT st.id, u.name, sar.roll_no, g.name AS grade_name, c.name AS class_name, st.fathers_name, st.mothers_name, ay.name AS academic_year_name, u.id AS user_id
+            SELECT st.id, u.name, u.avatar_url, sar.roll_no, g.name AS grade_name, c.name AS class_name, st.fathers_name, st.mothers_name, ay.name AS academic_year_name, u.id AS user_id
             FROM students st
             JOIN users u ON u.id = st.user_id
             LEFT JOIN student_academic_records sar ON sar.student_id = st.id
@@ -2344,7 +2346,7 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
         for (let student_id of student_ids) {
             // 1. Fetch student info
             const [[student]] = await db.execute(`
-                SELECT st.id, u.name, sar.roll_no, g.name AS grade_name, c.name AS class_name, st.fathers_name, st.mothers_name, ay.name AS academic_year_name, u.id AS user_id
+                SELECT st.id, u.name, u.avatar_url, sar.roll_no, g.name AS grade_name, c.name AS class_name, st.fathers_name, st.mothers_name, ay.name AS academic_year_name, u.id AS user_id
                 FROM students st
                 JOIN users u ON u.id = st.user_id
                 LEFT JOIN student_academic_records sar ON sar.student_id = st.id
@@ -2467,7 +2469,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         }
 
         const [rows] = await db.execute(`
-            SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+            SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
                    COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
                    COALESCE(g.name, eg_g.name) as grade_name, 
                    COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
@@ -2556,6 +2558,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         const student = {
             id: rows[0].student_id,
             name: rows[0].student_name,
+            avatar_url: rows[0].avatar_url,
             roll_no: rows[0].roll_no || 'N/A',
             class: classSectionDisplay,
             class_name: className,
@@ -3114,7 +3117,7 @@ const GenerateConsolidatedMarksheetPDF = async (req, res) => {
 
         // Fetch students and marks
         const [results] = await db.execute(`
-            SELECT st.id as student_id, u.name as student_name, sar.roll_no, st.fathers_name,
+            SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, st.fathers_name,
                    egr.exam_group_subject_id,
                    egr.marks_obtained, egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
                    egr.attendance_status, egr.grade, egr.teacher_remark
@@ -3258,7 +3261,7 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
 
         for (let student_id of student_ids) {
             const [rows] = await db.execute(`
-                SELECT st.id as student_id, u.name as student_name, sar.roll_no, 
+                SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
                        COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
                        COALESCE(g.name, eg_g.name) as grade_name, 
                        COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
