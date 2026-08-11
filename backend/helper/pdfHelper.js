@@ -436,6 +436,18 @@ const generateAdmitCardPDF = async (admitCardData) => {
         }
     } catch (e) { }
 
+    const noWrapDots = (str) => {
+        if (!str) return '';
+        // Remove spaces before dots first, in case user typed "S .S.P.D"
+        const cleanStr = str.replace(/\s+\./g, '.');
+        return cleanStr.split(' ').map(word => {
+            if (word.includes('.')) {
+                return `<span style="white-space: nowrap;">${word}</span>`;
+            }
+            return word;
+        }).join(' ');
+    };
+
     const rawRoutine = admitCardData.routine || [];
 
     const isOralCategory = (catStr, item) => {
@@ -484,7 +496,7 @@ const generateAdmitCardPDF = async (admitCardData) => {
     const oralRoutine = Object.values(oralGrouped).map(g => ({
         date: g.date,
         day: g.day,
-        subjects: g.subjectsList.join(' + ')
+        subjects: noWrapDots(g.subjectsList.join(' + '))
     }));
 
 
@@ -529,14 +541,18 @@ const generateAdmitCardPDF = async (admitCardData) => {
                 }
             }
         });
-        writtenRoutine = Object.values(writtenGrouped);
+        writtenRoutine = Object.values(writtenGrouped).map(g => ({
+            ...g,
+            sitting1: g.sitting1 === '---------' ? g.sitting1 : noWrapDots(g.sitting1),
+            sitting2: g.sitting2 === '---------' ? g.sitting2 : noWrapDots(g.sitting2)
+        }));
     } else {
         writtenRoutine = writtenItems.map(item => {
             const d = item.exam_date ? new Date(item.exam_date) : null;
             return {
                 date: d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : 'TBD',
                 day: d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '',
-                subject: item.subject_name,
+                subject: noWrapDots(item.subject_name),
                 time: item.start_time && item.end_time ? `${formatTime12Hour(item.start_time)} to ${formatTime12Hour(item.end_time)}` : 'TBD'
             };
         });
@@ -644,6 +660,17 @@ const generateExamRoutinePDF = async (examRoutineData) => {
         }
     } catch (e) { }
 
+    const noWrapDots = (str) => {
+        if (!str) return '';
+        const cleanStr = str.replace(/\s+\./g, '.');
+        return cleanStr.split(' ').map(word => {
+            if (word.includes('.')) {
+                return `<span style="white-space: nowrap;">${word}</span>`;
+            }
+            return word;
+        }).join(' ');
+    };
+
     const rawRoutine = examRoutineData.routine || [];
     const examSession = examRoutineData.exam_session;
     const fromClassToClass = examRoutineData.classes;
@@ -694,7 +721,7 @@ const generateExamRoutinePDF = async (examRoutineData) => {
     const oralRoutine = Object.values(oralGrouped).map(g => ({
         date: g.date,
         day: g.day,
-        subjects: g.subjectsList.join(' + ')
+        subjects: noWrapDots(g.subjectsList.join(' + '))
     }));
 
 
@@ -739,14 +766,18 @@ const generateExamRoutinePDF = async (examRoutineData) => {
                 }
             }
         });
-        writtenRoutine = Object.values(writtenGrouped);
+        writtenRoutine = Object.values(writtenGrouped).map(g => ({
+            ...g,
+            sitting1: g.sitting1 === '---------' ? g.sitting1 : noWrapDots(g.sitting1),
+            sitting2: g.sitting2 === '---------' ? g.sitting2 : noWrapDots(g.sitting2)
+        }));
     } else {
         writtenRoutine = writtenItems.map(item => {
             const d = item.exam_date ? new Date(item.exam_date) : null;
             return {
                 date: d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : 'TBD',
                 day: d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '',
-                subject: item.subject_name,
+                subject: noWrapDots(item.subject_name),
                 time: item.start_time && item.end_time ? `${formatTime12Hour(item.start_time)} to ${formatTime12Hour(item.end_time)}` : 'TBD'
             };
         });
