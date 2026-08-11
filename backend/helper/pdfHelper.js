@@ -476,7 +476,7 @@ const generateAdmitCardPDF = async (admitCardData) => {
         if (cats.includes('dictation') || item.has_dictation) comps.push('Dictation');
         if (cats.includes('recitation') || item.has_recitation) comps.push('Recitation');
         if (comps.length > 0) {
-            subDesc += ` ( ${comps.join(' + ')} )`;
+            subDesc += ` (${comps.join(' + ')})`;
         }
         oralGrouped[dateKey].subjectsList.push(subDesc);
     });
@@ -686,7 +686,7 @@ const generateExamRoutinePDF = async (examRoutineData) => {
         if (cats.includes('dictation') || item.has_dictation) comps.push('Dictation');
         if (cats.includes('recitation') || item.has_recitation) comps.push('Recitation');
         if (comps.length > 0) {
-            subDesc += ` ( ${comps.join(' + ')} )`;
+            subDesc += ` (${comps.join(' + ')})`;
         }
         oralGrouped[dateKey].subjectsList.push(subDesc);
     });
