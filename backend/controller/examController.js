@@ -41,7 +41,7 @@ const AddExamGroup = async (req, res) => {
         const sectionIdsJson = JSON.stringify(targetClassIds.map(id => parseInt(id, 10)));
 
         const [egRes] = await conn.execute(
-            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids, from_class_to_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?)`,
+            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids, from_class_to_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?, ?)`,
             [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null, sectionIdsJson, from_class_to_class?.trim() || null]
         );
         const examGroupId = egRes.insertId;
