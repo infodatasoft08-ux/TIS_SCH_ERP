@@ -17,6 +17,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [isGenerating, setIsGenerating] = useState(false);
     const [errors, setErrors] = useState({});
+    const [fromClassToClass, setFromClassToClass] = useState("");
 
     const mainCategoryOptions = [
         { id: "Written", name: "Written" },
@@ -43,6 +44,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
 
     useEffect(() => {
         if (open && exam && exam.subjects) {
+            setFromClassToClass(exam.from_class_to_class || "");
             const seenSubjects = new Set();
             setRoutine(exam.subjects.map(s => {
                 let currentCats = [];
@@ -91,6 +93,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
         } else {
             setRoutine([]);
             setErrors({});
+            setFromClassToClass("");
             setDeletedIds([]);
         }
     }, [open, exam]);
@@ -202,7 +205,12 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
 
         setIsSubmitting(true);
         try {
-            await API.put(`/exam/update/routine`, { routine: formattedRoutine, deleted_ids: deletedIds });
+            await API.put(`/exam/update/routine`, {
+                exam_id: exam.id,
+                from_class_to_class: fromClassToClass.trim() || null,
+                routine: formattedRoutine,
+                deleted_ids: deletedIds
+            });
             toast.success("Exam routine saved successfully");
             onOpenChange(false);
             if (onSuccess) onSuccess();
@@ -284,6 +292,19 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                 </DialogHeader>
 
                 <div className="py-4 space-y-6 max-h-[60vh] overflow-y-auto px-2">
+                    <div className="w-56">
+                        <label className="text-sm font-medium">
+                            Class (from-class to-class)
+                        </label>
+
+                        <Input
+                            type="text"
+                            className="mt-1 bg-white text-black dark:bg-gray-700 dark:text-white dark:[color-scheme:dark]"
+                            value={fromClassToClass}
+                            onChange={(e) => setFromClassToClass(e.target.value)}
+                            placeholder="e.g. Class 1 to Class 5"
+                        />
+                    </div>
                     {academicSubjects.length === 0 ? (
                         <p className="text-center text-gray-500">No subjects found for this exam.</p>
                     ) : (

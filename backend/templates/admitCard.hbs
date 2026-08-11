@@ -238,7 +238,7 @@
             border: 1px solid #cbd5e1;
             padding: 6px 10px;
             text-align: center;
-            font-size: 10.5px;
+            font-size: 12.5px;
         }
 
         .routine-table th {
@@ -246,7 +246,7 @@
             color: #1e3a8a;
             font-weight: 700;
             text-transform: uppercase;
-            font-size: 9.5px;
+            font-size: 14px;
         }
 
         .routine-table tbody tr:nth-child(even) {
@@ -265,9 +265,10 @@
         }
 
         .sitting-timing {
-            font-size: 8.5px;
+            font-size: 10.5px;
             font-weight: 500;
-            color: #475569;
+            /*color: #475569;*/
+            color: #d12b1f;
             text-transform: none;
             display: block;
             margin-top: 1px;
@@ -445,11 +446,11 @@
                     <th style="width: 18%;">Day</th>
                     <th style="width: 32%;">
                         <span class="sitting-header">1<sup>st</sup> Sitting</span>
-                        <span class="sitting-timing">Timing : {{firstSittingTiming}}</span>
+                        <span class="sitting-timing">(Timing : {{firstSittingTiming}})</span>
                     </th>
                     <th style="width: 32%;">
                         <span class="sitting-header">2<sup>nd</sup> Sitting</span>
-                        <span class="sitting-timing">Timing : {{secondSittingTiming}}</span>
+                        <span class="sitting-timing">(Timing : {{secondSittingTiming}})</span>
                     </th>
                 </tr>
             </thead>

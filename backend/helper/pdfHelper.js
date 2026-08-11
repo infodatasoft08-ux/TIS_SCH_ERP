@@ -565,65 +565,216 @@ const generateAdmitCardPDF = async (admitCardData) => {
     });
 };
 
-const generateExamRoutinePDF = async (routineData) => {
-    // Convert logos
-    let logoData = null;
-    let cmcLogo = null;
+// const generateExamRoutinePDF = async (routineData) => {
+//     // Convert logos
+//     let logoData = null;
+//     let cmcLogo = null;
+//     try {
+//         const logoPath = path.join(__dirname, '../assets/school_invoice_logo.png');
+//         if (fs.existsSync(logoPath)) {
+//             const logoBuffer = fs.readFileSync(logoPath);
+//             logoData = `data:image/png;base64,${logoBuffer.toString('base64')}`;
+//         }
+
+//         const cmcPath = path.join(__dirname, '../assets/Times_Internation_School_logo.png');
+//         if (fs.existsSync(cmcPath)) {
+//             const cmcBuffer = fs.readFileSync(cmcPath);
+//             cmcLogo = `data:image/png;base64,${cmcBuffer.toString('base64')}`;
+//         }
+//     } catch (e) { console.error('Logo error:', e); }
+
+//     const templatePath = path.join(__dirname, '../templates/examRoutine.hbs');
+//     const templateSource = fs.readFileSync(templatePath, 'utf8');
+
+//     // Register add helper if not exists (handled globally usually, but just in case)
+//     if (!handlebars.helpers.add) {
+//         handlebars.registerHelper('add', (a, b) => a + b);
+//     }
+
+//     const compiledTemplate = handlebars.compile(templateSource);
+
+//     // Format dates in routine
+//     const formattedRoutine = (routineData.routine || []).map(r => ({
+//         ...r,
+//         exam_date: r.exam_date ? new Date(r.exam_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
+//         time: r.start_time && r.end_time ? `${formatTime12Hour(r.start_time)} - ${formatTime12Hour(r.end_time)}` : 'TBD'
+//     }));
+
+//     const html = compiledTemplate({
+//         ...routineData,
+//         routine: formattedRoutine,
+//         logoData,
+//         cmcLogo,
+//         currentDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+//     });
+
+//     const browser = await puppeteer.launch({
+//         headless: 'new',
+//         args: ['--no-sandbox', '--disable-setuid-sandbox']
+//     });
+
+//     const page = await browser.newPage();
+//     await page.setContent(html, { waitUntil: 'networkidle0' });
+
+//     const pdfBuffer = await page.pdf({
+//         format: 'A4',
+//         printBackground: true,
+//         margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+//     });
+
+//     await browser.close();
+//     return pdfBuffer;
+// };
+
+const generateExamRoutinePDF = async (examRoutineData) => {
+    let school = {};
     try {
-        const logoPath = path.join(__dirname, '../assets/school_invoice_logo.png');
+        const schoolPath = path.join(__dirname, '../school-info.json');
+        if (fs.existsSync(schoolPath)) {
+            school = JSON.parse(fs.readFileSync(schoolPath, 'utf8'));
+        }
+    } catch (e) { }
+
+    let logoData = null;
+    try {
+        const logoPath = path.join(__dirname, '../assets/Times_Internation_School_logo.png');
         if (fs.existsSync(logoPath)) {
             const logoBuffer = fs.readFileSync(logoPath);
             logoData = `data:image/png;base64,${logoBuffer.toString('base64')}`;
         }
+    } catch (e) { }
 
-        const cmcPath = path.join(__dirname, '../assets/Times_Internation_School_logo.png');
-        if (fs.existsSync(cmcPath)) {
-            const cmcBuffer = fs.readFileSync(cmcPath);
-            cmcLogo = `data:image/png;base64,${cmcBuffer.toString('base64')}`;
+    const rawRoutine = examRoutineData.routine || [];
+    const examSession = examRoutineData.exam_session;
+    const fromClassToClass = examRoutineData.classes;
+
+    const isOralCategory = (catStr, item) => {
+        if (!catStr) return Boolean(item.has_oral && !item.has_written);
+        const cats = catStr.split(',').map(c => c.trim().toLowerCase());
+        return cats.includes('oral') || cats.includes('reading') || cats.includes('writing') || cats.includes('dictation') || cats.includes('recitation');
+    };
+
+    const isWrittenCategory = (catStr, item) => {
+        if (!catStr) return !isOralCategory(catStr, item);
+        const cats = catStr.split(',').map(c => c.trim().toLowerCase());
+        return cats.includes('written') || (!cats.includes('oral') && !cats.includes('reading') && !cats.includes('writing') && !cats.includes('dictation') && !cats.includes('recitation'));
+    };
+
+    const oralItems = rawRoutine.filter(r => isOralCategory(r.exam_category, r));
+    const writtenItems = rawRoutine.filter(r => isWrittenCategory(r.exam_category, r));
+
+    // Group Oral by Date
+    const oralGrouped = {};
+    oralItems.forEach(item => {
+        const dateKey = item.exam_date ? new Date(item.exam_date).toISOString().split('T')[0] : 'TBD';
+        if (!oralGrouped[dateKey]) {
+            const d = item.exam_date ? new Date(item.exam_date) : null;
+            oralGrouped[dateKey] = {
+                date: d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : 'TBD',
+                day: d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '',
+                subjectsList: []
+            };
         }
-    } catch (e) { console.error('Logo error:', e); }
 
-    const templatePath = path.join(__dirname, '../templates/examRoutine.hbs');
-    const templateSource = fs.readFileSync(templatePath, 'utf8');
+        let subDesc = item.subject_name;
+        const catStr = item.exam_category || '';
+        const cats = catStr.split(',').map(c => c.trim().toLowerCase());
 
-    // Register add helper if not exists (handled globally usually, but just in case)
-    if (!handlebars.helpers.add) {
-        handlebars.registerHelper('add', (a, b) => a + b);
-    }
+        const comps = [];
+        if (cats.includes('reading') || item.has_reading) comps.push('Reading');
+        if (cats.includes('writing') || item.has_writing_comp) comps.push('Writing');
+        if (cats.includes('dictation') || item.has_dictation) comps.push('Dictation');
+        if (cats.includes('recitation') || item.has_recitation) comps.push('Recitation');
+        if (comps.length > 0) {
+            subDesc += ` ( ${comps.join(' + ')} )`;
+        }
+        oralGrouped[dateKey].subjectsList.push(subDesc);
+    });
 
-    const compiledTemplate = handlebars.compile(templateSource);
-
-    // Format dates in routine
-    const formattedRoutine = (routineData.routine || []).map(r => ({
-        ...r,
-        exam_date: r.exam_date ? new Date(r.exam_date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : 'TBD',
-        time: r.start_time && r.end_time ? `${formatTime12Hour(r.start_time)} - ${formatTime12Hour(r.end_time)}` : 'TBD'
+    const oralRoutine = Object.values(oralGrouped).map(g => ({
+        date: g.date,
+        day: g.day,
+        subjects: g.subjectsList.join(' + ')
     }));
 
-    const html = compiledTemplate({
-        ...routineData,
-        routine: formattedRoutine,
+
+    // Check if any subject explicitly uses sittings
+    const hasSittings = writtenItems.some(item => item.sitting === '1st Sitting' || item.sitting === '2nd Sitting');
+
+    let writtenRoutine = [];
+    let firstSittingTiming = '08:30am to 10:30am';
+    let secondSittingTiming = '11:00am to 01:00pm';
+
+    if (hasSittings) {
+        const writtenGrouped = {};
+        writtenItems.forEach(item => {
+            const dateKey = item.exam_date ? new Date(item.exam_date).toISOString().split('T')[0] : 'TBD';
+            if (!writtenGrouped[dateKey]) {
+                const d = item.exam_date ? new Date(item.exam_date) : null;
+                writtenGrouped[dateKey] = {
+                    date: d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : 'TBD',
+                    day: d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '',
+                    sitting1: '---------',
+                    sitting1CustomTime: '',
+                    sitting2: '---------',
+                    sitting2CustomTime: ''
+                };
+            }
+
+            const isSitting1 = item.sitting === '1st Sitting' || (!item.sitting && writtenGrouped[dateKey].sitting1 === '---------');
+
+            if (item.sitting === '1st Sitting' || (isSitting1 && writtenGrouped[dateKey].sitting1 === '---------')) {
+                writtenGrouped[dateKey].sitting1 = item.subject_name;
+                if (item.start_time && item.end_time) {
+                    const formattedTime = `${formatTime12Hour(item.start_time)} to ${formatTime12Hour(item.end_time)}`;
+                    writtenGrouped[dateKey].sitting1CustomTime = formattedTime;
+                    firstSittingTiming = formattedTime;
+                }
+            } else {
+                writtenGrouped[dateKey].sitting2 = item.subject_name;
+                if (item.start_time && item.end_time) {
+                    const formattedTime = `${formatTime12Hour(item.start_time)} to ${formatTime12Hour(item.end_time)}`;
+                    writtenGrouped[dateKey].sitting2CustomTime = formattedTime;
+                    secondSittingTiming = formattedTime;
+                }
+            }
+        });
+        writtenRoutine = Object.values(writtenGrouped);
+    } else {
+        writtenRoutine = writtenItems.map(item => {
+            const d = item.exam_date ? new Date(item.exam_date) : null;
+            return {
+                date: d ? d.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.') : 'TBD',
+                day: d ? d.toLocaleDateString('en-US', { weekday: 'long' }) : '',
+                subject: item.subject_name,
+                time: item.start_time && item.end_time ? `${formatTime12Hour(item.start_time)} to ${formatTime12Hour(item.end_time)}` : 'TBD'
+            };
+        });
+    }
+
+    const examRoutineCode = `ER-${examRoutineData.exam_id}-${Date.now().toString().slice(-4)}`;
+    const issueDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '.');
+
+    return await generatePDFFromTemplate('examRoutine', {
+        school,
         logoData,
-        cmcLogo,
-        currentDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-    });
-
-    const browser = await puppeteer.launch({
-        headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
-    });
-
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'networkidle0' });
-
-    const pdfBuffer = await page.pdf({
+        // student: examRoutineData.student,
+        exam_name: examRoutineData.exam_name,
+        examSession,
+        fromClassToClass,
+        oralRoutine,
+        hasOral: oralRoutine.length > 0,
+        writtenRoutine,
+        hasWritten: writtenRoutine.length > 0 || oralRoutine.length === 0,
+        hasSittings,
+        firstSittingTiming,
+        secondSittingTiming,
+        issueDate,
+        examRoutineCode
+    }, {
         format: 'A4',
-        printBackground: true,
         margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
     });
-
-    await browser.close();
-    return pdfBuffer;
 };
 
 module.exports = {

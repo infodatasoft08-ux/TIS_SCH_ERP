@@ -12,7 +12,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
-    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects, from_class_to_class } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
 
     if (!isNonEmptyString(name) || !grade_id || !academic_year_id) {
@@ -41,8 +41,8 @@ const AddExamGroup = async (req, res) => {
         const sectionIdsJson = JSON.stringify(targetClassIds.map(id => parseInt(id, 10)));
 
         const [egRes] = await conn.execute(
-            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?)`,
-            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null, sectionIdsJson]
+            `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids, from_class_to_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?)`,
+            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null, sectionIdsJson, from_class_to_class?.trim() || null]
         );
         const examGroupId = egRes.insertId;
         createdExamGroupIds.push(examGroupId);
@@ -352,7 +352,7 @@ const GetExamGroups = async (req, res) => {
 
 const UpdateExamGroup = async (req, res) => {
     const id = toInt(req.params.id);
-    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects } = req.body;
+    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, status, is_results_published, subjects, from_class_to_class } = req.body;
 
     const updates = []; const params = [];
     if (name !== undefined) { updates.push('name = ?'); params.push(name.trim()); }
@@ -370,6 +370,7 @@ const UpdateExamGroup = async (req, res) => {
     if (note !== undefined) { updates.push('note = ?'); params.push(note); }
     if (start_date !== undefined) { updates.push('start_date = ?'); params.push(start_date || null); }
     if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
+    if (from_class_to_class != undefined) { updates.push('from_class_to_class = ?'); params.push(from_class_to_class.trim()); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
     if (is_results_published !== undefined) { updates.push('is_results_published = ?'); params.push(is_results_published ? 1 : 0); }
 
@@ -1182,19 +1183,66 @@ const DeleteExamGroup = async (req, res) => {
 }
 
 const UpdateExamRoutine = async (req, res) => {
-    const { routine, deleted_ids } = req.body;
+    const { exam_id, from_class_to_class, routine, deleted_ids } = req.body;
     if (!Array.isArray(routine)) return res.status(400).json({ error: 'Routine array is required' });
+
+    if (!exam_id) {
+        return res.status(400).json({
+            error: 'exam_id is required'
+        });
+    }
+
+    // if (!Array.isArray(routine)) {
+    //     return res.status(400).json({
+    //         error: 'Routine array is required'
+    //     });
+    // }
 
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
+
+        // Verify exam exists
+        const [examRows] = await conn.execute(
+            `SELECT id
+             FROM exam_groups
+             WHERE id = ?
+             LIMIT 1`,
+            [exam_id]
+        );
+
+        if (examRows.length === 0) {
+            await conn.rollback();
+            conn.release();
+
+            return res.status(404).json({
+                error: 'Exam group not found'
+            });
+        }
+
+        // Update exam-level field
+        await conn.execute(
+            `UPDATE exam_groups
+             SET from_class_to_class = ?
+             WHERE id = ?`,
+            [
+                from_class_to_class?.trim() || null,
+                exam_id
+            ]
+        );
 
         // 1. Delete removed split rows if any
         if (Array.isArray(deleted_ids) && deleted_ids.length > 0) {
             const validIds = deleted_ids.filter(id => typeof id === 'number' || (typeof id === 'string' && !id.startsWith('new_')));
             if (validIds.length > 0) {
                 const placeholders = validIds.map(() => '?').join(',');
-                await conn.execute(`DELETE FROM exam_group_subjects WHERE id IN (${placeholders})`, validIds);
+                // await conn.execute(`DELETE FROM exam_group_subjects WHERE id IN (${placeholders})`, validIds);
+                await conn.execute(
+                    `DELETE FROM exam_group_subjects
+                     WHERE id IN (${placeholders})
+                     AND exam_group_id = ?`,
+                    [...validIds, exam_id]
+                );
             }
         }
 
@@ -1202,26 +1250,118 @@ const UpdateExamRoutine = async (req, res) => {
         for (const item of routine) {
             const isExistingId = typeof item.id === 'number' || (typeof item.id === 'string' && !item.id.startsWith('new_'));
             if (isExistingId) {
+                // await conn.execute(
+                //     `UPDATE exam_group_subjects SET exam_date = ?, start_time = ?, end_time = ?, sitting = ?, exam_category = ? WHERE id = ?`,
+                //     [item.exam_date || null, item.start_time || null, item.end_time || null, item.sitting || null, item.exam_category || 'Written', item.id]
+                // );
                 await conn.execute(
-                    `UPDATE exam_group_subjects SET exam_date = ?, start_time = ?, end_time = ?, sitting = ?, exam_category = ? WHERE id = ?`,
-                    [item.exam_date || null, item.start_time || null, item.end_time || null, item.sitting || null, item.exam_category || 'Written', item.id]
+                    `UPDATE exam_group_subjects
+                     SET exam_date = ?,
+                         start_time = ?,
+                         end_time = ?,
+                         sitting = ?,
+                         exam_category = ?
+                     WHERE id = ?
+                       AND exam_group_id = ?`,
+                    [
+                        item.exam_date || null,
+                        item.start_time || null,
+                        item.end_time || null,
+                        item.sitting || null,
+                        item.exam_category || 'Written',
+                        item.id,
+                        exam_id
+                    ]
                 );
             } else if (item.original_id) {
                 // Insert split row copying max_marks, passing_marks and all sub-flags from original_id
+
+                // await conn.execute(
+                //     `INSERT INTO exam_group_subjects (
+                //         exam_group_id, subject_id, max_marks, passing_marks, 
+                //         has_theory, has_lab, has_oral, has_written, has_reading, has_writing_comp, has_dictation, has_recitation, has_ia_pr,
+                //         theory_max_marks, lab_max_marks, oral_max_marks, written_max_marks, reading_max_marks, writing_comp_max_marks, dictation_max_marks, recitation_max_marks, ia_pr_max_marks,
+                //         exam_date, start_time, end_time, sitting, exam_category
+                //     )
+                //     SELECT 
+                //         exam_group_id, subject_id, max_marks, passing_marks, 
+                //         has_theory, has_lab, has_oral, has_written, has_reading, has_writing_comp, has_dictation, has_recitation, has_ia_pr,
+                //         theory_max_marks, lab_max_marks, oral_max_marks, written_max_marks, reading_max_marks, writing_comp_max_marks, dictation_max_marks, recitation_max_marks, ia_pr_max_marks,
+                //         ?, ?, ?, ?, ?
+                //     FROM exam_group_subjects WHERE id = ?`,
+                //     [item.exam_date || null, item.start_time || null, item.end_time || null, item.sitting || null, item.exam_category || 'Written', item.original_id]
+                // );
+
                 await conn.execute(
                     `INSERT INTO exam_group_subjects (
-                        exam_group_id, subject_id, max_marks, passing_marks, 
-                        has_theory, has_lab, has_oral, has_written, has_reading, has_writing_comp, has_dictation, has_recitation, has_ia_pr,
-                        theory_max_marks, lab_max_marks, oral_max_marks, written_max_marks, reading_max_marks, writing_comp_max_marks, dictation_max_marks, recitation_max_marks, ia_pr_max_marks,
-                        exam_date, start_time, end_time, sitting, exam_category
+                        exam_group_id,
+                        subject_id,
+                        max_marks,
+                        passing_marks,
+                        has_theory,
+                        has_lab,
+                        has_oral,
+                        has_written,
+                        has_reading,
+                        has_writing_comp,
+                        has_dictation,
+                        has_recitation,
+                        has_ia_pr,
+                        theory_max_marks,
+                        lab_max_marks,
+                        oral_max_marks,
+                        written_max_marks,
+                        reading_max_marks,
+                        writing_comp_max_marks,
+                        dictation_max_marks,
+                        recitation_max_marks,
+                        ia_pr_max_marks,
+                        exam_date,
+                        start_time,
+                        end_time,
+                        sitting,
+                        exam_category
                     )
-                    SELECT 
-                        exam_group_id, subject_id, max_marks, passing_marks, 
-                        has_theory, has_lab, has_oral, has_written, has_reading, has_writing_comp, has_dictation, has_recitation, has_ia_pr,
-                        theory_max_marks, lab_max_marks, oral_max_marks, written_max_marks, reading_max_marks, writing_comp_max_marks, dictation_max_marks, recitation_max_marks, ia_pr_max_marks,
-                        ?, ?, ?, ?, ?
-                    FROM exam_group_subjects WHERE id = ?`,
-                    [item.exam_date || null, item.start_time || null, item.end_time || null, item.sitting || null, item.exam_category || 'Written', item.original_id]
+                    SELECT
+                        exam_group_id,
+                        subject_id,
+                        max_marks,
+                        passing_marks,
+                        has_theory,
+                        has_lab,
+                        has_oral,
+                        has_written,
+                        has_reading,
+                        has_writing_comp,
+                        has_dictation,
+                        has_recitation,
+                        has_ia_pr,
+                        theory_max_marks,
+                        lab_max_marks,
+                        oral_max_marks,
+                        written_max_marks,
+                        reading_max_marks,
+                        writing_comp_max_marks,
+                        dictation_max_marks,
+                        recitation_max_marks,
+                        ia_pr_max_marks,
+                        ?,
+                        ?,
+                        ?,
+                        ?,
+                        ?
+                    FROM exam_group_subjects
+                    WHERE id = ?
+                      AND exam_group_id = ?`,
+                    [
+                        item.exam_date || null,
+                        item.start_time || null,
+                        item.end_time || null,
+                        item.sitting || null,
+                        item.exam_category || 'Written',
+                        item.original_id,
+                        exam_id
+                    ]
                 );
             }
         }
@@ -2410,9 +2550,16 @@ const GenerateExamRoutinePDF = async (req, res) => {
     }
 
     try {
+
+        // 3. Fetch exam group info
+        // const [[examGroup]] = await db.execute(`
+        //     SELECT name FROM exam_groups WHERE id = ?
+        // `, [exam_id]);
+
+
         // Fetch exam group info
         const [[examGroup]] = await db.execute(`
-            SELECT eg.name, ay.name AS academic_year_name
+            SELECT eg.name, ay.name AS academic_year_name, eg.from_class_to_class
             FROM exam_groups eg
             LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
             WHERE eg.id = ?
@@ -2423,8 +2570,20 @@ const GenerateExamRoutinePDF = async (req, res) => {
         }
 
         // Fetch the schedule / routine for the exam group
+        // const [routine] = await db.execute(`
+        //     SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
+        //     FROM exam_group_subjects egs
+        //     JOIN subjects s ON s.id = egs.subject_id
+        //     WHERE egs.exam_group_id = ? 
+        //       AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
+        //     ORDER BY egs.exam_date ASC, egs.start_time ASC
+        // `, [exam_id]);
+
+        // 4. Fetch the schedule / routine for the exam group
         const [routine] = await db.execute(`
-            SELECT egs.exam_date, egs.start_time, egs.end_time, s.name AS subject_name
+            SELECT egs.exam_date, egs.start_time, egs.end_time, egs.sitting, egs.exam_category,
+                   egs.has_oral, egs.has_written, egs.has_reading, egs.has_writing_comp, egs.has_dictation, egs.has_recitation,
+                   s.name AS subject_name
             FROM exam_group_subjects egs
             JOIN subjects s ON s.id = egs.subject_id
             WHERE egs.exam_group_id = ? 
@@ -2436,8 +2595,10 @@ const GenerateExamRoutinePDF = async (req, res) => {
         const pdfBuffer = await generateExamRoutinePDF({
             exam_name: examGroup.name,
             exam_session: examGroup.academic_year_name || 'N/A',
+            classes: examGroup.from_class_to_class || 'N/A',
             routine
         });
+        // console.log("examGroup : ", exam_session)
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=ExamRoutine_${examGroup.name.replace(/\s+/g, '_')}.pdf`);
