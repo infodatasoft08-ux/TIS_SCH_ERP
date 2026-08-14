@@ -24,7 +24,7 @@
             font-family: 'Poppins', sans-serif;
             color: #1e293b;
             background: #ffffff;
-            padding: 8mm 10mm;
+            padding: 3mm 4mm;
             font-size: 11px;
             line-height: 1.35;
             -webkit-print-color-adjust: exact !important;
@@ -43,7 +43,7 @@
             height: calc(297mm - 16mm);
             border: 2px solid #1e3a8a;
             border-radius: 12px;
-            padding: 12px 14px;
+            padding: 10px 12px;
             margin: 0 auto;
             background: #ffffff;
             position: relative;
@@ -56,7 +56,7 @@
         .header-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 10px;
+            margin-bottom: 5px;
         }
 
         .header-table td {
@@ -72,20 +72,21 @@
         }
 
         .school-title {
-            font-size: 23px;
+            font-size: 37.5px;
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: 0.5px;
             color: #0d2873;
             text-align: center;
+            line-height: 1;
         }
 
         .school-subtitle {
-            font-size: 10.5px;
+            font-size: 12px;
             font-weight: 500;
             text-align: center;
             color: #475569;
-            margin-top: 2px;
+            margin-top: -18px;
             line-height: 1.4;
         }
 
@@ -219,7 +220,7 @@
             background: linear-gradient(90deg, #1e3a8a 0%, #2563eb 100%);
             color: #ffffff;
             border-radius: 6px 6px 0 0;
-            margin-top: 6px;
+            margin-top: 3px;
             letter-spacing: 0.5px;
         }
 
@@ -227,7 +228,7 @@
         .routine-table {
             width: 100%;
             border-collapse: collapse;
-            margin-bottom: 8px;
+            margin-bottom: 3px;
             border: 1px solid #cbd5e1;
             border-radius: 0 0 6px 6px;
             overflow: hidden;
@@ -332,13 +333,21 @@
         <!-- School Header -->
         <table class="header-table">
             <tr>
-                <td style="width: 18%;">
+                {{!-- <td style="width: 18%;">
                     {{#if logoData}}
                     <img src="{{logoData}}" class="logo-img" alt="Logo">
                     {{/if}}
-                </td>
-                <td style="width: 64%; text-align: center;">
-                    <div class="school-title">{{school.name}}</div>
+                </td> --}}
+                <td style="width: 85%; text-align: center;">
+                    <div
+                        style="display: flex; align-items: center; justify-content: center; gap: 5px; padding-right: 10px;">
+                        <div>
+                            {{#if logoData}}
+                            <img src="{{logoData}}" class="logo-img" alt="Logo">
+                            {{/if}}
+                        </div>
+                        <div class="school-title">{{school.name}}</div>
+                    </div>
                     <div class="school-subtitle">
                         Address : {{school.address}}<br>
                         Cont.: {{school.phone}}<br>
@@ -355,12 +364,15 @@
                         </div>
                     </div>
                     {{/if}}
+
+
+
                 </td>
-                <td style="width: 18%; text-align: right;">
+                {{!-- <td style="width: 18%; text-align: right;">
                     <div class="session-badge">
                         Session<br><span style="font-size: 11px;">{{student.academic_year_name}}</span>
                     </div>
-                </td>
+                </td> --}}
             </tr>
         </table>
 
@@ -481,7 +493,8 @@
                 <tr>
                     <td><strong style="color: #1e3a8a;">{{this.date}}</strong></td>
                     <td>{{this.day}}</td>
-                    <td style="font-weight: 600; color: #0f172a; text-align: left; padding-left: 12px;">{{{this.subject}}}
+                    <td style="font-weight: 600; color: #0f172a; text-align: left; padding-left: 12px;">
+                        {{{this.subject}}}
                     </td>
                     <td style="font-weight: 600; color: #475569;">{{this.time}}</td>
                 </tr>
@@ -495,7 +508,7 @@
         <div class="instructions-box">
             <div class="instructions-title">General / Exam Instructions for Students</div>
             <ol class="instructions-list">
-                <li>Reporting Timing : 8:00am</li>
+                <li>Reporting Timing : 7:45am and class 9th and 10th Reporting Timing : 10:00am</li>
                 <li>Check the exam timetable carefully.</li>
                 <li>Students must bring the 'Admit Card' and show it to the invigilator(s) on duty and should preserve
                     it for future requirements.</li>
@@ -506,8 +519,6 @@
                     starts.</li>
                 <li>Ensure that you use the washroom before arriving for your exam as you will not be permitted to leave
                     during the first hour.</li>
-                <li>Normally, you are required to answer using pencil. Make sure you bring some spare pencil with you.
-                </li>
                 <li>Keep your eyes on your own paper. Remember, copying is cheating!</li>
                 <li>You must remain silent until after you have exited the school building.</li>
             </ol>
