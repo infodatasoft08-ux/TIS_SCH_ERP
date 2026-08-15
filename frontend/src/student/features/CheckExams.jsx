@@ -37,6 +37,33 @@ const isAcademicSubject = (sub) => {
     return true;
 };
 
+const formatExamCategory = (sub) => {
+    if (!sub) return 'Written';
+    
+    const cat = (sub.exam_category || '').toLowerCase();
+    
+    // If it's a written exam, just return the category name
+    if (!cat.includes('oral') && !cat.includes('practical') && !cat.includes('viva')) {
+        return sub.exam_category || 'Written';
+    }
+
+    // For Oral/Practical routines, dynamically check which components are assigned
+    const components = [];
+    if (sub.oral_max_marks > 0) components.push('Oral');
+    if (sub.reading_max_marks > 0) components.push('Reading');
+    if (sub.writing_comp_max_marks > 0) components.push('Writing');
+    if (sub.dictation_max_marks > 0) components.push('Dictation');
+    if (sub.recitation_max_marks > 0) components.push('Recitation');
+    if (sub.lab_max_marks > 0) components.push('Lab');
+    if (sub.ia_pr_max_marks > 0) components.push('I.A./PR');
+    
+    if (components.length > 0) {
+        return components.join(', ');
+    }
+    
+    return sub.exam_category;
+};
+
 const CheckExams = () => {
     const [exams, setExams] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -181,7 +208,7 @@ const CheckExams = () => {
                                 <td className="p-3 font-bold text-slate-800 dark:text-slate-200">{sub.subject_name}</td>
                                 <td className="p-3">
                                     <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 font-semibold">
-                                        {sub.exam_category || 'Written'}
+                                        {formatExamCategory(sub)}
                                     </Badge>
                                 </td>
                                 <td className="p-3 font-medium text-slate-700 dark:text-slate-300">
@@ -210,7 +237,7 @@ const CheckExams = () => {
                         <div className="flex justify-between items-start">
                             <span className="font-bold text-sm text-slate-900 dark:text-slate-100">{sub.subject_name}</span>
                             <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-300 font-semibold text-[10px]">
-                                {sub.exam_category || 'Written'}
+                                {formatExamCategory(sub)}
                             </Badge>
                         </div>
 
@@ -288,7 +315,7 @@ const CheckExams = () => {
                     {filteredExams.map((exam) => {
                         const over = isExamOver(exam);
                         const isPublished = exam.is_results_published === 1 || exam.is_results_published === true;
-                        const academicSubCount = (exam.subjects || []).filter(isAcademicSubject).length;
+                        const academicSubCount = new Set((exam.subjects || []).filter(isAcademicSubject).map(s => s.subject_id || s.subject_name)).size;
                         return (
                             <Card key={exam.id} className="group hover:shadow-lg transition-all duration-300 border-l-4 border-l-primary/50 overflow-hidden flex flex-col h-full">
                                 <CardHeader className="pb-3">

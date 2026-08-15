@@ -500,7 +500,7 @@ const UpdateExamGroup = async (req, res) => {
                          has_theory=?, has_lab=?, has_oral=?, theory_max_marks=?, lab_max_marks=?, oral_max_marks=?,
                          has_written=?, has_reading=?, has_writing_comp=?, has_dictation=?, has_recitation=?, has_ia_pr=?,
                          written_max_marks=?, reading_max_marks=?, writing_comp_max_marks=?, dictation_max_marks=?, recitation_max_marks=?, ia_pr_max_marks=?
-                         WHERE id=?`,
+                         WHERE exam_group_id=? AND subject_id=?`,
                         [
                             calculatedMax, passMarks,
                             hasTheory, hasLab, hasOral,
@@ -508,7 +508,7 @@ const UpdateExamGroup = async (req, res) => {
                             hasWritten, hasReading, hasWritingComp, hasDictation, hasRecitation, hasIaPr,
                             hasWritten ? wrMax : null, hasReading ? rdMax : null, hasWritingComp ? wcMax : null,
                             hasDictation ? dcMax : null, hasRecitation ? rcMax : null, hasIaPr ? iaMax : null,
-                            existingSubjectMap[subId]
+                            id, subId
                         ]
                     );
                 } else {
@@ -1651,41 +1651,7 @@ const GetExamsForStudent = async (req, res) => {
 
             for (const row of examRows) {
                 const rawSubs = subjectRows.filter(s => s.exam_group_id === row.id);
-                const subMap = new Map();
-                for (const s of rawSubs) {
-                    const key = s.subject_id || s.subject_name;
-                    if (!subMap.has(key)) {
-                        subMap.set(key, { ...s });
-                    } else {
-                        const existing = subMap.get(key);
-                        if (existing.marks_obtained === null || existing.marks_obtained === undefined) {
-                            existing.marks_obtained = s.marks_obtained;
-                            existing.result_grade = s.result_grade;
-                            existing.attendance_status = s.attendance_status;
-                        }
-                        const pick = (a, b) => (a !== null && a !== undefined && a !== '' && a !== '-') ? a : b;
-                        existing.written_marks_obtained = pick(existing.written_marks_obtained, s.written_marks_obtained);
-                        existing.reading_marks_obtained = pick(existing.reading_marks_obtained, s.reading_marks_obtained);
-                        existing.writing_comp_marks_obtained = pick(existing.writing_comp_marks_obtained, s.writing_comp_marks_obtained);
-                        existing.dictation_marks_obtained = pick(existing.dictation_marks_obtained, s.dictation_marks_obtained);
-                        existing.recitation_marks_obtained = pick(existing.recitation_marks_obtained, s.recitation_marks_obtained);
-                        existing.oral_marks_obtained = pick(existing.oral_marks_obtained, s.oral_marks_obtained);
-                        existing.theory_marks_obtained = pick(existing.theory_marks_obtained, s.theory_marks_obtained);
-                        existing.lab_marks_obtained = pick(existing.lab_marks_obtained, s.lab_marks_obtained);
-                        existing.ia_pr_marks_obtained = pick(existing.ia_pr_marks_obtained, s.ia_pr_marks_obtained);
-
-                        existing.written_max_marks = existing.written_max_marks || s.written_max_marks;
-                        existing.reading_max_marks = existing.reading_max_marks || s.reading_max_marks;
-                        existing.writing_comp_max_marks = existing.writing_comp_max_marks || s.writing_comp_max_marks;
-                        existing.dictation_max_marks = existing.dictation_max_marks || s.dictation_max_marks;
-                        existing.recitation_max_marks = existing.recitation_max_marks || s.recitation_max_marks;
-                        existing.oral_max_marks = existing.oral_max_marks || s.oral_max_marks;
-                        existing.theory_max_marks = existing.theory_max_marks || s.theory_max_marks;
-                        existing.lab_max_marks = existing.lab_max_marks || s.lab_max_marks;
-                        existing.ia_pr_max_marks = existing.ia_pr_max_marks || s.ia_pr_max_marks;
-                    }
-                }
-                row.subjects = Array.from(subMap.values());
+                row.subjects = rawSubs;
             }
         }
 

@@ -62,17 +62,32 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
     const uniqueSubjects = useMemo(() => {
         if (!exam || !Array.isArray(exam.subjects)) return [];
-        const seen = new Set();
-        return exam.subjects.filter(s => {
+        const mergedMap = new Map();
+        
+        exam.subjects.forEach(s => {
             const n = s.subject_name?.toLowerCase().trim();
             const isExcluded = (n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
-            if (isExcluded) return false;
+            if (isExcluded) return;
 
             const key = s.subject_id || s.subject_name;
-            if (seen.has(key)) return false;
-            seen.add(key);
-            return true;
+            if (!mergedMap.has(key)) {
+                // Deep copy components array
+                const components = Array.isArray(s.components) ? s.components.map(c => ({...c})) : [];
+                mergedMap.set(key, { ...s, components });
+            } else {
+                const existing = mergedMap.get(key);
+                if (Array.isArray(s.components)) {
+                    s.components.forEach(newComp => {
+                        // avoid duplicate components by component_id
+                        if (!existing.components.find(c => c.component_id === newComp.component_id)) {
+                            existing.components.push({...newComp});
+                        }
+                    });
+                }
+            }
         });
+        
+        return Array.from(mergedMap.values());
     }, [exam]);
 
     useEffect(() => {
@@ -214,7 +229,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const handleMarkChange = (studentId, subjectId, field, value) => {
         const sId = String(studentId);
         const subId = String(subjectId);
-        const groupSub = exam.subjects.find(s => String(s.subject_id) === subId);
+        const groupSub = uniqueSubjects.find(s => String(s.subject_id) === subId);
 
         setMarksData(prev => {
             const updated = { ...prev };
@@ -288,7 +303,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
         Object.keys(marksData).forEach(studentId => {
             Object.keys(marksData[studentId]).forEach(subjectId => {
                 const d = marksData[studentId][subjectId];
-                const groupSub = exam.subjects.find(s => s.subject_id.toString() === subjectId.toString());
+                const groupSub = uniqueSubjects.find(s => s.subject_id.toString() === subjectId.toString());
                 
                 const hasValidMarks = groupSub && (
                     (d.components && d.components.some(c => c.marks_obtained !== '')) ||
