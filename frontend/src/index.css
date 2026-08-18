@@ -85,6 +85,40 @@
     --app-font-family: 'Inter', sans-serif;
   }
 
+  :root .sx__calendar-wrapper,
+  :root .sx-react-calendar-wrapper {
+    --sx-color-primary: #6750a4;
+    --sx-color-on-primary: #fff;
+    --sx-color-primary-container: #eaddff;
+    --sx-color-on-primary-container: #21005e;
+    --sx-color-secondary: #625b71;
+    --sx-color-on-secondary: #fff;
+    --sx-color-secondary-container: #e8def8;
+    --sx-color-on-secondary-container: #1e192b;
+    --sx-color-tertiary: #7d5260;
+    --sx-color-on-tertiary: #fff;
+    --sx-color-tertiary-container: #ffd8e4;
+    --sx-color-on-tertiary-container: #370b1e;
+    --sx-color-surface: #fef7ff;
+    --sx-color-surface-dim: #ded8e1;
+    --sx-color-surface-bright: #fef7ff;
+    --sx-color-on-surface: #1c1b1f;
+    --sx-color-surface-container: #f3edf7;
+    --sx-color-surface-container-low: #f7f2fa;
+    --sx-color-surface-container-high: #ece6f0;
+    --sx-color-background: #fff;
+    --sx-color-on-background: #1c1b1f;
+    --sx-color-outline: #79747e;
+    --sx-color-outline-variant: #c4c7c5;
+    --sx-color-shadow: #000;
+    --sx-color-surface-tint: #6750a4;
+    --sx-color-neutral: var(--sx-color-outline);
+    --sx-color-neutral-variant: var(--sx-color-outline-variant);
+    --sx-internal-color-gray-ripple-background: #e0e0e0;
+    --sx-internal-color-light-gray: #fafafa;
+    --sx-internal-color-text: #000;
+  }
+
   .dark {
     --background: 222.2 84% 4.9%;
     --foreground: 210 40% 98%;
@@ -147,6 +181,42 @@
     --sx-internal-color-light-gray: #222;
     --sx-internal-color-text: #fff;
   }
+
+  .dark .sx__calendar-wrapper,
+  .dark .sx-react-calendar-wrapper,
+  html.dark .sx__calendar-wrapper,
+  html.dark .sx-react-calendar-wrapper {
+    --sx-color-primary: #d0bcff;
+    --sx-color-on-primary: #381e72;
+    --sx-color-primary-container: #4f378b;
+    --sx-color-on-primary-container: #eaddff;
+    --sx-color-secondary: #ccc2dc;
+    --sx-color-on-secondary: #332d41;
+    --sx-color-secondary-container: #4a4458;
+    --sx-color-on-secondary-container: #e8def8;
+    --sx-color-tertiary: #efb8c8;
+    --sx-color-on-tertiary: #492532;
+    --sx-color-tertiary-container: #633b48;
+    --sx-color-on-tertiary-container: #ffd8e4;
+    --sx-color-surface: #1c1b1f;
+    --sx-color-surface-dim: #1c1b1f;
+    --sx-color-surface-bright: #3b383e;
+    --sx-color-on-surface: #e6e1e5;
+    --sx-color-surface-container: #211f26;
+    --sx-color-surface-container-low: #1c1b1f;
+    --sx-color-surface-container-high: #2b2930;
+    --sx-color-background: #1c1b1f;
+    --sx-color-on-background: #e6e1e5;
+    --sx-color-outline: #938f99;
+    --sx-color-outline-variant: #444746;
+    --sx-color-shadow: #000;
+    --sx-color-surface-tint: #d0bcff;
+    --sx-color-neutral: var(--sx-color-outline);
+    --sx-color-neutral-variant: var(--sx-color-outline-variant);
+    --sx-internal-color-gray-ripple-background: #333;
+    --sx-internal-color-light-gray: #222;
+    --sx-internal-color-text: #fff;
+  }
 }
 
 @layer base {
@@ -154,8 +224,11 @@
     @apply border-border;
   }
 
-  body {
+  html, body {
     @apply bg-background text-foreground;
+  }
+
+  body {
     font-family: var(--app-font-family);
   }
 }
@@ -167,51 +240,76 @@ body {
   width: 100%;
   height: 100%;
   touch-action: pan-y;
-  overscroll-behavior-y: contain;
+  overscroll-behavior-y: none;
+  /* none prevents the bounce effect completely, making it feel more like an app */
   transition: background-color 0.3s ease, color 0.3s ease;
+
+  /* Mobile App UI properties */
+  -webkit-touch-callout: none;
+  /* Disable iOS callout when tap to hold */
+  -webkit-user-select: none;
+  /* Disable selection in Safari */
+  user-select: none;
+  /* Disable selection/copy in UI */
+  -webkit-tap-highlight-color: transparent;
+  /* Removes the tap highlight color */
 }
 
-/* @media (min-width: 1024px) {
+/* Allow text selection in inputs and textareas */
+input,
+textarea {
+  -webkit-user-select: auto !important;
+  user-select: auto !important;
+}
 
-  /* Width */
+/* Custom Scrollbar Styles (Disabled for now)
+@media (min-width: 1024px) {
   ::-webkit-scrollbar {
     width: 10px;
   }
-
-  /* Track 
   ::-webkit-scrollbar-track {
     background: #f1f1f1;
   }
-
-  /* Handle 
   ::-webkit-scrollbar-thumb {
     background: #888;
     border-radius: 10px;
     border: 2px solid #f1f1f1;
   }
-
-  /* Handle on hover 
   ::-webkit-scrollbar-thumb:hover {
     background: #555;
   }
-} */
+} 
+*/
 
 
 
 /* Branding Overrides for Light Theme */
-:root:not(.dark) [data-sidebar="sidebar"] {
+[data-sidebar="sidebar"] {
   background-color: var(--app-sidebar-bg) !important;
   transition: background-color 0.3s ease;
 }
 
-:root:not(.dark) header {
+header {
   background-color: var(--app-header-bg) !important;
   transition: background-color 0.3s ease;
 }
 
-:root:not(.dark) main {
+main {
   background-color: var(--app-main-bg);
   transition: background-color 0.3s ease;
+}
+
+/* Dark Theme Overrides */
+.dark [data-sidebar="sidebar"] {
+  background-color: hsl(var(--sidebar-background)) !important;
+}
+
+.dark header {
+  background-color: hsl(var(--background)) !important;
+}
+
+.dark main {
+  background-color: hsl(var(--background));
 }
 
 /* Smooth page transitions */
@@ -269,35 +367,39 @@ body {
 
 
 @layer base {
-  /* Chrome, Edge, Safari */
-  ::-webkit-scrollbar {
-    width: 5px;
-    height: 5px;
-  }
+  @media (pointer: fine) {
 
-  ::-webkit-scrollbar-track {
-    background: hsl(var(--background));
-  }
+    /* Chrome, Edge, Safari */
+    ::-webkit-scrollbar {
+      width: 5px;
+      height: 5px;
+    }
 
-  ::-webkit-scrollbar-thumb {
-    background: hsl(var(--border));
-    border-radius: 9999px;
-  }
+    ::-webkit-scrollbar-track {
+      background: hsl(var(--background));
+    }
 
-  ::-webkit-scrollbar-thumb:hover {
-    background: hsl(var(--primary));
-  }
+    ::-webkit-scrollbar-thumb {
+      background: hsl(var(--border));
+      border-radius: 9999px;
+    }
 
-  /* Firefox */
-  * {
-    scrollbar-width: thin;
-    scrollbar-color: hsl(var(--border)) hsl(var(--background));
+    ::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--primary));
+    }
+
+    /* Firefox */
+    * {
+      scrollbar-width: thin;
+      scrollbar-color: hsl(var(--border)) hsl(var(--background));
+    }
   }
 }
 
 /* Fix for ScheduleX DatePicker mobile responsiveness and borders */
 .sx__date-picker-popup {
-  zoom: 0.85; /* Decrease size on all screens */
+  zoom: 0.85;
+  /* Decrease size on all screens */
   z-index: 9999 !important;
   background-color: hsl(var(--popover)) !important;
   color: hsl(var(--popover-foreground)) !important;
@@ -315,7 +417,7 @@ body {
   fill: hsl(var(--muted-foreground)) !important;
 }
 
-.sx__date-picker__day-name, 
+.sx__date-picker__day-name,
 .sx__date-picker__day {
   color: hsl(var(--foreground)) !important;
 }
@@ -337,7 +439,8 @@ body {
 
 @media (max-width: 640px) {
   .sx__date-picker-popup {
-    zoom: 0.75; /* Slightly smaller on mobile */
+    zoom: 0.75;
+    /* Slightly smaller on mobile */
   }
 }
 

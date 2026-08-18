@@ -90,7 +90,14 @@ export default function UpcomingActivities() {
             },
             theme: 'shadcn'
         });
-    }, [calendarEvents, eventsService, theme]);
+    }, [calendarEvents, eventsService]); // Removed theme to prevent recreation
+
+    // Dynamically update calendar theme without recreating the instance
+    useEffect(() => {
+        if (calendar && typeof calendar.setTheme === 'function') {
+            calendar.setTheme(theme === 'dark' ? 'dark' : 'light');
+        }
+    }, [theme, calendar]);
 
     // Format date for display
     const formatDate = (dateString) => {
