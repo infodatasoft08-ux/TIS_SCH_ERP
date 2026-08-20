@@ -93,6 +93,8 @@ export default function MainLayout() {
 
         if (settings.app_font) {
           document.documentElement.style.setProperty('--app-font-family', settings.app_font);
+        } else {
+          document.documentElement.style.setProperty('--app-font-family', "'Inter', sans-serif");
         }
       } catch (error) {
         console.error('Failed to fetch branding settings:', error);
@@ -100,7 +102,7 @@ export default function MainLayout() {
     };
 
     fetchBranding();
-  }, [theme, location.pathname]); // Re-fetch or re-apply on path change to ensure consistency
+  }, [theme]); // Re-apply on theme change
 
 
   // disable browser back navigation and handle window close/refresh
@@ -207,7 +209,13 @@ export default function MainLayout() {
                 <div className="p-2 sm:p-4 sm:pl-10 flex flex-col flex-1 min-h-full">
                   <AnimatePresence mode="wait">
                     <AnimatedLayout key={location.pathname}>
-                      <Outlet />
+                      <React.Suspense fallback={
+                        <div className="min-h-[40vh] flex items-center justify-center bg-background text-foreground">
+                          <div className="w-7 h-7 border-3 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                      }>
+                        <Outlet />
+                      </React.Suspense>
                     </AnimatedLayout>
                   </AnimatePresence>
 

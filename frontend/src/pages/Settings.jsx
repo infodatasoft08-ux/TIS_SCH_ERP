@@ -99,6 +99,15 @@ export default function Settings() {
                     whatsapp_enabled: whatsappEnabled ? "1" : "0"
                 }
             });
+
+            // Immediately apply CSS variables to live DOM
+            document.documentElement.style.setProperty('--app-font-family', appFont);
+            if (theme === 'light') {
+                document.documentElement.style.setProperty('--app-header-bg', headerBg);
+                document.documentElement.style.setProperty('--app-sidebar-bg', sidebarBg);
+                document.documentElement.style.setProperty('--app-main-bg', mainBg);
+            }
+
             toast.success("School settings updated successfully");
             // Invalidate sidebar cache
             localStorage.removeItem('sidebar_branding');
@@ -334,8 +343,13 @@ export default function Settings() {
                                     </div>
 
                                     <div className="grid gap-2 max-w-sm">
-                                        <Label htmlFor="app-font">Application Font Family</Label>
-                                        <Select value={appFont} onValueChange={setAppFont}>
+                                        <Select 
+                                            value={appFont} 
+                                            onValueChange={(newFont) => {
+                                                setAppFont(newFont);
+                                                document.documentElement.style.setProperty('--app-font-family', newFont);
+                                            }}
+                                        >
                                             <SelectTrigger id="app-font">
                                                 <SelectValue placeholder="Select Font" />
                                             </SelectTrigger>

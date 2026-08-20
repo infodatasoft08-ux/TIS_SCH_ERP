@@ -215,24 +215,25 @@ export default function AppSidebar({ user }) {
         collapsible="icon"
         className="shrink-0"
         style={{
-          "--sidebar-width": "16rem",
+          "--sidebar-width": "17.5rem",
           "--sidebar-width-icon": "4rem",
+          backgroundColor: theme === 'light' ? 'var(--app-sidebar-bg)' : undefined
         }}
       >
         {/* HEADER SKELETON */}
-        <SidebarHeader className="px-2 py-5 border-b border-sidebar-border/50">
+        <SidebarHeader className="px-3 py-5 border-b border-sidebar-border/50">
           <div className="flex items-center gap-3">
-            <Skeleton className="h-12 w-12 rounded-lg" />
+            <Skeleton className="h-14 w-14 rounded-2xl" />
 
             <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
-              <Skeleton className="h-4 w-28" />
-              <Skeleton className="h-3 w-20" />
+              <Skeleton className="h-4 w-32" />
+              <Skeleton className="h-3 w-24" />
             </div>
           </div>
         </SidebarHeader>
 
         {/* MENU SKELETON */}
-        <SidebarContent className="px-2 py-3 space-y-2">
+        <SidebarContent className="px-3 py-3 space-y-2">
           {Array.from({ length: 8 }).map((_, i) => (
             <div
               key={i}
@@ -242,7 +243,7 @@ export default function AppSidebar({ user }) {
               <Skeleton className="h-5 w-5 rounded" />
 
               {/* text */}
-              <Skeleton className="h-4 w-32 group-data-[collapsible=icon]:hidden" />
+              <Skeleton className="h-4 w-36 group-data-[collapsible=icon]:hidden" />
             </div>
           ))}
         </SidebarContent>
@@ -254,33 +255,33 @@ export default function AppSidebar({ user }) {
       collapsible="icon"
       className="shrink-0 transition-colors duration-300"
       style={{
-        "--sidebar-width": "16rem",
+        "--sidebar-width": "17.5rem",
         "--sidebar-width-icon": "4rem",
         backgroundColor: theme === 'light' ? 'var(--app-sidebar-bg)' : undefined
       }}
     >
-      <SidebarHeader className="px-2 py-4 border-b border-sidebar-border/50">
-        <div className="flex flex-col items-center gap-3 overflow-hidden">
-          <div className="flex w-full shrink-0 items-center justify-center rounded-lg text-primary group-data-[collapsible=icon]:mx-auto">
+      <SidebarHeader className="px-3 py-4 border-b border-sidebar-border/50">
+        <div className="flex flex-col items-center gap-3 overflow-hidden text-center">
+          <div className="flex shrink-0 items-center justify-center p-2 rounded-2xl bg-muted/40 dark:bg-slate-800/50 border border-border/50 shadow-sm group-data-[collapsible=icon]:mx-auto">
             {logo ? (
-              <img src={logo.image_url} alt="Logo" className=" w-32 object-contain rounded-xl" />
+              <img src={logo.image_url} alt="Logo" className="h-32 w-32 object-contain rounded-xl" />
             ) : (
-              <img src={SchoolLogo} alt="Logo" className=" w-32 object-contain rounded-xl" />
+              <img src={SchoolLogo} alt="Logo" className="h-32 w-32 object-contain rounded-xl" />
             )}
           </div>
-          <div className="flex flex-col gap-0.5 group-data-[collapsible=icon]:hidden">
-            <span className="text-[15px] font-bold leading-none truncate text-sidebar-foreground">
-              {schoolName}
+          <div className="flex flex-col items-center gap-0.5 group-data-[collapsible=icon]:hidden w-full px-1">
+            <span className="text-[14px] font-bold leading-tight truncate max-w-[240px] text-sidebar-foreground">
+              {schoolName || "Times International School"}
             </span>
-            <span className="text-[12px] text-muted-foreground tracking-wider font-semibold">
+            <span className="text-[11px] text-muted-foreground tracking-wider font-semibold">
               Commited to Excellence
             </span>
           </div>
         </div>
       </SidebarHeader>
 
-      <ScrollArea className="max-h-[calc(100vh-100px)]">
-        <SidebarContent className="px-2">
+      <ScrollArea className="flex-1 max-h-[calc(100vh-140px)]">
+        <SidebarContent className="px-3 py-2">
           {/* Dynamic Menus from DB */}
           {parents.map((parent) => {
             const children = childrenOf(parent.id);
@@ -294,24 +295,24 @@ export default function AppSidebar({ user }) {
             /* ---------- PARENT WITH CHILDREN ---------- */
             if (hasChildren) {
               return (
-                <SidebarGroup key={parent.id} className="mb-1">
+                <SidebarGroup key={parent.id} className="mb-1 p-0">
                   <Collapsible open={isOpen}>
                     <CollapsibleTrigger asChild>
                       <SidebarMenuButton
                         onClick={() =>
                           setOpenParent(isOpen ? null : parent.id)
                         }
-                        className={`relative w-full flex items-center px-2 py-2 rounded-md
+                        className={`relative w-full flex items-center px-3 py-2.5 rounded-lg transition-all duration-200
                         ${parentActive
-                            ? "bg-blue-50 text-blue-600"
-                            : ""}
+                            ? "bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 font-semibold"
+                            : "hover:bg-muted/60 text-sidebar-foreground"}
                         group-data-[collapsible=icon]:justify-center
                         group-data-[collapsible=icon]:pointer-events-none
                       `}
                       >
                         {/* Active vertical indicator */}
                         {isOpen && (
-                          <span className="absolute left-0 top-1 bottom-1 w-[3px] bg-blue-600 rounded-r
+                          <span className="absolute left-0 top-1.5 bottom-1.5 w-[3px] bg-blue-600 dark:bg-blue-400 rounded-r
                           group-data-[collapsible=icon]:hidden
                         " />
                         )}
@@ -319,7 +320,7 @@ export default function AppSidebar({ user }) {
                         <span className="flex items-center gap-3
                         group-data-[collapsible=icon]:justify-center
                       ">
-                          <i className={`${parent.icon} text-lg`} />
+                          <i className={`${parent.icon} text-lg shrink-0`} />
 
                           <span className="text-sm font-medium truncate
                           group-data-[collapsible=icon]:hidden
@@ -329,8 +330,8 @@ export default function AppSidebar({ user }) {
                         </span>
 
                         <i
-                          className={`ri-arrow-right-s-line ml-auto transition-transform
-                          ${isOpen ? "rotate-90" : ""}
+                          className={`ri-arrow-right-s-line ml-auto text-base transition-transform duration-200
+                          ${isOpen ? "rotate-90 text-blue-600 dark:text-blue-400" : "text-muted-foreground"}
                           group-data-[collapsible=icon]:hidden
                         `}
                         />
@@ -339,16 +340,16 @@ export default function AppSidebar({ user }) {
 
                     <CollapsibleContent>
                       <SidebarGroupContent>
-                        <SidebarMenu className="ml-4 border-l border-blue-100 pl-3 mt-1 space-y-0.5">
+                        <SidebarMenu className="ml-3.5 border-l-2 border-blue-500/20 dark:border-blue-400/20 pl-2.5 mt-1 space-y-1">
                           {children.map((child) => (
                             <SidebarMenuItem key={child.id}>
                               <SidebarMenuButton
                                 asChild
                                 isActive={isActive(child.path, location)}
-                                className="h-8 px-2"
+                                className="h-8 px-2.5 rounded-md hover:bg-muted/50"
                               >
-                                <NavLink to={child.path}>
-                                  <i className={`${child.icon} text-base`} />
+                                <NavLink to={child.path} className="flex items-center gap-2.5 w-full">
+                                  <i className={`${child.icon} text-base shrink-0`} />
                                   <span className="text-sm truncate">
                                     {child.title}
                                   </span>
@@ -366,17 +367,17 @@ export default function AppSidebar({ user }) {
 
             /* ---------- PARENT WITHOUT CHILDREN ---------- */
             return (
-              <SidebarGroup key={parent.id} className="mb-1">
+              <SidebarGroup key={parent.id} className="mb-1 p-0">
                 <SidebarMenu>
                   <SidebarMenuItem>
                     <SidebarMenuButton
                       asChild
                       isActive={isActive(parent.path, location)}
-                      className="h-9 px-2 group-data-[collapsible=icon]:justify-center"
+                      className="h-9 px-3 rounded-lg group-data-[collapsible=icon]:justify-center hover:bg-muted/60"
                     >
-                      <NavLink to={parent.path}>
-                        <i className={`${parent.icon} text-lg`} />
-                        <span className="text-sm truncate
+                      <NavLink to={parent.path} className="flex items-center gap-3 w-full">
+                        <i className={`${parent.icon} text-lg shrink-0`} />
+                        <span className="text-sm font-medium truncate
                         group-data-[collapsible=icon]:hidden
                       ">
                           {parent.title}
@@ -391,16 +392,12 @@ export default function AppSidebar({ user }) {
         </SidebarContent>
       </ScrollArea>
 
-
       <SidebarFooter className="p-3 border-t border-sidebar-border/30 group-data-[collapsible=icon]:hidden">
         <div className="text-[10px] text-muted-foreground text-center leading-tight">
           &copy; 2026 School Management System <br />
           <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
         </div>
       </SidebarFooter>
-
-
-
 
     </Sidebar>
   );

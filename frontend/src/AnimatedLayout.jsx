@@ -28,7 +28,7 @@ export default function AnimatedLayout({ children }) {
 
   return (
     <motion.div
-      key={location.pathname}
+      key={`animated-${location.pathname || 'page'}`}
       initial="initial"
       animate="in"
       exit="out"

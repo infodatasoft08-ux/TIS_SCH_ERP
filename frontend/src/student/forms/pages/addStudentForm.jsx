@@ -233,8 +233,9 @@ export default function AddStudentDialog({
       }));
   }, [classes, selectedGradeId]);
 
-  // Fetch academic years
+  // Fetch academic years (only when dialog is open)
   useEffect(() => {
+    if (!open) return;
     async function fetchAcademicYears() {
       try {
         const res = await API.get("/admin/get/academic-years");
@@ -244,7 +245,7 @@ export default function AddStudentDialog({
       }
     }
     fetchAcademicYears();
-  }, []);
+  }, [open]);
 
   const uniqueGrades = React.useMemo(() => {
     const gradeMap = new Map();

@@ -1,64 +1,79 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './auth/AuthContext';
 import { AnimatePresence } from 'framer-motion';
 import AnimatedLayout from './AnimatedLayout';
 import ProtectedRoute from './auth/ProtectedRoute';
 import LoginPage from './pages/LoginPage';
-import Profile from './pages/Profile';
-import Settings from './pages/Settings';
-import { LanguageProvider } from './context/LanguageContext';
 import MainLayout from './main/pages/mainLayout';
-import AddStudents from './student/forms/pages/addStudentForm';
 import Dashboard from './main/pages/Dashboard';
-import StudentsDatable from './student/datatable/pages/studentDataTable';
-import AddClasses from './admin/forms/pages/AddClass';
-import AddSubject from './admin/forms/pages/AddSubject';
-import RoleMenuAdmin from './admin/pages/setting/MenuRoleAssign';
-import ForgotPasswordPage from './pages/ForgotPassword';
+import { LanguageProvider } from './context/LanguageContext';
 import { Toaster } from "sonner";
-import TeachersOperation from './teacher/DataTable/pages/teachersDataTable';
-import TeacherSubjectAssign from './teacher/DataTable/pages/teacherSubjectAssign';
-import TakeAttendance from './teacher/DataTable/pages/attendanceTaker';
-import StaffOperation from './staff/dataTable/staffDataTable';
-import ClassFeeStructure from './finance/form/classFeeStructure';
-import Invoices from './finance/form/invoiceGenerationManagement';
-import InvoiceDetails from './finance/form/invoiceDetailsPayment';
-import StudentFeeSummary from './finance/form/studentFeeSummaryDashboard';
-import PaymentHistory from './finance/form/paymentHistory';
-import FeeTypes from './finance/form/addFeeType';
-import StudentAttendanceSummary from './widgets/studentAttendaceSummeryCalender';
-import CreateTimeTable from './admin/forms/pages/AddTimeTable';
-import ClassTimeTablePage from './features/ClassTimeTable';
-import AcademicRecordsPage from './academicRecord/AcademicRecordsPage';
-import ExamDataTable from './exam/ExamDataTable';
-import Assignment from './assignment/Assignment';
-import SubmitAssignment from './assignment/SubmitAssignment';
-import ViewSubjectAssignToTeacher from './teacher/DataTable/pages/viewSubjectAssignToTeacher';
-import AssignSubjectOnClass from './admin/forms/pages/AssignSubjectOnClass';
-import CheckExams from './student/features/CheckExams';
-import StudentFeeDetails from './student/features/StudentFeeDetails';
-import ClassStudent from './teacher/features/ClassStudent';
-import NotesManagement from './notes/NotesManagement';
-import NotesViewer from './notes/NotesViewer';
-import BulkImport from './pages/BulkImport';
-import ViewMySubjects from './student/pages/ViewMySubjects';
-import AcademicYearDataTable from './admin/datatable/pages/AcademicYearDataTable';
-import Contact from './pages/Contact';
-import DynamicAnnouncement from './components/announcements/DynamicAnnouncement';
-import NotFoundFallback from './pages/NotFoundFallback';
-import EmployeeAttendanceTaker from './admin/pages/EmployeeAttendanceTaker';
-import HomeworkPage from './homework/HomeworkPage';
-import StudentHomeworkPage from './homework/StudentHomeworkPage';
-import CreateAnouncementDatable from './components/announcements/CreateAnouncementDatable';
-import RegistrationPage from './pages/RegistrationPage';
-import RegisteredRequests from './admin/pages/RegisteredRequests';
-import TemplateUploadPage from './idcard/pages/TemplateUploadPage';
-import GenerateDocumentsPage from './idcard/pages/GenerateDocumentsPage';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
-const queryClient = new QueryClient();
+// Lazy loading heavy secondary components for Code Splitting
+const Profile = lazy(() => import('./pages/Profile'));
+const Settings = lazy(() => import('./pages/Settings'));
+const AddStudents = lazy(() => import('./student/forms/pages/addStudentForm'));
+const StudentsDatable = lazy(() => import('./student/datatable/pages/studentDataTable'));
+const AddClasses = lazy(() => import('./admin/forms/pages/AddClass'));
+const AddSubject = lazy(() => import('./admin/forms/pages/AddSubject'));
+const RoleMenuAdmin = lazy(() => import('./admin/pages/setting/MenuRoleAssign'));
+const ForgotPasswordPage = lazy(() => import('./pages/ForgotPassword'));
+const TeachersOperation = lazy(() => import('./teacher/DataTable/pages/teachersDataTable'));
+const TeacherSubjectAssign = lazy(() => import('./teacher/DataTable/pages/teacherSubjectAssign'));
+const TakeAttendance = lazy(() => import('./teacher/DataTable/pages/attendanceTaker'));
+const StaffOperation = lazy(() => import('./staff/dataTable/staffDataTable'));
+const ClassFeeStructure = lazy(() => import('./finance/form/classFeeStructure'));
+const Invoices = lazy(() => import('./finance/form/invoiceGenerationManagement'));
+const InvoiceDetails = lazy(() => import('./finance/form/invoiceDetailsPayment'));
+const StudentFeeSummary = lazy(() => import('./finance/form/studentFeeSummaryDashboard'));
+const PaymentHistory = lazy(() => import('./finance/form/paymentHistory'));
+const FeeTypes = lazy(() => import('./finance/form/addFeeType'));
+const StudentAttendanceSummary = lazy(() => import('./widgets/studentAttendaceSummeryCalender'));
+const CreateTimeTable = lazy(() => import('./admin/forms/pages/AddTimeTable'));
+const ClassTimeTablePage = lazy(() => import('./features/ClassTimeTable'));
+const AcademicRecordsPage = lazy(() => import('./academicRecord/AcademicRecordsPage'));
+const ExamDataTable = lazy(() => import('./exam/ExamDataTable'));
+const Assignment = lazy(() => import('./assignment/Assignment'));
+const SubmitAssignment = lazy(() => import('./assignment/SubmitAssignment'));
+const ViewSubjectAssignToTeacher = lazy(() => import('./teacher/DataTable/pages/viewSubjectAssignToTeacher'));
+const AssignSubjectOnClass = lazy(() => import('./admin/forms/pages/AssignSubjectOnClass'));
+const CheckExams = lazy(() => import('./student/features/CheckExams'));
+const StudentFeeDetails = lazy(() => import('./student/features/StudentFeeDetails'));
+const ClassStudent = lazy(() => import('./teacher/features/ClassStudent'));
+const NotesManagement = lazy(() => import('./notes/NotesManagement'));
+const NotesViewer = lazy(() => import('./notes/NotesViewer'));
+const BulkImport = lazy(() => import('./pages/BulkImport'));
+const ViewMySubjects = lazy(() => import('./student/pages/ViewMySubjects'));
+const AcademicYearDataTable = lazy(() => import('./admin/datatable/pages/AcademicYearDataTable'));
+const Contact = lazy(() => import('./pages/Contact'));
+const DynamicAnnouncement = lazy(() => import('./components/announcements/DynamicAnnouncement'));
+const NotFoundFallback = lazy(() => import('./pages/NotFoundFallback'));
+const EmployeeAttendanceTaker = lazy(() => import('./admin/pages/EmployeeAttendanceTaker'));
+const HomeworkPage = lazy(() => import('./homework/HomeworkPage'));
+const StudentHomeworkPage = lazy(() => import('./homework/StudentHomeworkPage'));
+const CreateAnouncementDatable = lazy(() => import('./components/announcements/CreateAnouncementDatable'));
+const RegistrationPage = lazy(() => import('./pages/RegistrationPage'));
+const RegisteredRequests = lazy(() => import('./admin/pages/RegisteredRequests'));
+const TemplateUploadPage = lazy(() => import('./idcard/pages/TemplateUploadPage'));
+const GenerateDocumentsPage = lazy(() => import('./idcard/pages/GenerateDocumentsPage'));
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // Cache queries for 5 minutes
+      refetchOnWindowFocus: false, // Prevent re-fetching on tab/window focus
+    },
+  },
+});
+
+const PageLoader = () => (
+  <div className="min-h-[50vh] flex flex-col items-center justify-center space-y-3 bg-background text-foreground">
+    <div className="w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+    <span className="text-xs font-medium text-muted-foreground">Loading module...</span>
+  </div>
+);
 
 export default function App() {
   const location = useLocation();
@@ -66,156 +81,144 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <LanguageProvider>
         <AuthProvider>
-          <AnimatePresence>
-            {/* <Toaster
-              position="top-right"
-              reverseOrder={true}
-            /> */}
             <Toaster position="top-center" richColors closeButton />
 
-            <Routes location={location} key={location.pathname}>
-              {/* Root -> show landing page */}
-              <Route index element={<LoginPage />} />
+            <AnimatePresence mode="wait">
+              <Suspense fallback={<PageLoader />}>
+                <Routes location={location}>
+                {/* Root -> show landing page */}
+                <Route index element={<LoginPage />} />
 
-              {/* Login route */}
-              <Route
-                path="/login"
-                element={
-                  <AnimatedLayout>
-                    <LoginPage />
-                  </AnimatedLayout>
-                }
-              />
-              <Route
-                path="/forgotpassword"
-                element={
-                  <AnimatedLayout>
-                    <ForgotPasswordPage />
-                  </AnimatedLayout>
-                }
-              />
-              <Route
-                path="/contact"
-                element={
-                  <AnimatedLayout>
-                    <Contact />
-                  </AnimatedLayout>
-                }
-              />
-              <Route
-                path="/registration"
-                element={
-                  <AnimatedLayout>
-                    <RegistrationPage />
-                  </AnimatedLayout>
-                }
-              />
-
-              {/* Admin area (protected by token) */}
-              <Route
-                path="/school"
-                element={
-                  <ProtectedRoute>
-                    <MainLayout />
-                  </ProtectedRoute>
-                }
-              >
-                {/* index child -> shows when /school is visited */}
-                <Route index element={<Dashboard />} />
-
-                {/* Relative child paths (NO leading slash) */}
-                <Route path="dashboard" element={<Dashboard />} />
-                {/* Student Route */}
-                <Route path="students/list" element={<StudentsDatable />} />
-                <Route path="students/add" element={<AddStudents />} />
-                <Route path="students/attendance" element={<TakeAttendance />} />
-                <Route path="student/acadamic" element={<AcademicRecordsPage />} />
-                {/* Teacher Route */}
-                <Route path="teachers/list" element={<TeachersOperation />} />
-                <Route path="teacher/students" element={<ClassStudent />} />
-                {/* Class Route */}
-                {/* <Route path="classes/list" element={<ClassesDataTable />} /> */}
-                <Route path="class/add" element={<AddClasses />} />
-                <Route path="class/attendance" element={<StudentAttendanceSummary />} />
-                <Route path="class/time_table" element={<CreateTimeTable />} />
-                <Route path="class/class_time_table" element={<ClassTimeTablePage />} />
-                <Route path="class/subjects" element={<AssignSubjectOnClass />} />
-                {/* Subject Route */}
-                <Route path="subject/assign" element={<TeacherSubjectAssign />} />
-                <Route path="subject/teacher_subject" element={<ViewSubjectAssignToTeacher />} />
-                <Route path="subject/student_subject" element={<ViewMySubjects />} />
-                <Route path="subject/add" element={<AddSubject />} />
-                {/* Staff Route */}
-                <Route path="staff/add" element={<StaffOperation />} />
-                <Route path="employees/attendance" element={<EmployeeAttendanceTaker />} />
-
-                {/* Finance Route */}
-                <Route path="finance/fee-structure/list" element={<FeeTypes />} />
+                {/* Login route */}
                 <Route
-                  path="finance/transactions/list"
-                  element={<PaymentHistory />}
+                  path="/login"
+                  element={
+                    <AnimatedLayout>
+                      <LoginPage />
+                    </AnimatedLayout>
+                  }
                 />
                 <Route
-                  path="finance/feestructure/add"
-                  element={<ClassFeeStructure />}
+                  path="/forgotpassword"
+                  element={
+                    <AnimatedLayout>
+                      <ForgotPasswordPage />
+                    </AnimatedLayout>
+                  }
                 />
                 <Route
-                  path="finance/students/fees"
-                  element={<StudentFeeSummary />}
-                />
-                <Route path="finance/invoice/manage" element={<Invoices />} />
-                <Route
-                  path="finance/invoices/:invoiceId"
-                  element={<InvoiceDetails />}
-                />
-                {/* Exam */}
-                <Route path="exam/create_exam" element={<ExamDataTable />} />
-                <Route path="academic-years" element={<AcademicYearDataTable />} />
-                <Route
-                  path="exam/exams_student"
-                  element={<CheckExams />}
+                  path="/contact"
+                  element={
+                    <AnimatedLayout>
+                      <Contact />
+                    </AnimatedLayout>
+                  }
                 />
                 <Route
-                  path="students/fees"
-                  element={<StudentFeeDetails />}
+                  path="/registration"
+                  element={
+                    <AnimatedLayout>
+                      <RegistrationPage />
+                    </AnimatedLayout>
+                  }
                 />
-                {/* <Route path="/fee-types" element={<FeeTypes />} />
-                <Route path="fee/add" element={<AddFeeStructure />} />
-                <Route path="/class-fee-structure" element={<ClassFeeStructure />} />
-                <Route path="/invoices" element={<Invoices />} />
-                <Route path="/invoices/:invoiceId" element={<InvoiceDetails />} />
-                <Route path="/student-fee-summary" element={<StudentFeeSummary />} />
-                <Route path="/payment-history" element={<PaymentHistory />} /> */}
-                {/* Announcement Route */}
-                <Route path="announcement/list" element={<DynamicAnnouncement />} />
-                {/* <Route path="notices/list" element={<NoticeDataTable />} /> */}
-                <Route path="announcement/add" element={<CreateAnouncementDatable />} />
 
-                {/* Assignment Route */}
-                <Route path="assignments/manage" element={<Assignment />} />
-                {/* <Route path="assignments/submit" element={<SubmitAssignment />} /> */}
-                <Route path="assignments/student" element={<SubmitAssignment />} />
-                {/* Notes Route */}
-                <Route path="notes/manage" element={<NotesManagement />} />
-                <Route path="notes/view" element={<NotesViewer />} />
-                {/* Homework Route */}
-                <Route path="homework/manage" element={<HomeworkPage />} />
-                <Route path="homework/student" element={<StudentHomeworkPage />} />
-                <Route path="bulk-import" element={<BulkImport />} />
-                {/* Setting Route */}
-                <Route path="setting" element={<RoleMenuAdmin />} />
-                <Route path="settings" element={<Settings />} />
-                <Route path="profile" element={<Profile />} />
-                <Route path="registered" element={<RegisteredRequests />} />
-                {/* ID Card & Certificate Generator Routes */}
-                <Route path="idcard/templates" element={<TemplateUploadPage />} />
-                <Route path="idcard/generate" element={<GenerateDocumentsPage />} />
-              </Route>
+                {/* Admin area (protected by token) */}
+                <Route
+                  path="/school"
+                  element={
+                    <ProtectedRoute>
+                      <MainLayout />
+                    </ProtectedRoute>
+                  }
+                >
+                  {/* index child -> shows when /school is visited */}
+                  <Route index element={<Dashboard />} />
 
-              {/* fallback -> go to login or dashboard */}
-              {/* <Route path="*" element={<Navigate to="/login" replace />} /> */}
-              <Route path="*" element={<NotFoundFallback />} />
-            </Routes>
+                  {/* Relative child paths (NO leading slash) */}
+                  <Route path="dashboard" element={<Dashboard />} />
+                  {/* Student Route */}
+                  <Route path="students/list" element={<StudentsDatable />} />
+                  <Route path="students/add" element={<AddStudents />} />
+                  <Route path="students/attendance" element={<TakeAttendance />} />
+                  <Route path="student/acadamic" element={<AcademicRecordsPage />} />
+                  {/* Teacher Route */}
+                  <Route path="teachers/list" element={<TeachersOperation />} />
+                  <Route path="teacher/students" element={<ClassStudent />} />
+                  {/* Class Route */}
+                  <Route path="class/add" element={<AddClasses />} />
+                  <Route path="class/attendance" element={<StudentAttendanceSummary />} />
+                  <Route path="class/time_table" element={<CreateTimeTable />} />
+                  <Route path="class/class_time_table" element={<ClassTimeTablePage />} />
+                  <Route path="class/subjects" element={<AssignSubjectOnClass />} />
+                  {/* Subject Route */}
+                  <Route path="subject/assign" element={<TeacherSubjectAssign />} />
+                  <Route path="subject/teacher_subject" element={<ViewSubjectAssignToTeacher />} />
+                  <Route path="subject/student_subject" element={<ViewMySubjects />} />
+                  <Route path="subject/add" element={<AddSubject />} />
+                  {/* Staff Route */}
+                  <Route path="staff/add" element={<StaffOperation />} />
+                  <Route path="employees/attendance" element={<EmployeeAttendanceTaker />} />
+
+                  {/* Finance Route */}
+                  <Route path="finance/fee-structure/list" element={<FeeTypes />} />
+                  <Route
+                    path="finance/transactions/list"
+                    element={<PaymentHistory />}
+                  />
+                  <Route
+                    path="finance/feestructure/add"
+                    element={<ClassFeeStructure />}
+                  />
+                  <Route
+                    path="finance/students/fees"
+                    element={<StudentFeeSummary />}
+                  />
+                  <Route path="finance/invoice/manage" element={<Invoices />} />
+                  <Route
+                    path="finance/invoices/:invoiceId"
+                    element={<InvoiceDetails />}
+                  />
+                  {/* Exam */}
+                  <Route path="exam/create_exam" element={<ExamDataTable />} />
+                  <Route path="academic-years" element={<AcademicYearDataTable />} />
+                  <Route
+                    path="exam/exams_student"
+                    element={<CheckExams />}
+                  />
+                  <Route
+                    path="students/fees"
+                    element={<StudentFeeDetails />}
+                  />
+
+                  {/* Announcement Route */}
+                  <Route path="announcement/list" element={<DynamicAnnouncement />} />
+                  <Route path="announcement/add" element={<CreateAnouncementDatable />} />
+
+                  {/* Assignment Route */}
+                  <Route path="assignments/manage" element={<Assignment />} />
+                  <Route path="assignments/student" element={<SubmitAssignment />} />
+                  {/* Notes Route */}
+                  <Route path="notes/manage" element={<NotesManagement />} />
+                  <Route path="notes/view" element={<NotesViewer />} />
+                  {/* Homework Route */}
+                  <Route path="homework/manage" element={<HomeworkPage />} />
+                  <Route path="homework/student" element={<StudentHomeworkPage />} />
+                  <Route path="bulk-import" element={<BulkImport />} />
+                  {/* Setting Route */}
+                  <Route path="setting" element={<RoleMenuAdmin />} />
+                  <Route path="settings" element={<Settings />} />
+                  <Route path="profile" element={<Profile />} />
+                  <Route path="registered" element={<RegisteredRequests />} />
+                  {/* ID Card & Certificate Generator Routes */}
+                  <Route path="idcard/templates" element={<TemplateUploadPage />} />
+                  <Route path="idcard/generate" element={<GenerateDocumentsPage />} />
+                </Route>
+
+                {/* fallback */}
+                <Route path="*" element={<NotFoundFallback />} />
+              </Routes>
+            </Suspense>
           </AnimatePresence>
         </AuthProvider>
       </LanguageProvider>

@@ -6,13 +6,17 @@ import "remixicon/fonts/remixicon.css";
 import App from './App.jsx'
 import { SpacemanThemeProvider } from '@space-man/react-theme-animation'
 
+import ErrorBoundary from './components/ErrorBoundary.jsx';
+
 // Make Temporal globally available for Schedule-X
 globalThis.Temporal = Temporal;
 
 createRoot(document.getElementById('root')).render(
-  <SpacemanThemeProvider>
-    <BrowserRouter basename="/tis">
-      <App />
-    </BrowserRouter>
-  </SpacemanThemeProvider>
+  <ErrorBoundary>
+    <SpacemanThemeProvider>
+      <BrowserRouter>
+        <App />
+      </BrowserRouter>
+    </SpacemanThemeProvider>
+  </ErrorBoundary>
 )

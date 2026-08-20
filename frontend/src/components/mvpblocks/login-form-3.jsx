@@ -104,7 +104,7 @@ export default function SignInPage() {
     }
   };
 
-  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID || "disabled-client-id";
 
   return (
     <GoogleOAuthProvider clientId={clientId}>

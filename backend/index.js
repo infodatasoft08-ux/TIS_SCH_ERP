@@ -34,8 +34,12 @@ const registrationRouter = require('./routes/registrationRoute');
 const documentRouter = require('./routes/documentRoute');
 const appVersionRoute = require('./routes/appVersionRoute');
 const path = require('path');
+const compression = require('compression');
+app.use(compression());
 
-app.use(cors());
+app.use(cors({
+  maxAge: 86400 // Cache CORS Preflight (204 OPTIONS) for 24 hours in browser
+}));
 app.use(express.json());
 app.use(bodyParser.json());
 app.use(express.urlencoded({ extended: true }));

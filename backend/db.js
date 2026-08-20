@@ -11,7 +11,7 @@ const db = mysql.createPool({
   //   ca: fs.readFileSync(process.env.CA),
   // },
   waitForConnections: true,
-  connectionLimit: 10,     // Max concurrent connections
+  connectionLimit: 50,     // Max concurrent connections
   queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0
