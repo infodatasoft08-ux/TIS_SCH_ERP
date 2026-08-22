@@ -291,7 +291,7 @@ const UpdateTeacher = async (req, res) => {
 
     // ensure teacher exists and lock rows
     const [trows] = await conn.execute(`SELECT * FROM teachers WHERE id = ? FOR UPDATE`, [id]);
-    if (trows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Teacher not found' }); }
+    if (trows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Teacher not found' }); }
     const teacherRow = trows[0];
 
     // update users table if needed
@@ -390,16 +390,16 @@ const UpdateTeacherPassword = async (req, res) => {
     await conn.beginTransaction();
 
     const [trows] = await conn.execute(`SELECT user_id FROM teachers WHERE id = ? FOR UPDATE`, [id]);
-    if (trows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Teacher not found' }); }
+    if (trows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Teacher not found' }); }
     const userId = trows[0].user_id;
 
     const [uRows] = await conn.execute(`SELECT password_hash FROM users WHERE id = ? FOR UPDATE`, [userId]);
-    if (uRows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'User not found' }); }
+    if (uRows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'User not found' }); }
     const currentHash = uRows[0].password_hash;
 
     if (isNonEmptyString(current_password)) {
       const ok = await bcrypt.compare(current_password, currentHash);
-      if (!ok) { await conn.rollback(); conn.release(); return res.status(403).json({ error: 'Current password invalid' }); }
+      if (!ok) { await conn.rollback(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
     const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
@@ -427,7 +427,7 @@ const DeleteTeacher = async (req, res) => {
     await conn.beginTransaction();
 
     const [trows] = await conn.execute(`SELECT user_id FROM teachers WHERE id = ? FOR UPDATE`, [id]);
-    if (trows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Teacher not found' }); }
+    if (trows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Teacher not found' }); }
     const userId = trows[0].user_id;
 
     const [uRows] = await conn.execute(`SELECT avatar_url FROM users WHERE id = ? FOR UPDATE`, [userId]);
@@ -764,19 +764,17 @@ const AsignTeacherForSubject = async (req, res) => {
 const DeleteSubjectAssignOnTeacher = async (req, res) => {
   const id = toInt(req.params.id);
   const subjectId = toInt(req.params.subject_id);
-  console.log(id, subjectId);
   if (!id || !subjectId) return res.status(400).json({ error: 'Invalid id or subject_id' });
-  const conn = await db.getConnection();
 
   try {
-    const [result] = await conn.execute(`DELETE FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?`, [id, subjectId]);
+    const [result] = await db.execute(`DELETE FROM teacher_subjects WHERE teacher_id = ? AND subject_id = ?`, [id, subjectId]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Assignment not found' });
     return res.json({ success: true });
   } catch (err) {
     console.error('DELETE /api/teachers/:id/subjects/:subject_id error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 

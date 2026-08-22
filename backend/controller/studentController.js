@@ -485,7 +485,7 @@ const UpdateStudent = async (req, res) => {
 
     // lock student row
     const [srows] = await conn.execute(`SELECT * FROM students WHERE id = ? FOR UPDATE`, [id]);
-    if (srows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Student not found' }); }
+    if (srows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Student not found' }); }
     const studentRow = srows[0];
     const userId = studentRow.user_id;
 
@@ -638,16 +638,16 @@ const UpdateStudentPassword = async (req, res) => {
     await conn.beginTransaction();
 
     const [srows] = await conn.execute(`SELECT user_id FROM students WHERE id = ? FOR UPDATE`, [id]);
-    if (srows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Student not found' }); }
+    if (srows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Student not found' }); }
     const userId = srows[0].user_id;
 
     const [uRows] = await conn.execute(`SELECT password_hash FROM users WHERE id = ? FOR UPDATE`, [userId]);
-    if (uRows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'User not found' }); }
+    if (uRows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'User not found' }); }
     const currentHash = uRows[0].password_hash;
 
     if (isNonEmptyString(current_password)) {
       const ok = await bcrypt.compare(current_password, currentHash);
-      if (!ok) { await conn.rollback(); conn.release(); return res.status(403).json({ error: 'Current password invalid' }); }
+      if (!ok) { await conn.rollback(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
     const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
@@ -674,7 +674,7 @@ const DeleteStudent = async (req, res) => {
     await conn.beginTransaction();
 
     const [srows] = await conn.execute(`SELECT user_id FROM students WHERE id = ? FOR UPDATE`, [id]);
-    if (srows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Student not found' }); }
+    if (srows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Student not found' }); }
     const userId = srows[0].user_id;
 
     const [uRows] = await conn.execute(`SELECT avatar_url FROM users WHERE id = ? FOR UPDATE`, [userId]);
@@ -728,7 +728,7 @@ const AddParentOnStudent = async (req, res) => {
 
     // ensure student exists
     const [srows] = await conn.execute(`SELECT id FROM students WHERE id = ? FOR UPDATE`, [id]);
-    if (srows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Student not found' }); }
+    if (srows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Student not found' }); }
 
     const pairs = parentIds.map(() => '(?, ?)').join(', ');
     const params = [];
