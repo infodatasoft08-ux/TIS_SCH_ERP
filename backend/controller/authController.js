@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const bcrypt = require('bcryptjs');
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 const axios = require('axios');
 require('dotenv').config();
 
@@ -32,7 +33,13 @@ const login = async (req, res) => {
     }
 
     const user = rows[0];
-    const ok = await bcrypt.compare(password, user.password_hash);
+    let ok = await bcrypt.compare(password, user.password_hash);
+    if (!ok) {
+      const cleanedInputPass = cleanPhoneNumber(password);
+      if (cleanedInputPass && cleanedInputPass !== password) {
+        ok = await bcrypt.compare(cleanedInputPass, user.password_hash);
+      }
+    }
 
     if (!ok) {
       return res.status(400).json({ message: "Invalid credentials" });
@@ -448,13 +455,16 @@ const AddStaffUser = async (req, res) => {
     const { name, email, gender, password, phone, role_id, sub_role, hire_date, employee_code, department, bio, qualification, address, adhar_no } = req.body || {};
     const avatar_url = req.file ? req.file.path : null;
 
+    const cleanedPhone = cleanPhoneNumber(phone);
+    const cleanedPassword = cleanPhoneNumber(password || phone);
+
     if (
       !isNonEmptyString(name) ||
       !isNonEmptyString(email) ||
       !isNonEmptyString(gender) ||
-      !isNonEmptyString(password) ||
+      !cleanedPassword ||
       !toInt(role_id) ||
-      !isNonEmptyString(phone) ||
+      !cleanedPhone ||
       !isNonEmptyString(department) ||
       !isNonEmptyString(adhar_no)
     ) {
@@ -463,7 +473,7 @@ const AddStaffUser = async (req, res) => {
         .status(400)
         .json({ error: "name, email, gender, password, phone, role_id, department, and adhar_no are required" });
     }
-    if (password.length < 6) {
+    if (cleanedPassword.length < 6) {
       if (avatar_url) await deleteFromCloudinary(avatar_url);
       return res
         .status(400)
@@ -479,8 +489,8 @@ const AddStaffUser = async (req, res) => {
       finalEmployeeCode = await generateNextId(settingsRows[0].setting_value, 'staff', 'employee_code');
     }
 
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
-    const [userres] = await db.execute('INSERT INTO users (name,email,gender,password_hash,phone,role_id,sub_role,avatar_url,address,adhar_no,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())', [name, email.trim(), gender, password_hash, phone, role_id, sub_role || null, avatar_url || null, address || null, adhar_no || null]);
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
+    const [userres] = await db.execute('INSERT INTO users (name,email,gender,password_hash,phone,role_id,sub_role,avatar_url,address,adhar_no,created_at) VALUES (?,?,?,?,?,?,?,?,?,?,NOW())', [name, email.trim(), gender, password_hash, cleanedPhone, role_id, sub_role || null, avatar_url || null, address || null, adhar_no || null]);
     const userId = userres.insertId;
 
     // 2) create staff profile

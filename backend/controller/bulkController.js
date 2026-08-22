@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const XLSX = require('xlsx');
 const { generateNextId } = require("../utils/idGenerator");
 const formatMySQLDate = require("../config/deateConverter");
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 
 const SALT_ROUNDS = 10;
 
@@ -46,8 +47,11 @@ const BulkAddStudents = async (req, res) => {
 
                 const { name, email, password, phone, gender, admission_no, grade, class: className, academic_year, address, admission_date, date_of_birth, roll_no, adhar_no, blood_group, fathers_name, mothers_name, father_occupation, mother_contect, parent_contact } = row;
 
-                if (!name || !email || !password || !grade || !className || !academic_year) {
-                    throw new Error(`Missing required fields: name, email, password, grade, class, academic_year`);
+                const cleanedPhone = cleanPhoneNumber(phone);
+                const cleanedPassword = cleanPhoneNumber(password || phone);
+
+                if (!name || !email || !cleanedPassword || !grade || !className || !academic_year) {
+                    throw new Error(`Missing required fields: name, email, password/phone, grade, class, academic_year`);
                 }
 
                 // Map Names to IDs
@@ -59,7 +63,7 @@ const BulkAddStudents = async (req, res) => {
                 if (!classId) throw new Error(`Class "${className}" not found`);
                 if (!ayId) throw new Error(`Academic Year "${academic_year}" not found`);
 
-                const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
+                const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
                 // Auto-generate Admission No if missing
                 let finalAdmissionNo = admission_no;
@@ -71,7 +75,7 @@ const BulkAddStudents = async (req, res) => {
                 const [userRes] = await conn.execute(
                     `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) 
                      VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                    [name, email, gender?.toLowerCase() || 'other', password_hash, studentRoleId, phone || null, adhar_no || null, address || null]
+                    [name, email, gender?.toLowerCase() || 'other', password_hash, studentRoleId, cleanedPhone || null, adhar_no || null, address || null]
                 );
                 const userId = userRes.insertId;
 
@@ -139,11 +143,14 @@ const BulkAddTeachers = async (req, res) => {
                 await conn.beginTransaction();
                 const { name, email, password, phone, gender, employee_code, hire_date, qualification, address, adhar_no, bio } = row;
 
-                if (!name || !email || !password) {
-                    throw new Error(`Missing required fields: name, email, password`);
+                const cleanedPhone = cleanPhoneNumber(phone);
+                const cleanedPassword = cleanPhoneNumber(password || phone);
+
+                if (!name || !email || !cleanedPassword) {
+                    throw new Error(`Missing required fields: name, email, password/phone`);
                 }
 
-                const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
+                const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
                 // Auto-generate Employee Code if missing
                 let finalEmployeeCode = employee_code;
@@ -153,7 +160,7 @@ const BulkAddTeachers = async (req, res) => {
 
                 const [userRes] = await conn.execute(
                     `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                    [name, email, gender?.toLowerCase() || 'other', password_hash, teacherRoleId, phone || null, adhar_no || null, address || null]
+                    [name, email, gender?.toLowerCase() || 'other', password_hash, teacherRoleId, cleanedPhone || null, adhar_no || null, address || null]
                 );
                 const userId = userRes.insertId;
 
@@ -212,11 +219,14 @@ const BulkAddStaff = async (req, res) => {
                 await conn.beginTransaction();
                 const { name, email, password, phone, gender, employee_code, department, sub_role, address, adhar_no } = row;
 
-                if (!name || !email || !password || !sub_role) {
-                    throw new Error(`Missing required fields: name, email, password, sub_role`);
+                const cleanedPhone = cleanPhoneNumber(phone);
+                const cleanedPassword = cleanPhoneNumber(password || phone);
+
+                if (!name || !email || !cleanedPassword || !sub_role) {
+                    throw new Error(`Missing required fields: name, email, password/phone, sub_role`);
                 }
 
-                const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
+                const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
                 // Auto-generate Employee Code if missing
                 let finalEmployeeCode = employee_code;
@@ -226,7 +236,7 @@ const BulkAddStaff = async (req, res) => {
 
                 const [userRes] = await conn.execute(
                     `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-                    [name, email, gender?.toLowerCase() || 'other', password_hash, staffRoleId, phone || null, adhar_no || null, address || null]
+                    [name, email, gender?.toLowerCase() || 'other', password_hash, staffRoleId, cleanedPhone || null, adhar_no || null, address || null]
                 );
                 const userId = userRes.insertId;
 

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
 const { generateAdmissionFormPDF } = require("../helper/pdfHelper");
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 require('dotenv').config();
 const SALT_ROUNDS = 10;
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -33,11 +34,14 @@ const AddStudent = async (req, res) => {
 
   const avatar_url = req.file ? req.file.path : undefined;
 
-  if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(password) || !role_id || !isNonEmptyString(phone) || !isNonEmptyString(gender)) {
+  const cleanedPhone = cleanPhoneNumber(phone);
+  const cleanedPassword = cleanPhoneNumber(password || phone);
+
+  if (!isNonEmptyString(name) || !isNonEmptyString(email) || !cleanedPassword || !role_id || !cleanedPhone || !isNonEmptyString(gender)) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
-    return res.status(400).json({ error: 'name, email, password and role_id are required' });
+    return res.status(400).json({ error: 'name, email, password, phone, and role_id are required' });
   }
-  if (password.length < 6) {
+  if (cleanedPassword.length < 6) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
     return res.status(400).json({ error: 'Password must be at least 6 characters' });
   }
@@ -48,7 +52,7 @@ const AddStudent = async (req, res) => {
 
     // 1) Create user
     const fullName = `${name.trim()}`;
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
     // Dynamic ID Generation for admission_no
     let finalAdmissionNo = admission_no;
@@ -65,7 +69,7 @@ const AddStudent = async (req, res) => {
         gender,
         password_hash,
         role_id,
-        phone,
+        cleanedPhone,
         avatar_url || null,
         adhar_number || null,
         address || null

@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const formatMySQLDate = require("../config/deateConverter");
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 require('dotenv').config();
 
 const SALT_ROUNDS = 10;
@@ -30,13 +31,16 @@ const AddTeacher = async (req, res) => {
 
   const avatar_url = req.file ? req.file.path : null;
 
+  const cleanedPhone = cleanPhoneNumber(phone);
+  const cleanedPassword = cleanPhoneNumber(password || phone);
+
   if (
     !isNonEmptyString(name) ||
     !isNonEmptyString(email) ||
     !isNonEmptyString(gender) ||
-    !isNonEmptyString(password) ||
+    !cleanedPassword ||
     !toInt(role_id) ||
-    !isNonEmptyString(phone) ||
+    !cleanedPhone ||
     !isNonEmptyString(adhar_no)
   ) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
@@ -44,7 +48,7 @@ const AddTeacher = async (req, res) => {
       .status(400)
       .json({ error: "name, email, gender, password, phone and role_id are required" });
   }
-  if (password.length < 6) {
+  if (cleanedPassword.length < 6) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
     return res
       .status(400)
@@ -56,7 +60,7 @@ const AddTeacher = async (req, res) => {
     await conn.beginTransaction();
 
     // 1) create user
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
     // Dynamic ID Generation for employee_code
     let finalEmployeeCode = employee_code;
@@ -67,7 +71,7 @@ const AddTeacher = async (req, res) => {
 
     const [userRes] = await conn.execute(
       `INSERT INTO users (name, email, gender, password_hash, phone, avatar_url, address, adhar_no, role_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-      [name, email.trim(), gender, password_hash, phone, avatar_url || null, address || null, adhar_no || null, role_id]
+      [name, email.trim(), gender, password_hash, cleanedPhone, avatar_url || null, address || null, adhar_no || null, role_id]
     );
     const userId = userRes.insertId;
 

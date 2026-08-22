@@ -2,6 +2,7 @@ const db = require("../db");
 const bcrypt = require('bcryptjs');
 const { generateNextId } = require("../utils/idGenerator");
 const formatMySQLDate = require("../config/deateConverter");
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 
 const SALT_ROUNDS = 10;
 
@@ -11,8 +12,11 @@ const SALT_ROUNDS = 10;
 const registerStudent = async (req, res) => {
   try {
     const { name, email, password, phone, adhar_no } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required." });
+    const cleanedPhone = cleanPhoneNumber(phone);
+    const cleanedPassword = cleanPhoneNumber(password || phone);
+
+    if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
+      return res.status(400).json({ error: "Name, email, and valid contact number are required." });
     }
 
     // Duplicate checks
@@ -27,15 +31,15 @@ const registerStudent = async (req, res) => {
     }
 
     // Hash password
-    const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
     // Save request
-    const payload = { ...req.body, password_hash };
+    const payload = { ...req.body, phone: cleanedPhone, password_hash };
     delete payload.password; // Do not save plain password in JSON
 
     const [result] = await db.execute(
       `INSERT INTO registration_requests (registration_type, status, name, email, phone, adhar_no, data) VALUES (?, 'pending', ?, ?, ?, ?, ?)`,
-      ['student', name.trim(), email.trim(), phone?.trim() || null, adhar_no?.trim() || null, JSON.stringify(payload)]
+      ['student', name.trim(), email.trim(), cleanedPhone || null, adhar_no?.trim() || null, JSON.stringify(payload)]
     );
 
     return res.status(201).json({ success: true, message: "Student registration submitted successfully. Awaiting administration review.", id: result.insertId });
@@ -51,8 +55,11 @@ const registerStudent = async (req, res) => {
 const registerTeacher = async (req, res) => {
   try {
     const { name, email, password, phone, adhar_no } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required." });
+    const cleanedPhone = cleanPhoneNumber(phone);
+    const cleanedPassword = cleanPhoneNumber(password || phone);
+
+    if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
+      return res.status(400).json({ error: "Name, email, and valid contact number are required." });
     }
 
     // Duplicate checks
@@ -66,13 +73,13 @@ const registerTeacher = async (req, res) => {
       return res.status(409).json({ error: "A registration request with this email or Aadhaar number is already pending review." });
     }
 
-    const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
-    const payload = { ...req.body, password_hash };
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
+    const payload = { ...req.body, phone: cleanedPhone, password_hash };
     delete payload.password;
 
     const [result] = await db.execute(
       `INSERT INTO registration_requests (registration_type, status, name, email, phone, adhar_no, data) VALUES (?, 'pending', ?, ?, ?, ?, ?)`,
-      ['teacher', name.trim(), email.trim(), phone?.trim() || null, adhar_no?.trim() || null, JSON.stringify(payload)]
+      ['teacher', name.trim(), email.trim(), cleanedPhone || null, adhar_no?.trim() || null, JSON.stringify(payload)]
     );
 
     return res.status(201).json({ success: true, message: "Teacher registration submitted successfully. Awaiting administration review.", id: result.insertId });
@@ -88,8 +95,11 @@ const registerTeacher = async (req, res) => {
 const registerStaff = async (req, res) => {
   try {
     const { name, email, password, phone, adhar_no } = req.body;
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: "Name, email, and password are required." });
+    const cleanedPhone = cleanPhoneNumber(phone);
+    const cleanedPassword = cleanPhoneNumber(password || phone);
+
+    if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
+      return res.status(400).json({ error: "Name, email, and valid contact number are required." });
     }
 
     // Duplicate checks
@@ -103,13 +113,13 @@ const registerStaff = async (req, res) => {
       return res.status(409).json({ error: "A registration request with this email or Aadhaar number is already pending review." });
     }
 
-    const password_hash = await bcrypt.hash(String(password), SALT_ROUNDS);
-    const payload = { ...req.body, password_hash };
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
+    const payload = { ...req.body, phone: cleanedPhone, password_hash };
     delete payload.password;
 
     const [result] = await db.execute(
       `INSERT INTO registration_requests (registration_type, status, name, email, phone, adhar_no, data) VALUES (?, 'pending', ?, ?, ?, ?, ?)`,
-      ['staff', name.trim(), email.trim(), phone?.trim() || null, adhar_no?.trim() || null, JSON.stringify(payload)]
+      ['staff', name.trim(), email.trim(), cleanedPhone || null, adhar_no?.trim() || null, JSON.stringify(payload)]
     );
 
     return res.status(201).json({ success: true, message: "Staff registration submitted successfully. Awaiting administration review.", id: result.insertId });
@@ -184,6 +194,7 @@ const approveRegistration = async (req, res) => {
 
     const data = typeof record.data === 'string' ? JSON.parse(record.data) : (record.data || {});
     const { name, email, password_hash, phone, gender, adhar_no, address, qualification, hire_date } = data;
+    const cleanedPhone = cleanPhoneNumber(phone || record.phone);
 
     // Check if email already exists in users
     const [existingUsers] = await conn.execute("SELECT id FROM users WHERE email = ?", [email]);
@@ -209,7 +220,7 @@ const approveRegistration = async (req, res) => {
       // 1) User Entry
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, studentRoleId, phone || null, adhar_no || null, address || null]
+        [name, email, gender?.toLowerCase() || 'other', password_hash, studentRoleId, cleanedPhone || null, adhar_no || null, address || null]
       );
       const userId = userRes.insertId;
 
@@ -285,7 +296,7 @@ const approveRegistration = async (req, res) => {
 
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, teacherRoleId, phone || null, adhar_no || null, address || null]
+        [name, email, gender?.toLowerCase() || 'other', password_hash, teacherRoleId, cleanedPhone || null, adhar_no || null, address || null]
       );
       const userId = userRes.insertId;
 
@@ -330,7 +341,7 @@ const approveRegistration = async (req, res) => {
 
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, sub_role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, department, phone || null, adhar_no || null, address || null, sub_role]
+        [name, email, gender?.toLowerCase() || 'other', password_hash, department, cleanedPhone || null, adhar_no || null, address || null, sub_role]
       );
       const userId = userRes.insertId;
 

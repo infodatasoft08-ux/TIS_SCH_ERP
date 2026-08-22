@@ -102,9 +102,23 @@ export default function RegistrationPage() {
     setStaffForm({ ...staffForm, [e.target.name]: e.target.value });
   };
 
+  const cleanPhoneNumber = (phone) => {
+    if (!phone) return '';
+    let str = String(phone).trim().replace(/[\s-]/g, '');
+    if (str.startsWith('+91')) {
+      str = str.slice(3);
+    } else if (str.startsWith('+')) {
+      str = str.slice(1);
+    } else if (str.length === 12 && str.startsWith('91')) {
+      str = str.slice(2);
+    }
+    return str;
+  };
+
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
-    if (!studentForm.name || !studentForm.email || !studentForm.phone) {
+    const cleanedPhone = cleanPhoneNumber(studentForm.phone);
+    if (!studentForm.name || !studentForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
@@ -122,7 +136,7 @@ export default function RegistrationPage() {
     }
     setLoading(true);
     try {
-      const submissionStudentData = { ...studentForm, password: studentForm.phone };
+      const submissionStudentData = { ...studentForm, phone: cleanedPhone, password: cleanedPhone };
       const res = await API.post('/registration/student', submissionStudentData);
       toast.success(res.data?.message || 'Student application submitted successfully!');
       setStudentForm({
@@ -142,13 +156,14 @@ export default function RegistrationPage() {
 
   const handleTeacherSubmit = async (e) => {
     e.preventDefault();
-    if (!teacherForm.name || !teacherForm.email || !teacherForm.phone) {
+    const cleanedPhone = cleanPhoneNumber(teacherForm.phone);
+    if (!teacherForm.name || !teacherForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
     setLoading(true);
     try {
-      const submissionTeacherData = { ...teacherForm, password: teacherForm.phone };
+      const submissionTeacherData = { ...teacherForm, phone: cleanedPhone, password: cleanedPhone };
       const res = await API.post('/registration/teacher', submissionTeacherData);
       toast.success(res.data?.message || 'Teacher application submitted successfully!');
       setTeacherForm({
@@ -165,13 +180,14 @@ export default function RegistrationPage() {
 
   const handleStaffSubmit = async (e) => {
     e.preventDefault();
-    if (!staffForm.name || !staffForm.email || !staffForm.phone) {
+    const cleanedPhone = cleanPhoneNumber(staffForm.phone);
+    if (!staffForm.name || !staffForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
     setLoading(true);
     try {
-      const submissionData = { ...staffForm, password: staffForm.phone };
+      const submissionData = { ...staffForm, phone: cleanedPhone, password: cleanedPhone };
       const res = await API.post('/registration/staff', submissionData);
       toast.success(res.data?.message || 'Staff application submitted successfully!');
       setStaffForm({
