@@ -7,13 +7,15 @@ module.exports = {
     {
       name: 'Times-ERP-backend',
       script: 'index.js',
-      instances: 'max',
+      instances: process.env.PM2_INSTANCES || 'max',
       exec_mode: 'cluster',
       autorestart: true,
       watch: false,
       max_memory_restart: '1G',
+      listen_timeout: 10000,
+      kill_timeout: 5000,
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: 'production'
       },
       env_production: {
         NODE_ENV: 'production'
@@ -31,7 +33,7 @@ module.exports = {
       log_date_format: "YYYY-MM-DD HH:mm Z",
       merge_logs: true,
       env: {
-        NODE_ENV: 'development'
+        NODE_ENV: 'production'
       },
       env_production: {
         NODE_ENV: 'production'

@@ -89,7 +89,7 @@ export default function AppSidebar({ user }) {
       // Cache the menu
       localStorage.setItem('sidebar_menu', JSON.stringify(menuData));
       localStorage.setItem('sidebar_menu_timestamp', Date.now().toString());
-    } catch {
+    } catch (error) {
       console.error("Error fetching menu:", error);
       // If fetch fails, try to use cached data
       const cachedMenu = localStorage.getItem('sidebar_menu');

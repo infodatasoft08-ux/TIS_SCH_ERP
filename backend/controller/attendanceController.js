@@ -314,6 +314,7 @@ const UpdateSingleAttendance = async (req, res) => {
     );
 
     if (!existingAttendance.length) {
+      await conn.rollback();
       return res.status(404).json({
         error: 'Attendance record not found'
       });

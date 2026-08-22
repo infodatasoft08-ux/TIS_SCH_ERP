@@ -4,10 +4,21 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 require('dotenv').config();
 require('../backend/db');
-require('./cron/autoGenerateInvoices'); // initialize the cron job
-// const exphbs = require('express-handlebars');
-// const hbs = require('hbs');
-// const path = require('path');
+
+// Centralized process safety error handlers to prevent unhandledRejection crashes
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('🚨 [Unhandled Rejection]:', reason);
+});
+
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [Uncaught Exception]:', error);
+});
+
+// Only initialize cron jobs on PM2 instance 0 (or single-process dev mode) to prevent multi-worker duplicate execution
+if (!process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === '0') {
+  require('./cron/autoGenerateInvoices');
+  console.log(`[CRON] Auto-generate invoices cron scheduled on instance ${process.env.NODE_APP_INSTANCE || '0'}`);
+}
 
 const authRoutes = require('./routes/auth');
 const studentsRoutes = require('./routes/students');
@@ -63,12 +74,6 @@ createBullBoard({
 
 app.use('/admin/queues', serverAdapter.getRouter());
 
-// app.post('/api/test-whatsapp-queue', async (req, res) => {
-//   const { to, message } = req.body;
-//   await whatsappQueue.add('testMessage', { to, message });
-//   res.json({ success: true, message: 'Message added to queue' });
-// });
-
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/staffUser', staffRouter);
@@ -94,6 +99,13 @@ app.use('/api/registration', registrationRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/app-version', appVersionRoute);
 
+// Global Express Error Handling Middleware
+app.use((err, req, res, next) => {
+  console.error('🚨 Central Express Error:', err.message || err);
+  res.status(err.status || 500).json({
+    message: err.message || 'Internal Server Error'
+  });
+});
 
-const PORT = process.env.PORT;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+const PORT = process.env.PORT || 5003;
+app.listen(PORT, () => console.log(`Server running on port ${PORT} (Process PID: ${process.pid})`));

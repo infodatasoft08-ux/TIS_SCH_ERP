@@ -18,9 +18,10 @@ const login = async (req, res) => {
     return res.status(400).json({ message: "email & password required" });
   }
 
-  const conn = await db.getConnection();
-
+  let conn;
   try {
+    conn = await db.getConnection();
+
     const [rows] = await conn.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
@@ -137,7 +138,7 @@ const login = async (req, res) => {
     console.error("LOGIN ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
 };
 
@@ -148,9 +149,10 @@ const googleLogin = async (req, res) => {
     return res.status(400).json({ message: "email required" });
   }
 
-  const conn = await db.getConnection();
-
+  let conn;
   try {
+    conn = await db.getConnection();
+
     const [rows] = await conn.query(
       "SELECT * FROM users WHERE email = ?",
       [email]
@@ -225,7 +227,7 @@ const googleLogin = async (req, res) => {
     console.error("GOOGLE LOGIN ERROR:", err);
     return res.status(500).json({ message: "Server error" });
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
 };
 
@@ -343,9 +345,7 @@ const sendOtp = async (req, res) => {
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
   try {
-    const conn = await db.getConnection();
-    const [rows] = await conn.execute('SELECT * FROM users WHERE email = ?', [email]);
-    conn.release();
+    const [rows] = await db.execute('SELECT * FROM users WHERE email = ?', [email]);
 
     if (rows.length === 0) {
       return res.status(404).json({ error: 'User with this email not found' });

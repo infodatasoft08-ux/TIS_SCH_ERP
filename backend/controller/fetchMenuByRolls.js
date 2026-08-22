@@ -2,13 +2,24 @@ const pool = require("../db");
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
+// Simple in-memory cache for role-based menu results (TTL 5 minutes)
+const menuCache = new Map();
+const CACHE_TTL_MS = 5 * 60 * 1000;
 
+function clearMenuCache() {
+  menuCache.clear();
+}
 
 const fetchMenusByRole = async (req, res) => {
-  // const conn = await pool.getConnection();
   try {
     const role_id = req.user.role_id;
-    // fetch only active menus (if you have is_active column)
+    const cacheKey = `role_menu_${role_id}`;
+    const cached = menuCache.get(cacheKey);
+
+    if (cached && (Date.now() - cached.timestamp < CACHE_TTL_MS)) {
+      return res.json({ success: true, results: cached.data });
+    }
+
     const [result] = await pool.execute(
       `SELECT m.id, m.key_name, m.title, m.icon, m.path, m.parent_id, m.actions
        FROM menus m
@@ -17,13 +28,14 @@ const fetchMenusByRole = async (req, res) => {
        ORDER BY COALESCE(m.parent_id, 0), m.id`,
       [role_id]
     );
-    // await conn.commit();
+
+    menuCache.set(cacheKey, { timestamp: Date.now(), data: result });
     return res.json({ success: true, results: result });
   } catch (err) {
-    console.error(err);
+    console.error('fetchMenusByRole error:', err);
     res.status(500).json({ message: 'Server error' });
   }
-}
+};
 
 
 /* =========================
@@ -50,6 +62,7 @@ const createMenu = async (req, res) => {
       'INSERT INTO menus (key_name, title, icon, path, parent_id, actions) VALUES (?, ?, ?, ?, ?, ?)',
       [key_name.trim(), title.trim(), icon || null, path || null, parent_id || null, req.body.actions ? JSON.stringify(req.body.actions) : null]
     );
+    clearMenuCache();
     const [rows] = await pool.execute('SELECT * FROM menus WHERE id = ?', [r.insertId]);
     return res.status(201).json({ menu: rows[0] });
   } catch (err) {
@@ -57,20 +70,7 @@ const createMenu = async (req, res) => {
     if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Menu key_name conflict' });
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
-
-
-// async function adminOnly(req, res) {
-//   const roleId = Number(req.params.role_id);
-//   if (!roleId) return res.status(400).json({ message: "Invalid role_id" });
-//   try {
-//     const menuTree = await fetchMenusByRole(roleId);
-//     res.json(menuTree);
-//   } catch (err) {
-//     console.error(err);
-//     res.status(500).json({ message: "Server error" });
-//   }
-// }
+};
 
 
 /**
@@ -106,7 +106,7 @@ const getMenus = async (req, res) => {
     console.error('GET /api/menus error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -130,8 +130,7 @@ const fetchMenuTree = async (req, res) => {
     console.error('GET /api/menus/tree error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-
-}
+};
 
 /**
  * GET /api/menus/:id
@@ -148,7 +147,7 @@ const fetchMenuById = async (req, res) => {
     console.error('GET /api/menus/:id error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -185,6 +184,7 @@ const updateMenu = async (req, res) => {
 
     params.push(id);
     await pool.execute(`UPDATE menus SET ${updates.join(', ')} WHERE id = ?`, params);
+    clearMenuCache();
     const [rows] = await pool.execute('SELECT * FROM menus WHERE id = ?', [id]);
     return res.json({ menu: rows[0] });
   } catch (err) {
@@ -192,7 +192,7 @@ const updateMenu = async (req, res) => {
     if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Menu key_name conflict' });
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -205,17 +205,24 @@ const deleteMenu = async (req, res) => {
   const cascade = req.query.cascade === '1' || req.query.cascade === 'true';
   if (!id) return res.status(400).json({ error: 'Invalid menu id' });
 
-  const conn = await pool.getConnection();
+  let conn;
   try {
+    conn = await pool.getConnection();
     await conn.beginTransaction();
 
     // check exists
     const [mrows] = await conn.execute('SELECT id FROM menus WHERE id = ? FOR UPDATE', [id]);
-    if (mrows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Menu not found' }); }
+    if (mrows.length === 0) { 
+      await conn.rollback(); 
+      return res.status(404).json({ error: 'Menu not found' }); 
+    }
 
     // check children
     const [children] = await conn.execute('SELECT id FROM menus WHERE parent_id = ?', [id]);
-    if (children.length > 0 && !cascade) { await conn.rollback(); conn.release(); return res.status(409).json({ error: 'Menu has children; use ?cascade=1 to delete recursively' }); }
+    if (children.length > 0 && !cascade) { 
+      await conn.rollback(); 
+      return res.status(409).json({ error: 'Menu has children; use ?cascade=1 to delete recursively' }); 
+    }
 
     if (cascade) {
       // gather descendant ids (simple loop)
@@ -241,15 +248,16 @@ const deleteMenu = async (req, res) => {
     }
 
     await conn.commit();
+    clearMenuCache();
     return res.json({ success: true, deleted_id: id, cascade });
   } catch (err) {
-    await conn.rollback();
+    if (conn) await conn.rollback();
     console.error('DELETE /api/menus/:id error', err);
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
-}
+};
 
 
 /* =========================
@@ -259,8 +267,6 @@ const deleteMenu = async (req, res) => {
 /**
  * POST /api/roles/:role_id/menus
  * Body: { menu_ids: [1,2,3], replace?: boolean }
- * - If replace=true: remove existing role_menus for the role and insert the new set (transactional)
- * - Otherwise: insert any new role_menu rows (ignore duplicates)
  */
 
 const assignMenusToRole = async (req, res) => {
@@ -271,27 +277,31 @@ const assignMenusToRole = async (req, res) => {
   if (!roleId) return res.status(400).json({ error: 'Invalid role id' });
   if (menu_ids.length === 0) return res.status(400).json({ error: 'menu_ids array required' });
 
-  const conn = await pool.getConnection();
+  let conn;
   try {
+    conn = await pool.getConnection();
     await conn.beginTransaction();
 
     // validate role exists
     const [rrows] = await conn.execute('SELECT id FROM roles WHERE id = ? FOR UPDATE', [roleId]);
-    if (rrows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Role not found' }); }
+    if (rrows.length === 0) { 
+      await conn.rollback(); 
+      return res.status(404).json({ error: 'Role not found' }); 
+    }
 
     // validate menu ids
     const [mrows] = await conn.execute(`SELECT id FROM menus WHERE id IN (${menu_ids.map(()=>'?').join(',')})`, menu_ids);
     const foundIds = mrows.map(r=>r.id);
     const missing = menu_ids.filter(id => !foundIds.includes(id));
-    if (missing.length) { await conn.rollback(); conn.release(); return res.status(400).json({ error: 'Some menus not found', missing }); }
+    if (missing.length) { 
+      await conn.rollback(); 
+      return res.status(400).json({ error: 'Some menus not found', missing }); 
+    }
 
     if (replace) {
-      // delete existing for role
       await conn.execute('DELETE FROM role_menus WHERE role_id = ?', [roleId]);
     }
 
-    // insert new assignments using INSERT IGNORE or ON DUPLICATE KEY UPDATE
-    // MySQL: use INSERT IGNORE to skip duplicates (requires unique PK defined)
     const values = menu_ids.map(()=> '(?, ?)').join(',');
     const params = [];
     menu_ids.forEach(mid => { params.push(roleId, mid); });
@@ -303,15 +313,16 @@ const assignMenusToRole = async (req, res) => {
       [roleId]
     );
     await conn.commit();
+    clearMenuCache();
     return res.json({ role_id: roleId, menus: assigned });
   } catch (err) {
-    await conn.rollback();
+    if (conn) await conn.rollback();
     console.error('POST /api/roles/:role_id/menus error', err);
     return res.status(500).json({ error: 'Internal server error' });
   } finally {
-    conn.release();
+    if (conn) conn.release();
   }
-}
+};
 
 
 /**
@@ -332,7 +343,7 @@ const getAssignRoleMenus = async (req, res) => {
     console.error('GET /api/roles/:role_id/menus error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -360,7 +371,7 @@ const getAssignRoleMenusTree = async (req, res) => {
     console.error('GET /api/roles/:role_id/menus/tree error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -376,12 +387,13 @@ const removeMenuFromRole = async (req, res) => {
   try {
     const [result] = await pool.execute('DELETE FROM role_menus WHERE role_id = ? AND menu_id = ?', [roleId, menuId]);
     if (result.affectedRows === 0) return res.status(404).json({ error: 'Assignment not found' });
+    clearMenuCache();
     return res.json({ success: true, role_id: roleId, menu_id: menuId });
   } catch (err) {
     console.error('DELETE /api/roles/:role_id/menus/:menu_id error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
 
 
 /**
@@ -402,8 +414,7 @@ const getRolesForMenus = async (req, res) => {
     console.error('GET /api/menus/:menu_id/roles error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
-
+};
 
 
 module.exports = {
@@ -419,5 +430,4 @@ module.exports = {
     getAssignRoleMenusTree,
     removeMenuFromRole,
     getRolesForMenus
-    // adminOnly
 };

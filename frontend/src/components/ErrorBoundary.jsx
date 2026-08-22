@@ -20,6 +20,10 @@ class ErrorBoundary extends React.Component {
   };
 
   handleReset = () => {
+    try {
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+    } catch (e) {}
     this.setState({ hasError: false, error: null, errorInfo: null });
     window.location.href = '/login';
   };
