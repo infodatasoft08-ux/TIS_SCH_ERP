@@ -13,13 +13,9 @@
  */
 function cleanPhoneNumber(phone) {
   if (!phone) return '';
-  let str = String(phone).trim().replace(/[\s-]/g, '');
-  if (str.startsWith('+91')) {
-    str = str.slice(3);
-  } else if (str.startsWith('+')) {
-    str = str.slice(1);
-  } else if (str.length === 12 && str.startsWith('91')) {
-    str = str.slice(2);
+  let str = String(phone).trim().replace(/\D/g, '');
+  if (str.length > 10) {
+    str = str.slice(-10);
   }
   return str;
 }

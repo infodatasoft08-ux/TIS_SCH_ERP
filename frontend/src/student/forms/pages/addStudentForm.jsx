@@ -30,7 +30,7 @@ const createStudentSchema = (isEditMode) =>
     password: isEditMode
       ? z.string().optional()
       : z.string().min(1, "Password is required"),
-    phone: z.string().min(1, "Phone is required"),
+    phone: z.string().min(1, "Phone number is required").regex(/^[0-9]{10}$/, "Must be a 10-digit mobile number (no +91 or country code)"),
     role_id: z.number().min(1, "Role is required"),
     admission_no: isEditMode ? z.string().min(1, "Admission No is required") : z.string().optional(),
     roll_no: z.string().min(1, "Roll No is required"),
@@ -40,13 +40,13 @@ const createStudentSchema = (isEditMode) =>
     admission_date: z.string().optional(),
     adhar_number: z.string().max(12, "12 Digit Adhar Number is required").optional(),
     blood_group: z.string().optional(),
-    mother_contect: z.string().max(10, "Phone is required and 10 digit number").optional(),
+    mother_contect: z.string().regex(/^[0-9]{10}$/, "Mother contact must be a 10-digit mobile number").optional().or(z.literal('')),
     father_occupation: z.string().min(1, "Father Occupation is required"),
     status: z.string().min(1, "Status is required"),
     address: z.string().min(1, "Address is required"),
     fathers_name: z.string().min(1, "Father's Name is required"),
     mothers_name: z.string().min(1, "Mother's Name is required"),
-    parent_contact: z.string().max(10, "Parent Contact is required and 10 digit number"),
+    parent_contact: z.string().min(1, "Parent contact is required").regex(/^[0-9]{10}$/, "Father/Parent contact must be a 10-digit mobile number"),
     academic_year_id: z.coerce.string().min(1, "Academic Year is required")
   });
 

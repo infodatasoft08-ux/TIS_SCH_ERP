@@ -25,7 +25,7 @@ const StaffSchema = z.object({
   name: z.string().min(1, "Name required"),
   email: z.string().email("Valid email required"),
   gender: z.string().min(1, "Gender is required"),
-  phone: z.string().min(1, "Phone is required"),
+  phone: z.string().min(1, "Phone number is required").regex(/^[0-9]{10}$/, "Must be a 10-digit mobile number (no +91 or country code)"),
   role_id: z.number().min(1, "Role is required"),
   employee_code: z.string().optional(),
   hire_date: z.string().optional(),

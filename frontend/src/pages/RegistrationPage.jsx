@@ -115,11 +115,25 @@ export default function RegistrationPage() {
     return str;
   };
 
+  const isValid10DigitPhone = (phone) => /^[0-9]{10}$/.test(phone);
+
   const handleStudentSubmit = async (e) => {
     e.preventDefault();
     const cleanedPhone = cleanPhoneNumber(studentForm.phone);
     if (!studentForm.name || !studentForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
+      return;
+    }
+    if (!isValid10DigitPhone(cleanedPhone)) {
+      toast.error('Phone number must be a valid 10-digit mobile number (without +91 or country code).');
+      return;
+    }
+    if (studentForm.parent_contact && !isValid10DigitPhone(cleanPhoneNumber(studentForm.parent_contact))) {
+      toast.error('Parent contact must be a valid 10-digit mobile number (without +91 or country code).');
+      return;
+    }
+    if (studentForm.mother_contect && !isValid10DigitPhone(cleanPhoneNumber(studentForm.mother_contect))) {
+      toast.error('Mother contact must be a valid 10-digit mobile number (without +91 or country code).');
       return;
     }
     if (!studentForm.grade) {
@@ -167,6 +181,10 @@ export default function RegistrationPage() {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
+    if (!isValid10DigitPhone(cleanedPhone)) {
+      toast.error('Phone number must be a valid 10-digit mobile number (without +91 or country code).');
+      return;
+    }
     setLoading(true);
     try {
       const submissionTeacherData = { ...teacherForm, phone: cleanedPhone, password: cleanedPhone };
@@ -189,6 +207,10 @@ export default function RegistrationPage() {
     const cleanedPhone = cleanPhoneNumber(staffForm.phone);
     if (!staffForm.name || !staffForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
+      return;
+    }
+    if (!isValid10DigitPhone(cleanedPhone)) {
+      toast.error('Phone number must be a valid 10-digit mobile number (without +91 or country code).');
       return;
     }
     setLoading(true);
@@ -334,11 +356,19 @@ export default function RegistrationPage() {
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                      Phone Number
+                      Phone Number *
                     </label>
                     <Input
-                      name="phone" value={studentForm.phone} onChange={handleStudentChange}
-                      placeholder="+91 9876543210"
+                      name="phone"
+                      value={studentForm.phone}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setStudentForm(prev => ({ ...prev, phone: val }));
+                      }}
+                      placeholder="10-digit mobile number"
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2.5 focus-visible:ring-blue-500"
                     />
                   </div>
@@ -478,8 +508,16 @@ export default function RegistrationPage() {
                       Parent Contact Phone
                     </label>
                     <Input
-                      name="parent_contact" value={studentForm.parent_contact} onChange={handleStudentChange}
-                      placeholder="Emergency Mobile Number"
+                      name="parent_contact"
+                      value={studentForm.parent_contact}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setStudentForm(prev => ({ ...prev, parent_contact: val }));
+                      }}
+                      placeholder="10-digit mobile number"
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-blue-500"
                     />
                   </div>
@@ -543,11 +581,19 @@ export default function RegistrationPage() {
 
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                      Phone Number
+                      Phone Number *
                     </label>
                     <Input
-                      name="phone" value={teacherForm.phone} onChange={handleTeacherChange}
-                      placeholder="+91 9123456780"
+                      name="phone"
+                      value={teacherForm.phone}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setTeacherForm(prev => ({ ...prev, phone: val }));
+                      }}
+                      placeholder="10-digit mobile number"
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-indigo-500"
                     />
                   </div>
@@ -735,11 +781,19 @@ export default function RegistrationPage() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 dark:text-gray-300 mb-1.5">
-                      Phone Number
+                      Phone Number *
                     </label>
                     <Input
-                      name="phone" value={staffForm.phone} onChange={handleStaffChange}
-                      placeholder="+91 9888123456"
+                      name="phone"
+                      value={staffForm.phone}
+                      maxLength={10}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={(e) => {
+                        const val = e.target.value.replace(/\D/g, "").slice(0, 10);
+                        setStaffForm(prev => ({ ...prev, phone: val }));
+                      }}
+                      placeholder="10-digit mobile number"
                       className="rounded-xl border-gray-200 dark:border-gray-700 py-2 focus-visible:ring-purple-500"
                     />
                   </div>
