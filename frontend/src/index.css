@@ -245,21 +245,8 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 
   /* Mobile App UI properties */
-  -webkit-touch-callout: none;
-  /* Disable iOS callout when tap to hold */
-  -webkit-user-select: none;
-  /* Disable selection in Safari */
-  user-select: none;
-  /* Disable selection/copy in UI */
   -webkit-tap-highlight-color: transparent;
   /* Removes the tap highlight color */
-}
-
-/* Allow text selection in inputs and textareas */
-input,
-textarea {
-  -webkit-user-select: auto !important;
-  user-select: auto !important;
 }
 
 /* Custom Scrollbar Styles (Disabled for now)
