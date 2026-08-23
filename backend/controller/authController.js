@@ -34,15 +34,35 @@ const login = async (req, res) => {
 
     const user = rows[0];
     let ok = await bcrypt.compare(password, user.password_hash);
-    if (!ok) {
-      const cleanedInputPass = cleanPhoneNumber(password);
-      if (cleanedInputPass && cleanedInputPass !== password) {
-        ok = await bcrypt.compare(cleanedInputPass, user.password_hash);
+    const cleanedInputPass = cleanPhoneNumber(password) || String(password).trim().replace(/\s+/g, '');
+
+    if (!ok && cleanedInputPass && cleanedInputPass !== password) {
+      ok = await bcrypt.compare(cleanedInputPass, user.password_hash);
+    }
+
+    let isLegacySpacedHash = false;
+    if (!ok && user.phone) {
+      if (await bcrypt.compare(user.phone, user.password_hash)) {
+        ok = true;
+        isLegacySpacedHash = true;
       }
     }
 
     if (!ok) {
       return res.status(400).json({ message: "Invalid credentials" });
+    }
+
+    if (isLegacySpacedHash || (user.phone && user.phone !== cleanPhoneNumber(user.phone))) {
+      try {
+        const cleanPassToStore = cleanedInputPass || cleanPhoneNumber(user.phone);
+        if (cleanPassToStore) {
+          const newCleanHash = await bcrypt.hash(cleanPassToStore, SALT_ROUNDS);
+          const cleanedUserPhone = cleanPhoneNumber(user.phone) || user.phone;
+          await conn.query("UPDATE users SET password_hash = ?, phone = ? WHERE id = ?", [newCleanHash, cleanedUserPhone, user.id]);
+        }
+      } catch (healErr) {
+        console.error("Auto-heal password hash error:", healErr);
+      }
     }
 
     const userResponse = {
@@ -431,7 +451,8 @@ const forgotPassword = async (req, res) => {
     }
 
     const userId = uRows[0].id;
-    const newHash = await bcrypt.hash(newPassword, SALT_ROUNDS);
+    const cleanedNewPass = cleanPhoneNumber(newPassword) || String(newPassword).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
 
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
@@ -683,7 +704,8 @@ const UpdateStaffUser = async (req, res) => {
       userParams.push(adhar_no || null);
     }
     if (password !== undefined && password !== "") {
-      const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+      const cleanedPass = cleanPhoneNumber(password) || String(password).trim().replace(/\s+/g, '');
+      const password_hash = await bcrypt.hash(cleanedPass, SALT_ROUNDS);
       userUpdates.push('password_hash = ?');
       userParams.push(password_hash);
     }
@@ -826,7 +848,8 @@ const UpdateStaffPassword = async (req, res) => {
       if (!ok) { await conn.rollback(); conn.release(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
-    const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    const cleanedNewPass = cleanPhoneNumber(new_password) || String(new_password).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
     await conn.commit();
@@ -965,7 +988,8 @@ const UpdateAdminPassword = async (req, res) => {
     const adminRow = trows[0];
 
     // update password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const cleanedPass = cleanPhoneNumber(password) || String(password).trim().replace(/\s+/g, '');
+    const hashedPassword = await bcrypt.hash(cleanedPass, 10);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [hashedPassword, admin_id]);
 
     await conn.commit();
@@ -1103,7 +1127,8 @@ const updateSuperAdminPassword = async (req, res) => {
     const superadminRow = trow[0];
 
     // update password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const cleanedPass = cleanPhoneNumber(password) || String(password).trim().replace(/\s+/g, '');
+    const hashedPassword = await bcrypt.hash(cleanedPass, 10);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [hashedPassword, superadmin_id]);
 
     await conn.commit();

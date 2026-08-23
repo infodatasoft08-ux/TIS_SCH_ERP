@@ -314,11 +314,12 @@ const UpdateTeacher = async (req, res) => {
     if (email !== undefined) { userUpdates.push('email = ?'); userParams.push(email || null); }
     if (gender !== undefined) { userUpdates.push('gender = ?'); userParams.push(gender || null); }
     if (role_id !== undefined) { userUpdates.push('role_id = ?'); userParams.push(role_id || null); }
-    if (phone !== undefined) { userUpdates.push('phone = ?'); userParams.push(phone || null); }
+    if (phone !== undefined) { userUpdates.push('phone = ?'); userParams.push(phone ? cleanPhoneNumber(phone) : null); }
     if (address !== undefined) { userUpdates.push('address = ?'); userParams.push(address || null); }
     if (adhar_no !== undefined) { userUpdates.push('adhar_no = ?'); userParams.push(adhar_no || null); }
     if (req.body.password !== undefined && req.body.password !== "") {
-      const password_hash = await bcrypt.hash(req.body.password, SALT_ROUNDS);
+      const cleanedPass = cleanPhoneNumber(req.body.password) || String(req.body.password).trim().replace(/\s+/g, '');
+      const password_hash = await bcrypt.hash(cleanedPass, SALT_ROUNDS);
       userUpdates.push('password_hash = ?');
       userParams.push(password_hash);
     }
@@ -406,7 +407,8 @@ const UpdateTeacherPassword = async (req, res) => {
       if (!ok) { await conn.rollback(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
-    const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    const cleanedNewPass = cleanPhoneNumber(new_password) || String(new_password).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
     await conn.commit();

@@ -147,6 +147,11 @@ export default function AddStaffDialog({
     try {
       const formData = new FormData();
 
+      const cleanPhoneField = (val) => {
+        if (typeof val !== 'string') return val;
+        return val.trim().replace(/[\s-]/g, '');
+      };
+
       // Add other fields - skip password if empty in edit mode
       Object.entries(values).forEach(([key, value]) => {
         if (value !== undefined && value !== "") {
@@ -154,7 +159,11 @@ export default function AddStaffDialog({
           if (isEditMode && key === "password" && value === "") {
             return;
           }
-          formData.append(key, value);
+          let finalVal = value;
+          if (['phone', 'password'].includes(key)) {
+            finalVal = cleanPhoneField(value);
+          }
+          formData.append(key, finalVal);
         }
       });
 

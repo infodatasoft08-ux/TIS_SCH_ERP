@@ -136,7 +136,13 @@ export default function RegistrationPage() {
     }
     setLoading(true);
     try {
-      const submissionStudentData = { ...studentForm, phone: cleanedPhone, password: cleanedPhone };
+      const submissionStudentData = { 
+        ...studentForm, 
+        phone: cleanedPhone, 
+        mother_contect: cleanPhoneNumber(studentForm.mother_contect),
+        parent_contact: cleanPhoneNumber(studentForm.parent_contact),
+        password: cleanedPhone 
+      };
       const res = await API.post('/registration/student', submissionStudentData);
       toast.success(res.data?.message || 'Student application submitted successfully!');
       setStudentForm({

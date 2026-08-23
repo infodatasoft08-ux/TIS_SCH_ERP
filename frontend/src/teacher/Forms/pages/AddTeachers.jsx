@@ -148,6 +148,11 @@ export default function AddTeacherDialog({
         formData.append('hire_date', formattedHireDate);
       }
 
+      const cleanPhoneField = (val) => {
+        if (typeof val !== 'string') return val;
+        return val.trim().replace(/[\s-]/g, '');
+      };
+
       // Add other fields - skip password if empty in edit mode
       Object.entries(values).forEach(([key, value]) => {
         if (value !== undefined && value !== "" && key !== 'hire_date') {
@@ -155,7 +160,11 @@ export default function AddTeacherDialog({
           if (isEditMode && key === 'password' && value === '') {
             return;
           }
-          formData.append(key, value);
+          let finalVal = value;
+          if (['phone', 'password'].includes(key)) {
+            finalVal = cleanPhoneField(value);
+          }
+          formData.append(key, finalVal);
         }
       });
 

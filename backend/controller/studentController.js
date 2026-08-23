@@ -96,10 +96,10 @@ const AddStudent = async (req, res) => {
         admission_date || null,
         // adhar_number || null,
         blood_group || null,
-        mother_contect || null,
+        cleanPhoneNumber(mother_contect) || null,
         father_occupation || null,
         status || 'active',
-        parent_contact || null,
+        cleanPhoneNumber(parent_contact) || null,
         mothers_name || null,
         fathers_name || null,
         // address || null
@@ -511,11 +511,12 @@ const UpdateStudent = async (req, res) => {
     if (email !== undefined) { userUpdates.push('email = ?'); userParams.push(email || null); }
     if (gender !== undefined) { userUpdates.push('gender = ?'); userParams.push(gender || null); }
     if (role_id !== undefined) { userUpdates.push('role_id = ?'); userParams.push(role_id || null); }
-    if (phone !== undefined) { userUpdates.push('phone = ?'); userParams.push(phone || null); }
+    if (phone !== undefined) { userUpdates.push('phone = ?'); userParams.push(phone ? cleanPhoneNumber(phone) : null); }
     if (address !== undefined) { userUpdates.push('address = ?'); userParams.push(address || null); }
     if (adhar_number !== undefined) { userUpdates.push('adhar_no = ?'); userParams.push(adhar_number || null); }
     if (req.body.password !== undefined && req.body.password !== "") {
-      const password_hash = await bcrypt.hash(req.body.password, SALT_ROUNDS);
+      const cleanedPass = cleanPhoneNumber(req.body.password) || String(req.body.password).trim().replace(/\s+/g, '');
+      const password_hash = await bcrypt.hash(cleanedPass, SALT_ROUNDS);
       userUpdates.push('password_hash = ?');
       userParams.push(password_hash);
     }
@@ -544,10 +545,10 @@ const UpdateStudent = async (req, res) => {
     if (admission_date !== undefined) { sUpdates.push('admission_date = ?'); sParams.push(admission_date || null); }
     // if (adhar_number !== undefined) { sUpdates.push('adhar_number = ?'); sParams.push(adhar_number || null); }
     if (blood_group !== undefined) { sUpdates.push('blood_group = ?'); sParams.push(blood_group || null); }
-    if (mother_contect !== undefined) { sUpdates.push('mother_contect = ?'); sParams.push(mother_contect || null); }
+    if (mother_contect !== undefined) { sUpdates.push('mother_contect = ?'); sParams.push(mother_contect ? cleanPhoneNumber(mother_contect) : null); }
     if (father_occupation !== undefined) { sUpdates.push('father_occupation = ?'); sParams.push(father_occupation || null); }
     if (status !== undefined) { sUpdates.push('status = ?'); sParams.push(status || null); }
-    if (parent_contact !== undefined) { sUpdates.push('parent_contact = ?'); sParams.push(parent_contact || null); }
+    if (parent_contact !== undefined) { sUpdates.push('parent_contact = ?'); sParams.push(parent_contact ? cleanPhoneNumber(parent_contact) : null); }
     // acadmic_year is now in academic records
     if (mothers_name !== undefined) { sUpdates.push('mothers_name = ?'); sParams.push(mothers_name || null); }
     if (fathers_name !== undefined) { sUpdates.push('fathers_name = ?'); sParams.push(fathers_name || null); }
@@ -654,7 +655,8 @@ const UpdateStudentPassword = async (req, res) => {
       if (!ok) { await conn.rollback(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
-    const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    const cleanedNewPass = cleanPhoneNumber(new_password) || String(new_password).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
     await conn.commit();

@@ -278,6 +278,11 @@ export default function AddStudentDialog({
         formData.append('date_of_birth', formattedBirthDate);
       }
 
+      const cleanPhoneField = (val) => {
+        if (typeof val !== 'string') return val;
+        return val.trim().replace(/[\s-]/g, '');
+      };
+
       // Add other fields - skip password if empty in edit mode
       Object.entries(values).forEach(([key, value]) => {
         if (value !== undefined && value !== "" && key !== 'admission_date' && key !== 'date_of_birth') {
@@ -285,7 +290,11 @@ export default function AddStudentDialog({
           if (isEditMode && key === 'password' && value === '') {
             return;
           }
-          formData.append(key, value);
+          let finalVal = value;
+          if (['phone', 'password', 'mother_contect', 'parent_contact'].includes(key)) {
+            finalVal = cleanPhoneField(value);
+          }
+          formData.append(key, finalVal);
         }
       });
 

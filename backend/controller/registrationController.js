@@ -196,6 +196,14 @@ const approveRegistration = async (req, res) => {
     const { name, email, password_hash, phone, gender, adhar_no, address, qualification, hire_date } = data;
     const cleanedPhone = cleanPhoneNumber(phone || record.phone);
 
+    let finalPasswordHash = password_hash;
+    if (!finalPasswordHash && (phone || record.phone)) {
+      const defaultPass = cleanPhoneNumber(phone || record.phone);
+      if (defaultPass) {
+        finalPasswordHash = await bcrypt.hash(defaultPass, SALT_ROUNDS);
+      }
+    }
+
     // Check if email already exists in users
     const [existingUsers] = await conn.execute("SELECT id FROM users WHERE email = ?", [email]);
     if (existingUsers.length > 0) {
@@ -220,7 +228,7 @@ const approveRegistration = async (req, res) => {
       // 1) User Entry
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, studentRoleId, cleanedPhone || null, adhar_no || null, address || null]
+        [name, email, gender?.toLowerCase() || 'other', finalPasswordHash, studentRoleId, cleanedPhone || null, adhar_no || null, address || null]
       );
       const userId = userRes.insertId;
 
@@ -267,9 +275,9 @@ const approveRegistration = async (req, res) => {
           formatMySQLDate(data.date_of_birth),
           formatMySQLDate(data.admission_date || new Date()),
           data.blood_group || null,
-          data.mother_contact || data.mother_contect || null,
+          cleanPhoneNumber(data.mother_contact || data.mother_contect) || null,
           data.father_occupation || null,
-          data.parent_contact || null,
+          cleanPhoneNumber(data.parent_contact) || null,
           data.mothers_name || null,
           data.fathers_name || null
         ]
@@ -296,7 +304,7 @@ const approveRegistration = async (req, res) => {
 
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, teacherRoleId, cleanedPhone || null, adhar_no || null, address || null]
+        [name, email, gender?.toLowerCase() || 'other', finalPasswordHash, teacherRoleId, cleanedPhone || null, adhar_no || null, address || null]
       );
       const userId = userRes.insertId;
 
@@ -307,21 +315,6 @@ const approveRegistration = async (req, res) => {
 
     } else if (record.registration_type === 'staff') {
       const { sub_role, department } = data;
-
-      // Smart lookup of specific sub_role ID if available
-      // let staffRoleId;
-      // if (sub_role) {
-      //   const [specRoles] = await conn.execute("SELECT id FROM roles WHERE id = ? AND sub_role = ? LIMIT 1", [department, sub_role]);
-      //   if (specRoles.length > 0) {
-      //     staffRoleId = specRoles[0].id;
-      //   } else {
-      //     const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE sub_role = ? LIMIT 1", [sub_role]);
-      //     if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
-      //   }
-      // } else {
-      //   const [rolesRows] = await conn.execute("SELECT id FROM roles WHERE sub_role = ? LIMIT 1", [sub_role]);
-      //   if (rolesRows.length > 0) staffRoleId = rolesRows[0].id;
-      // }
 
       const [settingsRows] = await conn.execute('SELECT setting_key, setting_value FROM school_settings WHERE setting_key = "employee_code_prefix"');
       const employeePrefix = settingsRows[0]?.setting_value;
@@ -341,7 +334,7 @@ const approveRegistration = async (req, res) => {
 
       const [userRes] = await conn.execute(
         `INSERT INTO users (name, email, gender, password_hash, role_id, phone, adhar_no, address, sub_role, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`,
-        [name, email, gender?.toLowerCase() || 'other', password_hash, department, cleanedPhone || null, adhar_no || null, address || null, sub_role]
+        [name, email, gender?.toLowerCase() || 'other', finalPasswordHash, department, cleanedPhone || null, adhar_no || null, address || null, sub_role]
       );
       const userId = userRes.insertId;
 

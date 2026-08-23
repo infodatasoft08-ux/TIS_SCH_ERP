@@ -1,17 +1,20 @@
 const db = require("../db");
 const bcrypt = require('bcryptjs');
+const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 require('dotenv').config();
 const SALT_ROUNDS = 10;
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 
 const AddParents = async (req, res) => {
-  const { name, email, password, role_id, relation, occupation } = req.body;
+  const { name, email, password, phone, role_id, relation, occupation } = req.body;
+  const cleanedPhone = cleanPhoneNumber(phone);
+  const cleanedPassword = cleanPhoneNumber(password || phone) || String(password).trim().replace(/\s+/g, '');
 
-  if (!isNonEmptyString(name) || !isNonEmptyString(email) || !isNonEmptyString(password) || !role_id) {
+  if (!isNonEmptyString(name) || !isNonEmptyString(email) || !cleanedPassword || !role_id) {
     return res.status(400).json({ error: 'name, email, password and role_id are required' });
   }
-  if (password.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
+  if (cleanedPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 
   let conn;
   try {
@@ -19,12 +22,12 @@ const AddParents = async (req, res) => {
     await conn.beginTransaction();
 
     const fullName = `${name.trim()}`;
-    const password_hash = await bcrypt.hash(password, SALT_ROUNDS);
+    const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
     // 1) create user
     const [userRes] = await conn.execute(
-      `INSERT INTO users (name, email, password_hash, role_id, created_at) VALUES (?, ?, ?, ?, NOW())`,
-      [fullName, email.trim(), password_hash, role_id]
+      `INSERT INTO users (name, email, password_hash, role_id, phone, created_at) VALUES (?, ?, ?, ?, ?, NOW())`,
+      [fullName, email.trim(), password_hash, role_id, cleanedPhone || null]
     );
     const userId = userRes.insertId;
 
@@ -213,7 +216,8 @@ const UpdateParentPassword = async (req, res) => {
       }
     }
 
-    const newHash = await bcrypt.hash(new_password, SALT_ROUNDS);
+    const cleanedNewPass = cleanPhoneNumber(new_password) || String(new_password).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
     await conn.execute(`UPDATE users SET password_hash = ? WHERE id = ?`, [newHash, userId]);
 
     await conn.commit();
