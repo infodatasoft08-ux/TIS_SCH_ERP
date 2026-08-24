@@ -44,7 +44,8 @@ export default function Settings() {
         STUDENT: 1,
         PARENT: 5,
         ACCOUNTANT: 4,
-        SUPERADMIN: 6
+        SUPERADMIN: 6,
+        DEVELOPER: 12
     };
 
     const fetchBranding = useCallback(async () => {
@@ -79,10 +80,10 @@ export default function Settings() {
     }, [ROLES.ADMIN]);
 
     useEffect(() => {
-        if (user?.role_id === ROLES.ADMIN) {
+        if (user?.role_id === ROLES.ADMIN || user?.role_id === ROLES.SUPERADMIN || user?.role_id === ROLES.DEVELOPER) {
             fetchBranding();
         }
-    }, [user, fetchBranding, ROLES.ADMIN]);
+    }, [user, fetchBranding, ROLES.ADMIN, ROLES.SUPERADMIN, ROLES.DEVELOPER]);
 
     const handleUpdateSettings = async () => {
         setSavingSettings(true);
@@ -174,7 +175,7 @@ export default function Settings() {
 
             <div className="grid gap-6">
                 {/* Role Menu Assign Section */}
-                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN) && (
+                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN || user.role_id === ROLES.DEVELOPER) && (
                     <Card className="overflow-hidden border-muted/60 shadow-md">
                         <CardHeader className="bg-muted/30">
                             <div className="flex items-center gap-2">
@@ -203,7 +204,7 @@ export default function Settings() {
                 )}
 
                 {/* Mobile App Settings Section */}
-                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN) && (
+                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN || user.role_id === ROLES.DEVELOPER) && (
                     <Card className="overflow-hidden border-muted/60 shadow-md">
                         <CardHeader className="bg-muted/30">
                             <div className="flex items-center gap-2">
@@ -226,7 +227,7 @@ export default function Settings() {
                 )}
 
                 {/* School Branding Section (Admin Only) */}
-                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN) && (
+                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN || user.role_id === ROLES.DEVELOPER) && (
                     <div className="space-y-6">
                         {/* School Name and Basic Info */}
                         <Card className="overflow-hidden border-muted/60 shadow-md">

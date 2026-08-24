@@ -17,6 +17,7 @@ const ROLES = {
   DISCIPLINE_INCHARGE: 11,
   CARE_TAKER: 10,
   COMPUTER_OPERATOR: 9,
+  DEVELOPER: 12,
   STAFF: "staff"
 };
 
@@ -53,6 +54,7 @@ export default function Dashboard() {
       return <FinanceDashboard />;
 
     case ROLES.SUPERADMIN:
+    case ROLES.DEVELOPER:
       return <AdminDashboard />;
 
     case ROLES.DISCIPLINE_INCHARGE:

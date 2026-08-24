@@ -24,8 +24,8 @@ const login = async (req, res) => {
     conn = await db.getConnection();
 
     const [rows] = await conn.query(
-      "SELECT * FROM users WHERE email = ?",
-      [email]
+      "SELECT * FROM users WHERE email = ? OR name = ?",
+      [email, email]
     );
 
     if (!rows.length) {

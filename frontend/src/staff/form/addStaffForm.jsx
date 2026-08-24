@@ -509,7 +509,7 @@ export default function AddStaffDialog({
                                 <CommandEmpty>No roles found.</CommandEmpty>
                                 <CommandGroup>
                                   {roles
-                                    .filter((role) => role.sub_role === "staff" || (!["student", "teacher", "admin", "superadmin", "parent"].includes(String(role.role_name).toLowerCase()) && !role.sub_role))
+                                    .filter((role) => role.sub_role === "staff" || (!["student", "teacher", "admin", "superadmin", "parent", "developer"].includes(String(role.role_name).toLowerCase()) && !role.sub_role))
                                     .map((role) => (
                                       <CommandItem
                                         key={role.id}

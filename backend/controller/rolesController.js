@@ -11,7 +11,7 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
  */
 const getSubRole = (role_name) => {
     const nameLower = (role_name || '').toLowerCase();
-    const isCore = ['student', 'teacher', 'admin', 'superadmin', 'parents'].some(core => nameLower.includes(core));
+    const isCore = ['student', 'teacher', 'admin', 'superadmin', 'parents', 'developer'].some(core => nameLower.includes(core));
     return isCore ? null : 'staff';
 };
 
