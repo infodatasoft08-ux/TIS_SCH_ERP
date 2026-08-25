@@ -346,6 +346,7 @@ export default function AddStaffDialog({
                   <FormField
                     control={form.control}
                     name="employee_code"
+                    readonly={true}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Employee Code *</FormLabel>

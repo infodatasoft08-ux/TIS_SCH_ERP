@@ -52,21 +52,28 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
         }
     });
 
+
+    const [progress, setProgress] = useState(0);
+    const [promotedCount, setPromotedCount] = useState(0);
+    const [totalToPromote, setTotalToPromote] = useState(0);
+    const [statusMessage, setStatusMessage] = useState("");
+
     const sourceGradeId = form.watch("source_grade_id");
     const selectedStudentIds = form.watch("student_ids");
+    const targetGradeId = form.watch("grade_id");
+    const targetClassId = form.watch("class_id");
 
-    // Fetch students when source grade changes
+    // Clear Selected Students on Filter Change & fetch students for selected source grade
     useEffect(() => {
         async function fetchStudents() {
             if (!open) return;
             setIsLoadingStudents(true);
             try {
-                // Fetch students based on source grade filter
                 const gradeId = sourceGradeId === "all" ? "" : sourceGradeId;
                 const res = await API.get(`/students/get/student?limit=1000&grade_id=${gradeId}`);
                 setAllStudents(res.data.students || []);
-                // Clear selected students when source grade changes to avoid cross-grade promotion errors
-                // form.setValue("student_ids", []);
+                // Always clear student_ids when source grade changes to prevent accidental cross-grade promotions
+                form.setValue("student_ids", []);
             } catch (err) {
                 console.error("Failed to fetch students", err);
                 toast.error("Failed to fetch students for selected class");
@@ -77,19 +84,74 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
         fetchStudents();
     }, [sourceGradeId, open, form]);
 
+    // Filter section dropdown by target grade
+    const filteredTargetSections = useMemo(() => {
+        if (!targetGradeId) return [];
+        return classes.filter(c => c.grade_id.toString() === targetGradeId.toString());
+    }, [classes, targetGradeId]);
+
+    // Auto-Reset Mismatched Sections when target grade changes
+    useEffect(() => {
+        if (targetGradeId && targetClassId) {
+            const belongs = classes.some(c =>
+                c.id.toString() === targetClassId.toString() &&
+                c.grade_id.toString() === targetGradeId.toString()
+            );
+            if (!belongs) {
+                form.setValue("class_id", "");
+            }
+        }
+    }, [targetGradeId, targetClassId, classes, form]);
+
     async function onSubmit(values) {
+        const total = values.student_ids.length;
         setIsSubmitting(true);
+        setTotalToPromote(total);
+        setPromotedCount(0);
+        setProgress(5);
+        setStatusMessage(`Preparing promotion for ${total} student${total > 1 ? 's' : ''}...`);
+
+        // Progressive counter while promotion request processes
+        const interval = setInterval(() => {
+            setProgress((prev) => {
+                if (prev >= 90) {
+                    clearInterval(interval);
+                    return 90;
+                }
+                const next = prev + Math.floor(Math.random() * 15) + 5;
+                const currentCount = Math.min(Math.floor((next / 100) * total), total - 1);
+                setPromotedCount(currentCount);
+                setStatusMessage(`Promoting student ${currentCount + 1} of ${total}...`);
+                return next > 90 ? 90 : next;
+            });
+        }, 120);
+
         try {
             await API.post("/academic/bulk-promote", {
                 student_ids: values.student_ids,
                 academic_year_id: values.academic_year_id,
                 grade_id: values.grade_id,
-                class_id: values.class_id
+                class_id: values.class_id || null
             });
-            toast.success("Students promoted successfully");
-            onOpenChange(false);
-            if (onSuccess) onSuccess();
+
+            clearInterval(interval);
+            setProgress(100);
+            setPromotedCount(total);
+            setStatusMessage(`Successfully promoted ${total} student${total > 1 ? 's' : ''}!`);
+            toast.success(`Successfully promoted ${total} student${total > 1 ? 's' : ''}!`);
+
+            setTimeout(() => {
+                setIsSubmitting(false);
+                setProgress(0);
+                onOpenChange(false);
+                if (onSuccess) onSuccess();
+            }, 1000);
+            // onOpenChange(false);
+            // if (onSuccess) onSuccess();
         } catch (err) {
+            clearInterval(interval);
+            setIsSubmitting(false);
+            setProgress(0);
             console.error(err);
             toast.error(err.response?.data?.error || "Failed to promote students");
         } finally {
@@ -279,7 +341,22 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                                         render={({ field }) => (
                                             <FormItem>
                                                 <FormLabel>Promote to Class *</FormLabel>
-                                                <Select onValueChange={field.onChange} value={field.value}>
+                                                <Select
+                                                    onValueChange={(val) => {
+                                                        field.onChange(val);
+                                                        const sections = classes.filter(c => c.grade_id.toString() === val.toString());
+                                                        if (sections.length === 1) {
+                                                            form.setValue("class_id", sections[0].id.toString());
+                                                        } else {
+                                                            const currentSection = form.getValues("class_id");
+                                                            const belongs = sections.some(c => c.id.toString() === currentSection?.toString());
+                                                            if (!belongs) {
+                                                                form.setValue("class_id", "");
+                                                            }
+                                                        }
+                                                    }}
+                                                    value={field.value}
+                                                >
                                                     <FormControl>
                                                         <SelectTrigger>
                                                             <SelectValue placeholder="Select Class" />
@@ -309,7 +386,7 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                                                         </SelectTrigger>
                                                     </FormControl>
                                                     <SelectContent>
-                                                        {classes.filter(c => c.grade_id.toString() === form.watch("grade_id")).map((c) => (
+                                                        {filteredTargetSections.map((c) => (
                                                             <SelectItem key={c.id} value={c.id.toString()}>{c.name}</SelectItem>
                                                         ))}
                                                     </SelectContent>
@@ -325,6 +402,58 @@ export default function BulkPromoteForm({ open, onOpenChange, onSuccess, grades 
                                 </div>
                             </div>
                         </div>
+
+                        {/* Centered Overlay Progress Bar */}
+                        {isSubmitting && (
+                            <div className="absolute inset-0 bg-background/90 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center animate-in fade-in zoom-in-95 duration-200">
+                                <div className="bg-card border border-emerald-500/30 shadow-2xl rounded-2xl p-8 max-w-md w-full space-y-6 relative overflow-hidden">
+                                    {/* Top decorative gradient bar */}
+                                    <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-emerald-500 via-teal-500 to-indigo-500" />
+
+                                    {/* Animated Icon Header */}
+                                    <div className="flex justify-center">
+                                        {progress < 100 ? (
+                                            <div className="relative flex items-center justify-center h-16 w-16 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-30"></span>
+                                                <ArrowUpCircle className="h-9 w-9 animate-bounce text-emerald-600 dark:text-emerald-400" />
+                                            </div>
+                                        ) : (
+                                            <div className="h-16 w-16 rounded-full bg-emerald-500 text-white flex items-center justify-center shadow-lg shadow-emerald-500/30 animate-in zoom-in-50 duration-300">
+                                                <Check className="h-9 w-9 stroke-[3]" />
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* Status Title & Message */}
+                                    <div className="space-y-1">
+                                        <h3 className="text-xl font-bold text-foreground">
+                                            {progress < 100 ? "Promoting Students..." : "Promotion Complete!"}
+                                        </h3>
+                                        <p className="text-sm font-medium text-muted-foreground">
+                                            {statusMessage}
+                                        </p>
+                                    </div>
+
+                                    {/* Main Progress Bar Container */}
+                                    <div className="space-y-2">
+                                        <div className="flex justify-between items-center text-xs font-semibold">
+                                            <span className="text-emerald-700 dark:text-emerald-400 font-medium">Progress</span>
+                                            <span className="font-mono bg-emerald-100 dark:bg-emerald-900/80 text-emerald-800 dark:text-emerald-200 px-2.5 py-0.5 rounded-full text-xs font-bold">
+                                                {promotedCount} / {totalToPromote} ({Math.round(progress)}%)
+                                            </span>
+                                        </div>
+
+                                        {/* Progress Bar Track */}
+                                        <div className="w-full bg-slate-200 dark:bg-slate-800 h-4 rounded-full overflow-hidden p-0.5 border border-slate-300/40 dark:border-slate-700/40 shadow-inner">
+                                            <div
+                                                className="bg-gradient-to-r from-emerald-500 via-teal-500 to-emerald-400 h-full rounded-full transition-all duration-300 ease-out shadow-md"
+                                                style={{ width: `${progress}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         <DialogFooter className="p-6 border-t flex-shrink-0 gap-2 mt-0 bg-gray-50/50 dark:bg-gray-900/50">
                             <Button type="button" variant="outline" disabled={isSubmitting} onClick={() => onOpenChange(false)}>

@@ -174,7 +174,7 @@ export default function AddTeacherDialog({
         formData.append("avatar_url", "");
       }
 
-      console.log("Submitting form data:", Object.fromEntries(formData));
+      // console.log("Submitting form data:", Object.fromEntries(formData));
 
       if (isEditMode) {
         await API.put(`/teachers/update/teacher/${teacherToEdit.teacher_id}`, formData);
@@ -348,6 +348,7 @@ export default function AddTeacherDialog({
                   <FormField
                     control={form.control}
                     name="employee_code"
+                    readonly={true}
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Employee Code *</FormLabel>

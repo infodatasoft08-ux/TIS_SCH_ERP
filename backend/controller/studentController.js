@@ -565,15 +565,60 @@ const UpdateStudent = async (req, res) => {
     // simpler approach: update the LATEST academic record for this student.
     const hasAcademicUpdates = (grade_id !== undefined || class_id !== undefined || roll_no !== undefined || academic_year_id !== undefined);
 
-    if (hasAcademicUpdates) {
-      // get latest record
-      const [recs] = await conn.execute(
-        `SELECT id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1`,
-        [id]
-      );
+    // if (hasAcademicUpdates) {
+    //   // get latest record
+    //   const [recs] = await conn.execute(
+    //     `SELECT id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1`,
+    //     [id]
+    //   );
 
-      if (recs.length > 0) {
-        const recId = recs[0].id;
+    //   if (recs.length > 0) {
+    //     const recId = recs[0].id;
+    //     const aUpdates = [];
+    //     const aParams = [];
+
+    //     if (grade_id !== undefined) { aUpdates.push('grade_id = ?'); aParams.push(grade_id || null); }
+    //     if (class_id !== undefined) { aUpdates.push('class_id = ?'); aParams.push(class_id || null); }
+    //     if (roll_no !== undefined) { aUpdates.push('roll_no = ?'); aParams.push(roll_no || null); }
+    //     if (academic_year_id !== undefined) { aUpdates.push('academic_year_id = ?'); aParams.push(academic_year_id || null); }
+
+    //     if (aUpdates.length > 0) {
+    //       aParams.push(recId);
+    //       await conn.execute(`UPDATE student_academic_records SET ${aUpdates.join(', ')} WHERE id = ?`, aParams);
+    //     }
+    //   } else {
+    //     // No academic record exists? Should not happen for valid students, but if it does, insert one?
+    //     // For now, let's assume it exists if student exists, or we skip.
+    //     // Optionally we could INSERT if missing, but we need mandatory fields like academic_year_id.
+    //   }
+    // }
+
+    if (hasAcademicUpdates) {
+      let targetRecId = null;
+
+      // 1. Look for existing record matching student_id and academic_year_id
+      if (academic_year_id) {
+        const [existingAy] = await conn.execute(
+          `SELECT id FROM student_academic_records WHERE student_id = ? AND academic_year_id = ? LIMIT 1`,
+          [id, academic_year_id]
+        );
+        if (existingAy.length > 0) {
+          targetRecId = existingAy[0].id;
+        }
+      }
+
+      // 2. Fallback to latest academic record if specific session record not found
+      if (!targetRecId) {
+        const [recs] = await conn.execute(
+          `SELECT id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1`,
+          [id]
+        );
+        if (recs.length > 0) {
+          targetRecId = recs[0].id;
+        }
+      }
+
+      if (targetRecId) {
         const aUpdates = [];
         const aParams = [];
 
@@ -583,13 +628,22 @@ const UpdateStudent = async (req, res) => {
         if (academic_year_id !== undefined) { aUpdates.push('academic_year_id = ?'); aParams.push(academic_year_id || null); }
 
         if (aUpdates.length > 0) {
-          aParams.push(recId);
-          await conn.execute(`UPDATE student_academic_records SET ${aUpdates.join(', ')} WHERE id = ?`, aParams);
+          aParams.push(targetRecId);
+          try {
+            await conn.execute(`UPDATE student_academic_records SET ${aUpdates.join(', ')} WHERE id = ?`, aParams);
+          } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+              console.warn('[studentController] Academic record session conflict handled cleanly:', err.message);
+            } else {
+              throw err;
+            }
+          }
         }
-      } else {
-        // No academic record exists? Should not happen for valid students, but if it does, insert one?
-        // For now, let's assume it exists if student exists, or we skip.
-        // Optionally we could INSERT if missing, but we need mandatory fields like academic_year_id.
+      } else if (academic_year_id && grade_id) {
+        await conn.execute(
+          `INSERT INTO student_academic_records (student_id, academic_year_id, grade_id, class_id, roll_no, result_status, created_at) VALUES (?, ?, ?, ?, ?, 'pass', NOW())`,
+          [id, academic_year_id, grade_id || null, class_id || null, roll_no || null]
+        );
       }
     }
 

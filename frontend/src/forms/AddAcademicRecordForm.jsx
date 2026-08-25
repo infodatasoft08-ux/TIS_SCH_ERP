@@ -11,7 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { toast } from "sonner";
 import { AdvancedComboboxFormField } from "@/widgets/AdvancedComboboxFormField";
 import { ComboboxFormField } from "@/widgets/comboboxFormField";
-import { GraduationCap, Save, X } from "lucide-react";
+import { GraduationCap, Save, X, CheckCircle2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
     student_id: z.string().min(1, "Student is required"),
@@ -23,7 +24,16 @@ const schema = z.object({
     promoted_from_grade_id: z.string().optional(),
 });
 
-export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEdit, onSuccess, students = [], classes = [], grades = [] }) {
+export default function AddAcademicRecordDialog({ 
+    open, 
+    onOpenChange, 
+    recordToEdit, 
+    onSuccess, 
+    students = [], 
+    classes = [], 
+    grades = [],
+    existingRecords = []
+}) {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [academicYears, setAcademicYears] = useState([]);
 
@@ -39,6 +49,15 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
             promoted_from_grade_id: "",
         }
     });
+
+    const selectedStudentId = form.watch("student_id");
+    const selectedAcademicYearId = form.watch("academic_year_id");
+    const selectedGradeId = form.watch("grade_id");
+
+    const filteredSections = React.useMemo(() => {
+        if (!selectedGradeId) return classes;
+        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+    }, [classes, selectedGradeId]);
 
     // Reset form on open/edit
     useEffect(() => {
@@ -67,13 +86,7 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
         }
     }, [open, recordToEdit, form]);
 
-    const selectedGradeId = form.watch("grade_id");
-
-    const filteredSections = React.useMemo(() => {
-        if (!selectedGradeId) return classes;
-        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
-    }, [classes, selectedGradeId]);
-
+    // Fetch lightweight academic years (no heavy limit=5000 call needed!)
     useEffect(() => {
         async function fetchAcademicYears() {
             try {
@@ -86,6 +99,68 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
         if (open) fetchAcademicYears();
     }, [open]);
 
+    // Helper: Extract student's existing academic info cleanly from pre-loaded student or record data
+    const getStudentAcademicInfo = React.useCallback((studentObj) => {
+        if (!studentObj) return null;
+        
+        // 1. Check current page records first
+        const fromRecords = existingRecords.find(r => r.student_id.toString() === studentObj.id.toString());
+        if (fromRecords) return fromRecords;
+
+        // 2. Fallback to student object's existing academic join attributes from students API
+        if (studentObj.academic_id || studentObj.grade_name || studentObj.class_name) {
+            return {
+                id: studentObj.academic_id,
+                student_id: studentObj.id,
+                academic_year_id: studentObj.academic_year_id,
+                grade_id: studentObj.grade_id,
+                class_id: studentObj.class_id,
+                roll_no: studentObj.roll_no,
+                grade_name: studentObj.grade_name,
+                class_name: studentObj.class_name,
+                academic_year_name: studentObj.academic_year,
+                result_status: studentObj.result_status || 'pass'
+            };
+        }
+        return null;
+    }, [existingRecords]);
+
+    // Selected student's record summary
+    const selectedStudentObj = React.useMemo(() => {
+        if (!selectedStudentId) return null;
+        return students.find(s => s.id.toString() === selectedStudentId.toString());
+    }, [selectedStudentId, students]);
+
+    const existingStudentRec = React.useMemo(() => {
+        return getStudentAcademicInfo(selectedStudentObj);
+    }, [selectedStudentObj, getStudentAcademicInfo]);
+
+    // When selecting a student in "Add" mode, auto-fill existing details if present
+    const handleStudentSelect = (newStudentId) => {
+        form.setValue("student_id", newStudentId, { shouldValidate: true });
+        if (!recordToEdit && newStudentId) {
+            const st = students.find(s => s.id.toString() === newStudentId.toString());
+            const existingRec = getStudentAcademicInfo(st);
+            if (existingRec) {
+                if (existingRec.academic_year_id && !form.getValues("academic_year_id")) {
+                    form.setValue("academic_year_id", existingRec.academic_year_id.toString(), { shouldValidate: true });
+                }
+                if (existingRec.grade_id) {
+                    form.setValue("grade_id", existingRec.grade_id.toString(), { shouldValidate: true });
+                }
+                if (existingRec.class_id) {
+                    form.setValue("class_id", existingRec.class_id.toString(), { shouldValidate: true });
+                }
+                if (existingRec.roll_no) {
+                    form.setValue("roll_no", existingRec.roll_no, { shouldValidate: true });
+                }
+                if (existingRec.result_status) {
+                    form.setValue("result_status", existingRec.result_status, { shouldValidate: true });
+                }
+            }
+        }
+    };
+
     async function onSubmit(values) {
         setIsSubmitting(true);
         try {
@@ -94,7 +169,7 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                 toast.success("Record updated successfully");
             } else {
                 await API.post("/academic/create", values);
-                toast.success("Record created successfully");
+                toast.success("Academic record saved successfully");
             }
             onOpenChange(false);
             if (onSuccess) onSuccess();
@@ -116,7 +191,7 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                             {recordToEdit ? "Edit Academic Record" : "Add Academic Record"}
                         </DialogTitle>
                         <p className="text-emerald-100/80 text-sm mt-1">
-                            {recordToEdit ? "Update existing student record details." : "Create a new academic record for a student."}
+                            {recordToEdit ? "Update existing student record details." : "Create or update an academic session record for a student."}
                         </p>
                     </DialogHeader>
                 </div>
@@ -131,7 +206,10 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                         name="student_id"
                                         render={({ field }) => (
                                             <AdvancedComboboxFormField
-                                                field={field}
+                                                field={{
+                                                    ...field,
+                                                    onChange: handleStudentSelect
+                                                }}
                                                 items={students}
                                                 valueKey="id"
                                                 labelKey="user_name"
@@ -141,22 +219,50 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                                 emptyMessage="No student found."
                                                 label="Student *"
                                                 required
-                                                renderItem={(student) => (
-                                                    <div className="flex flex-col">
-                                                        <span>{student.user_name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Admission: {student.admission_no}
-                                                        </span>
-                                                    </div>
-                                                )}
-                                                renderSelected={(selectedStudent) => (
-                                                    <div className="flex flex-col text-left">
-                                                        <span className="font-medium">{selectedStudent.user_name}</span>
-                                                        <span className="text-xs text-muted-foreground">
-                                                            Admission: {selectedStudent.admission_no}
-                                                        </span>
-                                                    </div>
-                                                )}
+                                                renderItem={(student) => {
+                                                    const rec = getStudentAcademicInfo(student);
+                                                    return (
+                                                        <div className="flex items-center justify-between w-full py-0.5">
+                                                            <div className="flex flex-col">
+                                                                <span className="font-medium text-sm">{student.user_name}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Admission: {student.admission_no} {student.grade_name ? `• ${student.grade_name}` : ''}
+                                                                </span>
+                                                            </div>
+                                                            <div className="ml-2 flex-shrink-0">
+                                                                {rec ? (
+                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                                                                        <CheckCircle2 className="h-3 w-3" />
+                                                                        {rec.grade_name || "Has Record"}
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className="inline-flex items-center gap-1 text-[11px] font-medium px-2 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/50">
+                                                                        <AlertCircle className="h-3 w-3" />
+                                                                        No Record
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    );
+                                                }}
+                                                renderSelected={(selectedStudent) => {
+                                                    const rec = getStudentAcademicInfo(selectedStudent);
+                                                    return (
+                                                        <div className="flex justify-between items-center w-full">
+                                                            <div className="flex flex-col text-left">
+                                                                <span className="font-medium">{selectedStudent.user_name}</span>
+                                                                <span className="text-xs text-muted-foreground">
+                                                                    Admission: {selectedStudent.admission_no}
+                                                                </span>
+                                                            </div>
+                                                            {rec && (
+                                                                <Badge variant="outline" className="bg-emerald-50 text-emerald-700 border-emerald-300 text-[11px]">
+                                                                    Existing: {rec.grade_name || "Record Found"}
+                                                                </Badge>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                }}
                                             />
                                         )}
                                     />
@@ -225,7 +331,7 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                             valueKey="id"
                                             labelKey="name"
                                             searchKey="name"
-                                            placeholder="Select Class"
+                                            placeholder="Select Section"
                                             searchPlaceholder="Search class..."
                                             emptyMessage="No class found."
                                             label="Class Section *"
@@ -317,6 +423,15 @@ export default function AddAcademicRecordDialog({ open, onOpenChange, recordToEd
                                     )}
                                 />
                             </div>
+
+                            {existingStudentRec && !recordToEdit && (
+                                <div className="bg-blue-50 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-800 dark:text-blue-200 flex items-center gap-2">
+                                    <CheckCircle2 className="h-4 w-4 text-blue-600 flex-shrink-0" />
+                                    <span>
+                                        <strong>Note:</strong> Selected student already has a record ({existingStudentRec.grade_name || ''}). Submitting will update their session record cleanly.
+                                    </span>
+                                </div>
+                            )}
                         </div>
 
                         <DialogFooter className="p-6 border-t flex-shrink-0 gap-2 mt-0 bg-gray-50/50 dark:bg-gray-900/50">

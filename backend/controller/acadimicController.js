@@ -2,12 +2,25 @@ const db = require('../db');
 
 const toId = v => (v === "" || v === undefined || v === null ? null : v);
 
-// Create Academic Record
+// Create Academic Record (Single Promotion / Upsert)
 exports.createAcademicRecord = async (req, res) => {
     try {
         const { student_id, academic_year_id, grade_id, class_id, roll_no, promoted_from_grade_id, result_status } = req.body;
+
+        if (!student_id || !academic_year_id || !grade_id) {
+            return res.status(400).json({ error: 'student_id, academic_year_id, and grade_id are required' });
+        }
+
         const [result] = await db.query(
-            `INSERT INTO student_academic_records (student_id, academic_year_id, grade_id, class_id, roll_no, promoted_from_grade_id, result_status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, NOW())`,
+            `INSERT INTO student_academic_records 
+             (student_id, academic_year_id, grade_id, class_id, roll_no, promoted_from_grade_id, result_status, created_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+             ON DUPLICATE KEY UPDATE
+                grade_id = VALUES(grade_id),
+                class_id = VALUES(class_id),
+                roll_no = VALUES(roll_no),
+                promoted_from_grade_id = VALUES(promoted_from_grade_id),
+                result_status = VALUES(result_status)`,
             [
                 toId(student_id),
                 toId(academic_year_id),
@@ -15,17 +28,18 @@ exports.createAcademicRecord = async (req, res) => {
                 toId(class_id),
                 toId(roll_no),
                 toId(promoted_from_grade_id),
-                result_status
+                result_status || 'pass'
             ]
         );
-        res.status(201).json({ message: 'Academic record created successfully', id: result.insertId });
+
+        return res.status(201).json({ message: 'Academic record processed successfully', id: result.insertId });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error', details: error.message });
+        console.error('createAcademicRecord error:', error);
+        return res.status(500).json({ error: 'Server error', details: error.message });
     }
 };
 
-// Get Academic Records
+// Get Academic Records (Historical session querying support)
 exports.getAcademicRecords = async (req, res) => {
     try {
         const limit = parseInt(req.query.limit) || 100;
@@ -33,6 +47,7 @@ exports.getAcademicRecords = async (req, res) => {
         const q = req.query.q ? `%${req.query.q}%` : '%';
         const gradeId = req.query.grade_id && req.query.grade_id !== '' ? Number(req.query.grade_id) : null;
         const academicYearId = req.query.academic_year_id && req.query.academic_year_id !== '' ? Number(req.query.academic_year_id) : null;
+        const studentId = req.query.student_id && req.query.student_id !== '' ? Number(req.query.student_id) : null;
 
         let sql = `
             SELECT sar.*, u.name as student_name, c.name as class_name, g.name as grade_name, ay.name as academic_year_name
@@ -46,6 +61,10 @@ exports.getAcademicRecords = async (req, res) => {
 
         const params = [q, q, q, q, q, q];
 
+        if (studentId) {
+            sql += ` AND sar.student_id = ?`;
+            params.push(studentId);
+        }
         if (gradeId) {
             sql += ` AND sar.grade_id = ?`;
             params.push(gradeId);
@@ -55,17 +74,17 @@ exports.getAcademicRecords = async (req, res) => {
             params.push(academicYearId);
         }
 
-        sql += ` ORDER BY sar.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
+        sql += ` ORDER BY sar.academic_year_id DESC, sar.created_at DESC LIMIT ${limit} OFFSET ${offset}`;
 
         const [rows] = await db.query(sql, params);
-        res.status(200).json({ academic_records: rows });
+        return res.status(200).json({ academic_records: rows });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error', details: error.message });
+        console.error('getAcademicRecords error:', error);
+        return res.status(500).json({ error: 'Server error', details: error.message });
     }
 };
 
-// Bulk Promote Students
+// Bulk Promote Students (Transaction-based UPSERT)
 exports.bulkPromote = async (req, res) => {
     const { student_ids, academic_year_id, grade_id, class_id } = req.body;
 
@@ -80,8 +99,28 @@ exports.bulkPromote = async (req, res) => {
     try {
         await conn.beginTransaction();
 
+        // 1) Validate section (class_id) for target grade
+        let resolvedClassId = class_id || null;
+        if (resolvedClassId) {
+            const [validClass] = await conn.query(
+                'SELECT id FROM classes WHERE id = ? AND grade_id = ? LIMIT 1',
+                [resolvedClassId, grade_id]
+            );
+            if (validClass.length === 0) resolvedClassId = null;
+        }
+
+        // Fallback to first section belonging to target grade
+        if (!resolvedClassId) {
+            const [firstClass] = await conn.query(
+                'SELECT id FROM classes WHERE grade_id = ? ORDER BY id ASC LIMIT 1',
+                [grade_id]
+            );
+            if (firstClass.length > 0) resolvedClassId = firstClass[0].id;
+        }
+
+        let promotedCount = 0;
         for (const studentId of student_ids) {
-            // Get latest record for this student to check status and old grade/class
+            // Fetch latest academic record for student
             const [recs] = await conn.execute(
                 `SELECT grade_id, class_id, roll_no, result_status 
                  FROM student_academic_records 
@@ -90,40 +129,52 @@ exports.bulkPromote = async (req, res) => {
                 [studentId]
             );
 
-            if (recs.length === 0) continue; // Skip if no record found
+            let currentGradeId = grade_id;
+            let currentClassId = resolvedClassId;
+            let currentRollNo = null;
+            let promotedFromGradeId = null;
 
-            const current = recs[0];
-            let targetGradeId = grade_id;
-            let targetClassId = class_id || current.class_id;
+            if (recs.length > 0) {
+                const current = recs[0];
+                currentRollNo = current.roll_no;
+                promotedFromGradeId = current.grade_id;
 
-            // If fail, remain in same class but update academic year
-            if (current.result_status === 'fail') {
-                targetGradeId = current.grade_id;
-                targetClassId = current.class_id;
+                // Failed students repeat the grade & section in the new session
+                if (current.result_status === 'fail') {
+                    currentGradeId = current.grade_id;
+                    currentClassId = current.class_id;
+                }
             }
 
-            // Insert new record
+            // Upsert academic record for the new session
             await conn.execute(
                 `INSERT INTO student_academic_records 
                  (student_id, academic_year_id, grade_id, class_id, roll_no, promoted_from_grade_id, result_status, created_at) 
-                 VALUES (?, ?, ?, ?, ?, ?, 'pass', NOW())`,
+                 VALUES (?, ?, ?, ?, ?, ?, 'pass', NOW())
+                 ON DUPLICATE KEY UPDATE
+                    grade_id = VALUES(grade_id),
+                    class_id = VALUES(class_id),
+                    roll_no = VALUES(roll_no),
+                    promoted_from_grade_id = VALUES(promoted_from_grade_id),
+                    result_status = VALUES(result_status)`,
                 [
                     studentId,
                     academic_year_id,
-                    targetGradeId,
-                    targetClassId,
-                    current.roll_no, // Maintain same roll no for now
-                    current.grade_id // Promoted from
+                    currentGradeId,
+                    currentClassId,
+                    currentRollNo,
+                    promotedFromGradeId
                 ]
             );
+            promotedCount++;
         }
 
         await conn.commit();
-        res.status(200).json({ message: 'Students promoted successfully' });
+        return res.status(200).json({ message: 'Students promoted successfully', promotedCount });
     } catch (error) {
         await conn.rollback();
         console.error('Bulk promote error:', error);
-        res.status(500).json({ error: 'Server error', details: error.message });
+        return res.status(500).json({ error: 'Server error', details: error.message });
     } finally {
         conn.release();
     }
@@ -147,57 +198,71 @@ exports.updateAcademicRecord = async (req, res) => {
                 id
             ]
         );
-        res.status(200).json({ message: 'Academic record updated successfully' });
+        return res.status(200).json({ message: 'Academic record updated successfully' });
     } catch (error) {
-        console.error(error);
-        res.status(500).json({ error: 'Server error', details: error.message });
+        console.error('updateAcademicRecord error:', error);
+        return res.status(500).json({ error: 'Server error', details: error.message });
     }
 };
 
 // Delete Academic Record
+// exports.deleteAcademicRecord = async (req, res) => {
+//     const conn = await db.getConnection();
+//     try {
+//         const { id } = req.params;
+//         await conn.beginTransaction();
+
+//         // 1. Get the student_id from the academic record
+//         const [acRows] = await conn.query('SELECT student_id FROM student_academic_records WHERE id = ? FOR UPDATE', [id]);
+//         if (acRows.length === 0) {
+//             await conn.rollback();
+//             conn.release();
+//             return res.status(404).json({ error: 'Academic record not found' });
+//         }
+//         const studentId = acRows[0].student_id;
+
+//         // 2. Get the user_id from the student record
+//         const [stRows] = await conn.query('SELECT user_id FROM students WHERE id = ? FOR UPDATE', [studentId]);
+//         let userId = null;
+//         if (stRows.length > 0) {
+//             userId = stRows[0].user_id;
+//         }
+
+//         // 3. Delete parent_children links if any
+//         await conn.query('DELETE FROM parent_children WHERE student_id = ?', [studentId]);
+
+//         // 4. Delete all academic records for this student
+//         await conn.query('DELETE FROM student_academic_records WHERE student_id = ?', [studentId]);
+
+//         // 5. Delete the student record
+//         await conn.query('DELETE FROM students WHERE id = ?', [studentId]);
+
+//         // 6. Delete the user record
+//         if (userId) {
+//             await conn.query('DELETE FROM users WHERE id = ?', [userId]);
+//         }
+
+//         await conn.commit();
+//         return res.status(200).json({ message: 'Academic record and associated student deleted successfully' });
+//     } catch (error) {
+//         if (conn) await conn.rollback();
+//         console.error('Error deleting academic record:', error);
+//         return res.status(500).json({ error: 'Server error', details: error.message });
+//     } finally {
+//         if (conn) conn.release();
+//     }
+// };
+
 exports.deleteAcademicRecord = async (req, res) => {
-    const conn = await db.getConnection();
     try {
         const { id } = req.params;
-        await conn.beginTransaction();
-
-        // 1. Get the student_id from the academic record
-        const [acRows] = await conn.query('SELECT student_id FROM student_academic_records WHERE id = ? FOR UPDATE', [id]);
-        if (acRows.length === 0) {
-            await conn.rollback();
-            conn.release();
+        const [result] = await db.query('DELETE FROM student_academic_records WHERE id = ?', [id]);
+        if (result.affectedRows === 0) {
             return res.status(404).json({ error: 'Academic record not found' });
         }
-        const studentId = acRows[0].student_id;
-
-        // 2. Get the user_id from the student record
-        const [stRows] = await conn.query('SELECT user_id FROM students WHERE id = ? FOR UPDATE', [studentId]);
-        let userId = null;
-        if (stRows.length > 0) {
-            userId = stRows[0].user_id;
-        }
-
-        // 3. Delete parent_children links if any
-        await conn.query('DELETE FROM parent_children WHERE student_id = ?', [studentId]);
-
-        // 4. Delete all academic records for this student
-        await conn.query('DELETE FROM student_academic_records WHERE student_id = ?', [studentId]);
-
-        // 5. Delete the student record
-        await conn.query('DELETE FROM students WHERE id = ?', [studentId]);
-
-        // 6. Delete the user record
-        if (userId) {
-            await conn.query('DELETE FROM users WHERE id = ?', [userId]);
-        }
-
-        await conn.commit();
-        res.status(200).json({ message: 'Academic record and associated student deleted successfully' });
+        res.status(200).json({ message: 'Academic session record deleted successfully' });
     } catch (error) {
-        if (conn) await conn.rollback();
         console.error('Error deleting academic record:', error);
         res.status(500).json({ error: 'Server error', details: error.message });
-    } finally {
-        if (conn) conn.release();
     }
 };

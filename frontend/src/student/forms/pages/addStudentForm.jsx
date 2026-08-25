@@ -517,6 +517,7 @@ export default function AddStudentDialog({
                       <FormField
                         control={form.control}
                         name="admission_no"
+                        readonly={true}
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Admission No *</FormLabel>

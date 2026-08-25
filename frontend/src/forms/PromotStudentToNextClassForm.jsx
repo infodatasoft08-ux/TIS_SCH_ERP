@@ -40,18 +40,32 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
         }
     });
 
+    const selectedGradeId = form.watch("grade_id");
+    const selectedClassId = form.watch("class_id");
+
+    // Filter available sections by target grade
+    const filteredSections = React.useMemo(() => {
+        if (!selectedGradeId) return classes;
+        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+    }, [classes, selectedGradeId]);
+
     // Reset form on open/edit
     useEffect(() => {
         if (open) {
             if (recordToPromote) {
+                const currentGradeStr = recordToPromote.grade_id ? recordToPromote.grade_id.toString() : "";
+                const promotedFromStr = recordToPromote.promoted_from_grade_id 
+                    ? recordToPromote.promoted_from_grade_id.toString() 
+                    : currentGradeStr;
+
                 form.reset({
                     student_id: recordToPromote.student_id ? recordToPromote.student_id.toString() : "",
                     academic_year_id: recordToPromote.academic_year_id ? recordToPromote.academic_year_id.toString() : "",
                     class_id: recordToPromote.class_id ? recordToPromote.class_id.toString() : "",
-                    grade_id: recordToPromote.grade_id ? recordToPromote.grade_id.toString() : "",
+                    grade_id: currentGradeStr,
                     roll_no: recordToPromote.roll_no || "",
                     result_status: recordToPromote.result_status || "pass",
-                    promoted_from_grade_id: recordToPromote.promoted_from_grade_id ? recordToPromote.promoted_from_grade_id.toString() : "",
+                    promoted_from_grade_id: promotedFromStr,
                 });
             } else {
                 form.reset({
@@ -67,6 +81,24 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
         }
     }, [open, recordToPromote, form]);
 
+    // Auto-reset class_id if it doesn't belong to selected target grade
+    useEffect(() => {
+        if (selectedGradeId && selectedClassId) {
+            const belongs = classes.some(cls => 
+                cls.id.toString() === selectedClassId.toString() && 
+                cls.grade_id.toString() === selectedGradeId.toString()
+            );
+            if (!belongs) {
+                const available = classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
+                if (available.length === 1) {
+                    form.setValue("class_id", available[0].id.toString(), { shouldValidate: true });
+                } else {
+                    form.setValue("class_id", "", { shouldValidate: true });
+                }
+            }
+        }
+    }, [selectedGradeId, selectedClassId, classes, form]);
+
     useEffect(() => {
         async function fetchAcademicYears() {
             try {
@@ -78,13 +110,6 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
         }
         if (open) fetchAcademicYears();
     }, [open]);
-
-    const selectedGradeId = form.watch("grade_id");
-
-    const filteredSections = React.useMemo(() => {
-        if (!selectedGradeId) return classes;
-        return classes.filter(cls => cls.grade_id.toString() === selectedGradeId.toString());
-    }, [classes, selectedGradeId]);
 
     async function onSubmit(values) {
         setIsSubmitting(true);
@@ -168,7 +193,7 @@ export default function PromoteStudentToNextClassDialog({ open, onOpenChange, re
                                                         const availableSections = classes.filter(cls => cls.grade_id.toString() === newGradeId.toString());
                                                         if (availableSections.length === 1) {
                                                             form.setValue("class_id", availableSections[0].id.toString(), { shouldValidate: true });
-                                                        } else if (availableSections.length > 1) {
+                                                        } else {
                                                             const currentSection = form.getValues("class_id");
                                                             if (currentSection) {
                                                                 const belongs = availableSections.some(cls => cls.id.toString() === currentSection.toString());

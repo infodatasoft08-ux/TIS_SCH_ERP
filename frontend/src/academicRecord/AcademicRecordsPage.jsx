@@ -337,16 +337,17 @@ export default function AcademicRecordsPage() {
                     open={isDialogOpen}
                     onOpenChange={handleDialogClose}
                     recordToEdit={selectedRecord}
-                    onSuccess={loadRecords}
+                    onSuccess={() => loadRecords(true)}
                     students={students}
                     classes={classes}
                     grades={grades}
+                    existingRecords={records}
                 />
                 <PromoteStudentToNextClassDialog
                     open={isPromoteDialogOpen}
                     onOpenChange={handlePromoteDialogClose}
                     recordToPromote={selectedRecord}
-                    onSuccess={loadRecords}
+                    onSuccess={() => loadRecords(true)}
                     students={students}
                     classes={classes}
                     grades={grades}
@@ -354,7 +355,7 @@ export default function AcademicRecordsPage() {
                 <BulkPromoteForm
                     open={isBulkPromoteDialogOpen}
                     onOpenChange={setIsBulkPromoteDialogOpen}
-                    onSuccess={loadRecords}
+                    onSuccess={() => loadRecords(true)}
                     grades={grades}
                     classes={classes}
                     academicYears={academicYears}
