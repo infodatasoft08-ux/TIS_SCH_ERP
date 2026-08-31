@@ -345,6 +345,12 @@ const getOtpHtmlTemplate = (otp) => `
 `;
 
 async function sendViaBrevo({ to, subject, html }) {
+  // Guard: if BREVO_API_KEY is not configured, skip silently
+  if (!apiKey || apiKey.trim() === '') {
+    console.warn(`⚠️ BREVO_API_KEY not configured. Skipping email to ${to} (subject: ${subject})`);
+    return { skipped: true, reason: 'BREVO_API_KEY not set' };
+  }
+
   const payload = {
     sender: { name: 'TIMES INTERNATIONAL SCHOOL', email: process.env.MY_EMAIL },
     to: [{ email: to }],
@@ -384,20 +390,19 @@ const sendOtp = async (req, res) => {
     otpStore.set(email, { otp, expiresAt, verified: false });
 
     try {
-      await sendViaBrevo({
+      const brevoResult = await sendViaBrevo({
         to: email,
         subject: 'Password Reset OTP - TIMES INTERNATIONAL SCHOOL',
         html: getOtpHtmlTemplate(otp)
       });
-      res.json({ success: true, message: 'OTP sent to your email' });
+      // If Brevo is not configured, brevoResult.skipped will be true — still succeed
+      res.json({ success: true, message: brevoResult?.skipped ? 'OTP generated (email delivery not configured)' : 'OTP sent to your email' });
     } catch (error) {
       console.error('Error sending OTP via Brevo:', error);
-      // Fallback for development if needed, or return error
       res.status(500).json({
         success: false,
         message: 'Failed to send email OTP',
-        error: error.message,
-        otpDev: otp // Only if you want to keep this for dev
+        error: error.message
       });
     }
   } catch (err) {
