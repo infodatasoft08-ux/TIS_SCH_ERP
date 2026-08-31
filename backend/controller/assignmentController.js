@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 // const { sendWhatsAppMessage } = require('../helper/whatsappHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -65,7 +66,8 @@ const AddAssignment = async (req, res) => {
 
         // --- WHATSAPP INTEGRATION ---
         try {
-            const [students] = await conn.execute(
+            if (await isWhatsAppEnabled()) {
+                const [students] = await conn.execute(
                 `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone, c.name as class_name
                  FROM student_academic_records sar
                  JOIN students s ON s.id = sar.student_id
@@ -84,6 +86,7 @@ const AddAssignment = async (req, res) => {
                     jobType: 'assignmentNotification',
                     message: msg
                 });
+            }
             }
         } catch (msgErr) { console.error('Assignment notification error:', msgErr); }
         // ----------------------------

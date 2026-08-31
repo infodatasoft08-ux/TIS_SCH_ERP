@@ -1,7 +1,14 @@
 const axios = require('axios');
+const { isWhatsAppEnabled } = require('./whatsappSettingHelper');
 require('dotenv').config();
 
 const sendWhatsAppMessage = async (to, message) => {
+
+    const enabled = await isWhatsAppEnabled();
+    if (!enabled) {
+        console.log(`⚠️ WhatsApp notifications disabled or credentials missing. Skipping message to ${to}`);
+        return { success: true, bypassed: true, message: 'WhatsApp disabled or missing credentials' };
+    }
 
     if (!to) {
         console.warn('No phone number provided');

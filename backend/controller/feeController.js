@@ -2,6 +2,7 @@ const pool = require('../db');
 const { generateInvoicePDF, generatePaymentReceiptPDF, generateCombinedInvoiceReceiptPDF, generateBulkInvoicesPDF } = require('../helper/pdfHelper');
 const crypto = require('crypto');
 const whatsappQueue = require('../queues/whatsappQueue');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -890,6 +891,7 @@ const CreateBulkInvoices = async (req, res) => {
         const uniqueContacts = [...new Set(contacts)];
 
         // Send WhatsApp to all unique contacts
+        if (await isWhatsAppEnabled()) {
         for (const contact of uniqueContacts) {
           try {
             // Queue WhatsApp message instead of direct sending
@@ -970,6 +972,7 @@ const CreateBulkInvoices = async (req, res) => {
           } catch (err) {
             console.error(`WhatsApp queue add failed for ${contact}`, err.message);
           }
+        }
         }
       }
 
@@ -1731,6 +1734,7 @@ const AddPaymentToInvoice = async (req, res) => {
         const contacts = [student.student_phone, student.parent_contact].filter(Boolean);
         // Send to unique contacts
         const uniqueContacts = [...new Set(contacts)];
+        if (await isWhatsAppEnabled()) {
         for (const contact of uniqueContacts) {
           // Queue WhatsApp message instead of direct sending
           await whatsappQueue.add('paymentReceiptNotification', {
@@ -1801,6 +1805,7 @@ const AddPaymentToInvoice = async (req, res) => {
             `
             }
           });
+        }
         }
       }
     } catch (msgErr) {

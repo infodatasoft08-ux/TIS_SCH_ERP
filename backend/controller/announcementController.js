@@ -3,6 +3,7 @@ const formatMySQLDate = require('../config/deateConverter');
 const pool = require('../db');
 const { deleteFromCloudinary } = require('../helper/cloudinaryHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -70,7 +71,7 @@ const createNotice = async (req, res) => {
 
         // --- WHATSAPP INTEGRATION (NOTICE) ---
         try {
-            if (is_published) {
+            if (is_published && (await isWhatsAppEnabled())) {
                 const msg = `New Notice: ${title}\n\n${body}\n\nPublished: ${publishAtISO || 'Now'}`;
 
                 if (audience === 'all') {
@@ -336,7 +337,7 @@ const createEvents = async (req, res) => {
 
         // --- WHATSAPP INTEGRATION (EVENT) ---
         try {
-            if (is_public) {
+            if (is_public && (await isWhatsAppEnabled())) {
                 // For events, usually notify all students/parents
                 const [students] = await pool.execute(
                     `SELECT s.parent_contact, s.mother_contect, u.phone as student_phone 

@@ -1,5 +1,6 @@
 const db = require("../db");
 const whatsappQueue = require("../queues/whatsappQueue");
+const { isWhatsAppEnabled } = require("../helper/whatsappSettingHelper");
 
 const createHomework = async (req, res) => {
     const { title, grade_id, class_id, homework_date, academic_year_id, subject_homeworks } = req.body;
@@ -102,6 +103,10 @@ const sendHomeworkWhatsApp = async (req, res) => {
 
 const sendNotifications = async (homeworkId, title, grade_id, class_id, homework_date, subject_homeworks, attachment_url = null) => {
     try {
+        if (!(await isWhatsAppEnabled())) {
+            console.log('⚠️ WhatsApp notifications disabled or credentials missing. Skipping homework notification queueing.');
+            return;
+        }
         // Fetch students and their parents
         let sql = `
             SELECT u.name as student_name, u.phone as student_phone, 

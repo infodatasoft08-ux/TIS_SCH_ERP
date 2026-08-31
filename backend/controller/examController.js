@@ -5,6 +5,7 @@ const storageService = require('../services/storageService');
 const path = require('path');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -639,6 +640,7 @@ const UpdateExamGroup = async (req, res) => {
                 // });
 
                 // WhatsApp queue
+                if (await isWhatsAppEnabled()) {
                 let usersQuery = '';
                 const usersParams = [];
                 if (sectionIds.length > 0) {
@@ -724,6 +726,7 @@ const UpdateExamGroup = async (req, res) => {
                             message: { fallbackText: teacherMsg }
                         });
                     }
+                }
                 }
             } catch (notifyErr) {
                 console.error('Failed to send result publish notification:', notifyErr);
@@ -1076,6 +1079,7 @@ const PublishExam = async (req, res) => {
         // });
 
         // WhatsApp queue
+        if (await isWhatsAppEnabled()) {
         let usersQuery = '';
         const usersParams = [];
         if (sectionIds.length > 0) {
@@ -1162,6 +1166,7 @@ const PublishExam = async (req, res) => {
                     message: { fallbackText: teacherMsg }
                 });
             }
+        }
         }
 
         return res.json({ success: true, message: 'Exam published successfully' });

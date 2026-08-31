@@ -1,4 +1,5 @@
 const axios = require('axios');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 require('dotenv').config();
 
 /**
@@ -14,15 +15,11 @@ class WhatsAppService {
      */
     async sendWhatsAppTemplate(to, message) {
 
-        // Check if WhatsApp notifications are enabled in admin settings
-        try {
-            const [settings] = await pool.query('SELECT setting_value FROM school_settings WHERE setting_key = "whatsapp_enabled"');
-            if (settings.length > 0 && settings[0].setting_value === '0') {
-                console.log(`⚠️ WhatsApp notifications disabled by admin. Skipping message to ${to}`);
-                return { success: true, message: 'WhatsApp disabled by admin' };
-            }
-        } catch (err) {
-            console.error('Error checking whatsapp_enabled setting:', err.message);
+        // Check if WhatsApp notifications are enabled in admin settings and .env
+        const enabled = await isWhatsAppEnabled();
+        if (!enabled) {
+            console.log(`⚠️ WhatsApp notifications disabled or credentials missing. Skipping message to ${to}`);
+            return { success: true, bypassed: true, message: 'WhatsApp disabled or missing credentials' };
         }
 
         if (!to) {

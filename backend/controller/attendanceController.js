@@ -2,6 +2,7 @@ const express = require('express');
 const db = require('../db');
 const formatMySQLDate = require("../config/deateConverter");
 const whatsappQueue = require('../queues/whatsappQueue');
+const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 
 const VALID_STATUSES = new Set(['present', 'absent', 'late', 'excused']);
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -89,8 +90,7 @@ const TakeAttendance = async (req, res) => {
         details.forEach(d => { detailsMap[d.student_id] = d; });
         let msg = '';
 
-
-
+        if (await isWhatsAppEnabled()) {
         for (const record of normalized) {
           const detail = detailsMap[record.student_id];
           if (detail && ['absent', 'late'].includes(record.status)) {
@@ -249,13 +249,13 @@ Thank you,
                     fallbackText: msg
                   }
                 });
-
               }
             }
           }
         }
       }
-    } catch (msgErr) { console.error('Bulk attendance notification error:', msgErr); }
+    }
+  } catch (whErr) { console.error('Bulk attendance notification error:', whErr); }
     // -----------------------------------
 
 
@@ -337,6 +337,7 @@ const UpdateSingleAttendance = async (req, res) => {
     // WHATSAPP UPDATE NOTIFICATION
     // -------------------------------
     try {
+      if (await isWhatsAppEnabled()) {
       // Collect both student and parent contacts
       const contacts = [
         oldAttendance.student_phone,
@@ -593,8 +594,8 @@ Thank you,
           }
         }
       }
-
-    } catch (msgErr) {
+    }
+  } catch (msgErr) {
 
       console.error(
         'Attendance update notification error:',
