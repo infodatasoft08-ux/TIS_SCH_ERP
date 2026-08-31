@@ -153,7 +153,7 @@ const login = async (req, res) => {
     const token = jwt.sign(
       tokenPayload,
       process.env.JWT_SECRET || "SECRET_KEY",
-      { expiresIn: "365d" }
+      { expiresIn: "30d" }
     );
 
     return res.json({
@@ -242,7 +242,7 @@ const googleLogin = async (req, res) => {
     const token = jwt.sign(
       tokenPayload,
       process.env.JWT_SECRET || "SECRET_KEY",
-      { expiresIn: "365d" }
+      { expiresIn: "30d" }
     );
 
     return res.json({

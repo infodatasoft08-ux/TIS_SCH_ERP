@@ -14,9 +14,17 @@ API.interceptors.request.use(config => {
   return config;
 }, error => Promise.reject(error));
 
-// Global response interceptor for handling server timeouts & authorization errors
+// Global response interceptor for handling refreshed tokens, server timeouts & authorization errors
 API.interceptors.response.use(
-  response => response,
+  response => {
+    // Rolling token refresh handler
+    const refreshedToken = response.headers?.['x-refreshed-token'];
+    if (refreshedToken) {
+      localStorage.setItem('token', refreshedToken);
+      API.defaults.headers.common.Authorization = `Bearer ${refreshedToken}`;
+    }
+    return response;
+  },
   error => {
     if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
       console.warn('⚠️ Server request timed out');

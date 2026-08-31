@@ -49,6 +49,7 @@ const compression = require('compression');
 app.use(compression());
 
 app.use(cors({
+  exposedHeaders: ['x-refreshed-token'],
   maxAge: 86400 // Cache CORS Preflight (204 OPTIONS) for 24 hours in browser
 }));
 app.use(express.json());
