@@ -69,9 +69,13 @@ export default function AppSidebar({ user }) {
         return;
       }
 
+      const userRoleId = user?.role_id ?? user?.role;
+      const userId = user?.id;
+      const cacheKey = `sidebar_menu_role_${userRoleId || 'none'}_user_${userId || 'none'}`;
+
       // Check if we have cached menu
-      const cachedMenu = localStorage.getItem('sidebar_menu');
-      const cacheTimestamp = localStorage.getItem('sidebar_menu_timestamp');
+      const cachedMenu = localStorage.getItem(cacheKey);
+      const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`);
 
       // Cache for 5 minutes (300000 ms)
       if (cachedMenu && cacheTimestamp && (Date.now() - parseInt(cacheTimestamp)) < 300000) {
@@ -86,13 +90,16 @@ export default function AppSidebar({ user }) {
 
       const menuData = res?.data?.results || [];
       setMenu(menuData);
-      // Cache the menu
-      localStorage.setItem('sidebar_menu', JSON.stringify(menuData));
-      localStorage.setItem('sidebar_menu_timestamp', Date.now().toString());
+      // Cache the menu under user/role scoped key
+      localStorage.setItem(cacheKey, JSON.stringify(menuData));
+      localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString());
     } catch (error) {
       console.error("Error fetching menu:", error);
-      // If fetch fails, try to use cached data
-      const cachedMenu = localStorage.getItem('sidebar_menu');
+      // Fallback: try cached menu for this specific user
+      const userRoleId = user?.role_id ?? user?.role;
+      const userId = user?.id;
+      const cacheKey = `sidebar_menu_role_${userRoleId || 'none'}_user_${userId || 'none'}`;
+      const cachedMenu = localStorage.getItem(cacheKey);
       if (cachedMenu) {
         setMenu(JSON.parse(cachedMenu));
       }
@@ -100,7 +107,7 @@ export default function AppSidebar({ user }) {
       setIsLoading(false);
     }
 
-  }, [user?.token]);
+  }, [user]);
 
 
 

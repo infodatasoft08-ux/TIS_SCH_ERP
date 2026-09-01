@@ -37,6 +37,25 @@ export function AuthProvider({ children }) {
   }, [token]);
 
   useEffect(() => {
+    const handleTokenRefreshed = (e) => {
+      if (e.detail) setToken(e.detail);
+    };
+    const handleLoggedOut = () => {
+      setToken(null);
+      setUser(null);
+    };
+
+    window.addEventListener('auth:token_refreshed', handleTokenRefreshed);
+    window.addEventListener('auth:logged_out', handleLoggedOut);
+
+    return () => {
+      window.removeEventListener('auth:token_refreshed', handleTokenRefreshed);
+      window.removeEventListener('auth:logged_out', handleLoggedOut);
+    };
+  }, []);
+
+
+  useEffect(() => {
     if (user) localStorage.setItem('user', JSON.stringify(user));
     else localStorage.removeItem('user');
   }, [user]);
