@@ -196,67 +196,63 @@ export default function AdminDashboard() {
     : classes.find(c => c.id.toString() === attendanceClassId)?.name || 'Class';
 
   return (
-    <div className="p-2 space-y-6 min-h-screen animate-in fade-in slide-in-from-bottom-10 duration-1000">
+    <div className="p-2 sm:p-4 md:p-6 pb-28 sm:pb-12 space-y-4 sm:space-y-6 min-h-screen animate-in fade-in slide-in-from-bottom-10 duration-1000">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-6">
         <div>
-          <h2 className="text-4xl font-extrabold tracking-tight">System Overview</h2>
-          <p className="text-gray-400 mt-2 flex items-center gap-2">
-            <Zap className="w-4 h-4 text-yellow-500" />
+          <h2 className="text-2xl sm:text-4xl font-extrabold tracking-tight">System Overview</h2>
+          <p className="text-xs sm:text-sm text-gray-400 mt-1 flex items-center gap-1.5">
+            <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-yellow-500" />
             Live analytics and school management metrics.
           </p>
         </div>
-        <div className="flex items-center gap-3 px-5 py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl border dark:border-gray-800 shadow-lg">
-          <CalendarIcon className="w-5 h-5 text-blue-500" />
-          <span className="font-semibold">{new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</span>
+        <div className="flex items-center gap-2.5 px-3.5 sm:px-5 py-2 sm:py-2.5 bg-gray-50 dark:bg-gray-900/50 rounded-xl border dark:border-gray-800 shadow-sm text-xs sm:text-sm self-start sm:self-auto">
+          <CalendarIcon className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
+          <span>{new Date().toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}</span>
         </div>
       </div>
 
-      <div className='flex flex-col xl:flex-row gap-6'>
-        {/* Left Side */}
-        <div className='flex-1'>
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-6">
-            {stats.map((stat, idx) => (
-              <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-6 rounded-xl border dark:border-gray-800 hover:border-gray-700 transition-all group overflow-hidden relative" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
-                <div className="relative z-10 flex items-start justify-between">
-                  <div>
-                    <p className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">{stat.label}</p>
-                    <h3 className="text-3xl font-bold">{stat.value}</h3>
-                    <div className="mt-3 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/10 text-emerald-400 text-xs font-bold">
-                      <TrendingUp className="w-3 h-3" />
-                      <span>{stat.trend}</span>
-                    </div>
-                  </div>
-                  <div className={`${stat.bg} ${stat.color} p-4 rounded-3xl group-hover:scale-110 transition-transform`}>
-                    <stat.icon className="w-8 h-8" />
-                  </div>
-                </div>
-                {/* Background Grain/Glow */}
-                <div className={`absolute -right-4 -bottom-4 w-16 h-16 rounded-full blur-3xl opacity-10 ${stat.bg}`}></div>
+      {/* Stats Cards Grid */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
+        {stats.map((stat, idx) => (
+          <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md relative overflow-hidden group hover:border-blue-500/30 transition-all cursor-pointer" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.label}</span>
+              <div className={`p-2 rounded-xl ${stat.bg}`}>
+                <stat.icon className={`w-5 h-5 ${stat.color}`} />
               </div>
-            ))}
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <h3 className="text-2xl sm:text-3xl font-black">{stat.value}</h3>
+              <span className="text-xs font-bold text-emerald-500 flex items-center gap-0.5">
+                <TrendingUp className="w-3 h-3" />
+                {stat.trend}
+              </span>
+            </div>
           </div>
+        ))}
+      </div>
 
-          {/* Main Content Grid */}
-          {/* <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mt-6"> */}
+      {/* Main Charts & Analytics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-            {/* Attendance Pie Chart */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border dark:border-gray-800 shadow-lg">
+        {/* Left 2 Columns */}
+        <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+
+            {/* Attendance Donut Chart */}
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-xl font-bold">Daily Attendance</h3>
+                <h3 className="text-lg font-bold">Attendance Log</h3>
                 <Select
                   value={attendanceClassId}
                   onValueChange={(value) => {
                     setAttendanceClassId(value);
                   }}
-                  className="bg-gray-800 text-xs border-none rounded-xl px-2 py-1 text-gray-300 outline-none"
                 >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a class" />
+                  <SelectTrigger className="w-[120px] h-8 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-gray-800 border-none">
+                    <SelectValue placeholder="Select class" />
                   </SelectTrigger>
-
                   <SelectContent>
                     <SelectItem value="all">All Classes</SelectItem>
                     {classes.map((c) => (
@@ -267,16 +263,16 @@ export default function AdminDashboard() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="h-72 w-full flex items-center justify-center relative">
+              <div className="h-60 sm:h-72 w-full flex items-center justify-center relative">
                 <ResponsiveContainer width="100%" height="100%">
                   <PieChart>
                     <Pie
                       data={data.attendanceData.length > 0 ? data.attendanceData : [{ name: 'N/A', value: 1 }]}
                       cx="50%"
                       cy="50%"
-                      innerRadius={75}
-                      outerRadius={100}
-                      paddingAngle={10}
+                      innerRadius={60}
+                      outerRadius={85}
+                      paddingAngle={8}
                       dataKey="value"
                       stroke="none"
                     >
@@ -288,38 +284,37 @@ export default function AdminDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                  <span className="text-3xl font-black">
+                  <span className="text-2xl sm:text-3xl font-black">
                     {data.attendanceData.reduce((acc, curr) => acc + curr.value, 0)}
                   </span>
                   <span className="text-[10px] text-gray-500 uppercase tracking-widest font-bold">Total Logs</span>
                 </div>
               </div>
-              <div className="mt-4 grid grid-cols-2 gap-2">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {data.attendanceData.map((entry, idx) => (
-                  <div key={idx} className="flex items-center gap-2 px-3 py-1.5 bg-gray-800 rounded-xl border border-gray-700">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
-                    <span className="text-xs font-semibold capitalize text-gray-300">{entry.name}</span>
+                  <div key={idx} className="flex items-center gap-2 px-2.5 py-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700">
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                    <span className="text-xs font-semibold capitalize text-gray-700 dark:text-gray-300 truncate">{entry.name}: {entry.value}</span>
                   </div>
                 ))}
               </div>
             </div>
 
             {/* Admission Stats / Command Center */}
-            <div className="bg-gray-50 dark:bg-gray-900/50 p-2 rounded-xl border shadow-md overflow-hidden relative">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8 relative z-10">
-                <h3 className="text-xl font-black">Admissions</h3>
-                <div className="flex flex-wrap items-center gap-1">
-                  <div className="flex-1">
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md overflow-hidden relative flex flex-col justify-between">
+              <div>
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4 relative z-10">
+                  <h3 className="text-lg font-bold">Admissions</h3>
+                  <div className="flex items-center gap-1.5">
                     <Select
                       value={admissionYear}
                       onValueChange={(value) => {
                         setAdmissionYear(value);
                       }}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select an academic year" />
+                      <SelectTrigger className="h-8 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-gray-800 border-none">
+                        <SelectValue placeholder="Academic Year" />
                       </SelectTrigger>
-
                       <SelectContent>
                         {academicYears.map((year) => (
                           <SelectItem key={year.id} value={year.id.toString()}>
@@ -328,19 +323,17 @@ export default function AdminDashboard() {
                         ))}
                       </SelectContent>
                     </Select>
-                  </div>
-                  <div className="flex-1">
                     <Select
                       value={admissionGradeId}
                       onValueChange={(value) => {
                         setAdmissionGradeId(value);
                       }}
                     >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a grade" />
+                      <SelectTrigger className="h-8 text-xs font-semibold rounded-xl bg-gray-100 dark:bg-gray-800 border-none">
+                        <SelectValue placeholder="Grade" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">All</SelectItem>
+                        <SelectItem value="all">All Grades</SelectItem>
                         {grades.map((grade) => (
                           <SelectItem key={grade.id} value={grade.id.toString()}>
                             {grade.name}
@@ -350,51 +343,50 @@ export default function AdminDashboard() {
                     </Select>
                   </div>
                 </div>
+
+                <div className="grid grid-cols-2 gap-2 mb-4 relative z-10">
+                  <div className="bg-blue-500/10 border border-blue-500/20 p-3 rounded-2xl flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-blue-400 uppercase tracking-wider">Boys</span>
+                    <span className="text-2xl sm:text-3xl font-black text-blue-500">{data.summary.boysAdmission}</span>
+                  </div>
+                  <div className="bg-pink-500/10 border border-pink-500/20 p-3 rounded-2xl flex flex-col items-center">
+                    <span className="text-[10px] font-bold text-pink-400 uppercase tracking-wider">Girls</span>
+                    <span className="text-2xl sm:text-3xl font-black text-pink-500">{data.summary.girlsAdmission}</span>
+                  </div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-2 mb-8 relative z-10">
-                <div className="bg-blue-500/10 border border-blue-500/20 p-4 rounded-2xl flex flex-col items-center">
-                  <span className="text-xs font-bold text-blue-400 uppercase tracking-tighter">Boys</span>
-                  <span className="text-3xl font-black text-blue-500">{data.summary.boysAdmission}</span>
-                </div>
-                <div className="bg-pink-500/10 border border-pink-500/20 p-4 rounded-2xl flex flex-col items-center">
-                  <span className="text-xs font-bold text-pink-400 uppercase tracking-tighter">Girls</span>
-                  <span className="text-3xl font-black text-pink-500">{data.summary.girlsAdmission}</span>
+              <div>
+                <h3 className="text-xs font-bold mb-2 relative z-10 text-gray-400 uppercase tracking-wider">Quick Actions</h3>
+                <div className="grid grid-cols-3 gap-2 relative z-10">
+                  <button onClick={() => navigate("/school/students/list")} className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
+                    <Users className="w-4 h-4 text-blue-600 mb-1" />
+                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Students</span>
+                  </button>
+                  <button onClick={() => navigate("/school/teachers/list")} className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
+                    <GraduationCap className="w-4 h-4 text-purple-600 mb-1" />
+                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Teachers</span>
+                  </button>
+                  <button onClick={() => navigate("/school/class/attendance")} className="flex flex-col items-center justify-center p-2.5 rounded-xl bg-white dark:bg-gray-800/80 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
+                    <Activity className="w-4 h-4 text-emerald-600 mb-1" />
+                    <span className="text-[10px] font-bold text-gray-600 dark:text-gray-300">Attendance</span>
+                  </button>
                 </div>
               </div>
-
-              <h3 className="text-sm font-bold mb-4 relative z-10 text-gray-400 uppercase">Quick Actions</h3>
-              <div className="grid grid-cols-3 gap-3 relative z-10">
-                <button onClick={() => navigate("/school/students/list")} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
-                  <Users className="w-5 h-5 text-blue-600 mb-1" />
-                  <span className="text-[10px] font-bold text-gray-500">Student</span>
-                </button>
-                <button onClick={() => navigate("/school/teachers/list")} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
-                  <GraduationCap className="w-5 h-5 text-purple-600 mb-1" />
-                  <span className="text-[10px] font-bold text-gray-500">Teacher</span>
-                </button>
-                <button onClick={() => navigate("/school/class/attendance")} className="flex flex-col items-center justify-center p-3 rounded-xl bg-gray-50 dark:bg-gray-800/50 hover:bg-gray-100 dark:hover:bg-gray-800 transition-all border border-gray-200 dark:border-gray-700 group">
-                  <Activity className="w-5 h-5 text-emerald-600 mb-1" />
-                  <span className="text-[10px] font-bold text-gray-500">Attendance</span>
-                </button>
-              </div>
-              {/* Design Element */}
-              <div className="absolute -top-10 -right-10 w-40 h-40 bg-blue-500/5 rounded-full blur-3xl"></div>
             </div>
 
           </div>
 
-
-          <div className="grid grid-cols-1 gap-6 mt-6">
-            {/* Finance Area Chart - Takes 2 columns */}
-            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-xl border dark:border-gray-800 shadow-lg">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-8">
-                <h3 className="text-xl font-bold">Financial Growth</h3>
-                <div className="flex flex-wrap items-center gap-2">
+          <div className="grid grid-cols-1 gap-4 sm:gap-6">
+            {/* Finance Area Chart */}
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-3 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 mb-4 sm:mb-6">
+                <h3 className="text-lg sm:text-xl font-bold">Financial Growth</h3>
+                <div className="flex items-center gap-2">
                   <select
                     value={financeMonth}
                     onChange={(e) => setFinanceMonth(e.target.value)}
-                    className="bg-gray-800 text-sm border-none rounded-lg px-3 py-1 text-gray-300 outline-none"
+                    className="bg-gray-100 dark:bg-gray-800 text-xs font-semibold border-none rounded-xl px-2.5 py-1 text-gray-800 dark:text-gray-300 outline-none"
                   >
                     <option value="all">All Months</option>
                     <option value="1">January</option>
@@ -413,16 +405,16 @@ export default function AdminDashboard() {
                   <select
                     value={financeFilter}
                     onChange={(e) => setFinanceFilter(e.target.value.toLowerCase())}
-                    className="bg-gray-800 text-sm border-none rounded-lg px-3 py-1 text-gray-300 outline-none"
+                    className="bg-gray-100 dark:bg-gray-800 text-xs font-semibold border-none rounded-xl px-2.5 py-1 text-gray-800 dark:text-gray-300 outline-none"
                   >
                     <option value="yearly">Yearly</option>
                     <option value="monthly">Monthly</option>
                   </select>
                 </div>
               </div>
-              <div className="h-80 w-full">
+              <div className="h-56 sm:h-80 w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <AreaChart data={data.financeData}>
+                  <AreaChart data={data.financeData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="colorFinance" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#3b82f6" stopOpacity={0.3} />
@@ -430,47 +422,55 @@ export default function AdminDashboard() {
                       </linearGradient>
                     </defs>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} />
+                    <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 10 }} dy={5} interval="preserveStartEnd" minTickGap={10} />
+                    <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 10 }} />
                     <Tooltip content={<CustomTooltip title="Finance" />} />
-                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={4} fillOpacity={1} fill="url(#colorFinance)" dot={{ r: 4, fill: '#3b82f6' }} activeDot={{ r: 6, strokeWidth: 0 }} />
+                    <Area type="monotone" dataKey="amount" stroke="#3b82f6" strokeWidth={3} fillOpacity={1} fill="url(#colorFinance)" dot={{ r: 3, fill: '#3b82f6' }} activeDot={{ r: 5, strokeWidth: 0 }} />
                   </AreaChart>
                 </ResponsiveContainer>
               </div>
             </div>
 
-            {/* Students per Class Bar Chart */}
-            <div className="lg:col-span-2 bg-gray-50 dark:bg-gray-900/50 p-1.5 rounded-xl border dark:border-gray-800 shadow-lg">
-              <h3 className="text-xl font-bold mb-8">Capacity Breakdown</h3>
-              <div className="h-80 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={data.classData}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
-                    <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} dy={10} />
-                    <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 12 }} />
-                    <Tooltip cursor={{ fill: '#1f2937', opacity: 0.4 }} content={<CustomTooltip title="Class Capacity" />} />
-                    <Bar dataKey="students" fill="#818cf8" radius={[8, 8, 0, 0]} barSize={50}>
-                      {data.classData.map((entry, index) => (
-                        <Cell key={`bar-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#4f46e5'} opacity={0.8} />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+            {/* Capacity Breakdown Bar Chart */}
+            <div className="bg-gray-50 dark:bg-gray-900/50 p-3 sm:p-5 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md">
+              <h3 className="text-lg sm:text-xl font-bold mb-3 sm:mb-6">Capacity Breakdown</h3>
+              <div className="w-full overflow-x-auto scrollbar-none pb-1">
+                <div className="min-w-[500px] sm:min-w-full h-56 sm:h-80">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={data.classData} margin={{ top: 10, right: 10, left: -20, bottom: 25 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#374151" />
+                      <XAxis
+                        dataKey="name"
+                        axisLine={false}
+                        tickLine={false}
+                        tick={{ fill: LIGHT_GRAY, fontSize: 9, fontWeight: 600 }}
+                        dy={6}
+                        interval={0}
+                        angle={-30}
+                        textAnchor="end"
+                        tickFormatter={(val) => typeof val === 'string' ? val.replace(/^Class\s+/i, '') : val}
+                      />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fill: LIGHT_GRAY, fontSize: 10 }} />
+                      <Tooltip cursor={{ fill: '#1f2937', opacity: 0.4 }} content={<CustomTooltip title="Class Capacity" />} />
+                      <Bar dataKey="students" fill="#818cf8" radius={[6, 6, 0, 0]} barSize={28}>
+                        {data.classData.map((entry, index) => (
+                          <Cell key={`bar-${index}`} fill={index % 2 === 0 ? '#6366f1' : '#4f46e5'} opacity={0.8} />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
               </div>
             </div>
           </div>
-
-          {/* </div> */}
         </div>
 
         {/* Right Side - Calendar, Notices & Events */}
-        <>
+        <div className="w-full">
           <UpcomingActivities />
-        </>
+        </div>
 
       </div>
-
-
     </div>
   );
 }

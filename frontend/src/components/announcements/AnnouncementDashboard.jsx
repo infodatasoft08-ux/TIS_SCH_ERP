@@ -234,54 +234,51 @@ export default function AnnouncementDashboard({ userRole, userId, canManage = fa
     }
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-                <div className="relative w-full sm:w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                    <Input
-                        placeholder="Search announcements..."
-                        className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800"
-                        value={search}
-                        onChange={(e) => setSearch(e.target.value)}
-                    />
-                </div>
-
-                <div className="flex items-center gap-2">
+        <div className="space-y-4 sm:space-y-6 pb-24 sm:pb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-2.5">
+                <div className="flex items-center gap-2 w-full sm:w-auto flex-1">
+                    <div className="relative flex-1">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Input
+                            placeholder="Search announcements..."
+                            className="pl-9 bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-800 text-xs sm:text-sm h-9 sm:h-10 rounded-xl w-full"
+                            value={search}
+                            onChange={(e) => setSearch(e.target.value)}
+                        />
+                    </div>
                     <Button
                         variant="outline"
                         size="icon"
                         onClick={() => fetchData(true)}
-                        className={isRefreshing ? "animate-spin" : ""}
+                        className={`h-9 w-9 sm:h-10 sm:w-10 rounded-xl shrink-0 ${isRefreshing ? "animate-spin" : ""}`}
                     >
                         <RefreshCcw className="w-4 h-4" />
                     </Button>
-
-                    {canManage && (
-                        <div className="flex items-center gap-2">
-                            <Button onClick={() => { setEditingItem(null); setNoticeModalOpen(true); }} className="gap-2">
-                                <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">Add Notice</span>
-                                <Megaphone className="w-4 h-4 sm:hidden" />
-                            </Button>
-                            <Button onClick={() => { setEditingItem(null); setEventModalOpen(true); }} variant="secondary" className="gap-2">
-                                <Plus className="w-4 h-4" />
-                                <span className="hidden sm:inline">Add Event</span>
-                                <CalendarIcon className="w-4 h-4 sm:hidden" />
-                            </Button>
-                        </div>
-                    )}
                 </div>
+
+                {canManage && (
+                    <div className="flex items-center gap-2 w-full sm:w-auto">
+                        <Button onClick={() => { setEditingItem(null); setNoticeModalOpen(true); }} className="gap-1.5 h-9 sm:h-10 text-xs sm:text-sm rounded-xl flex-1 sm:flex-initial">
+                            <Plus className="w-4 h-4" />
+                            <span>Add Notice</span>
+                        </Button>
+                        <Button onClick={() => { setEditingItem(null); setEventModalOpen(true); }} variant="secondary" className="gap-1.5 h-9 sm:h-10 text-xs sm:text-sm rounded-xl flex-1 sm:flex-initial">
+                            <Plus className="w-4 h-4" />
+                            <span>Add Event</span>
+                        </Button>
+                    </div>
+                )}
             </div>
 
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="bg-gray-100 dark:bg-gray-800/50 p-1 mb-6">
-                    <TabsTrigger value="notices" className="gap-2">
-                        <Megaphone className="w-4 h-4" />
+                <TabsList className="bg-gray-100 dark:bg-gray-800/50 p-1 mb-4 sm:mb-6 rounded-xl">
+                    <TabsTrigger value="notices" className="gap-1.5 text-xs sm:text-sm rounded-lg">
+                        <Megaphone className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Notices
                         <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">{filteredNotices.length}</Badge>
                     </TabsTrigger>
-                    <TabsTrigger value="events" className="gap-2">
-                        <CalendarIcon className="w-4 h-4" />
+                    <TabsTrigger value="events" className="gap-1.5 text-xs sm:text-sm rounded-lg">
+                        <CalendarIcon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                         Events
                         <Badge variant="secondary" className="ml-1 px-1.5 py-0 text-[10px]">{filteredEvents.length}</Badge>
                     </TabsTrigger>
@@ -290,7 +287,7 @@ export default function AnnouncementDashboard({ userRole, userId, canManage = fa
                 <TabsContent value="notices">
                     {filteredNotices.length > 0 ? (
                         <>
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-6">
                                 {filteredNotices.map((notice, index) => {
                                     const isLast = index === filteredNotices.length - 1;
                                     return (
@@ -311,10 +308,10 @@ export default function AnnouncementDashboard({ userRole, userId, canManage = fa
                             )}
                         </>
                     ) : (
-                        <div className="text-center py-20 bg-gray-50 dark:bg-gray-900/20 rounded-[2rem] border-2 border-dashed border-gray-200 dark:border-gray-800">
-                            <Megaphone className="w-12 h-12 mx-auto text-gray-300 mb-4" />
-                            <h3 className="text-lg font-bold text-gray-900 dark:text-white">No notices found</h3>
-                            <p className="text-gray-500">Important updates will appear here.</p>
+                        <div className="text-center py-12 sm:py-20 bg-gray-50 dark:bg-gray-900/20 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-800 p-4">
+                            <Megaphone className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-gray-300 mb-3" />
+                            <h3 className="text-base sm:text-lg font-bold text-gray-900 dark:text-white">No notices found</h3>
+                            <p className="text-xs sm:text-sm text-gray-500">Important updates will appear here.</p>
                         </div>
                     )}
                 </TabsContent>

@@ -14,6 +14,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import API from '@/api';
@@ -39,9 +40,9 @@ const isAcademicSubject = (sub) => {
 
 const formatExamCategory = (sub) => {
     if (!sub) return 'Written';
-    
+
     const cat = (sub.exam_category || '').toLowerCase();
-    
+
     // If it's a written exam, just return the category name
     if (!cat.includes('oral') && !cat.includes('practical') && !cat.includes('viva')) {
         return sub.exam_category || 'Written';
@@ -56,19 +57,23 @@ const formatExamCategory = (sub) => {
     if (sub.recitation_max_marks > 0) components.push('Recitation');
     if (sub.lab_max_marks > 0) components.push('Lab');
     if (sub.ia_pr_max_marks > 0) components.push('I.A./PR');
-    
+
     if (components.length > 0) {
         return components.join(', ');
     }
-    
+
     return sub.exam_category;
 };
 
 const CheckExams = () => {
     const [exams, setExams] = useState([]);
+    const [academicYears, setAcademicYears] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
-    
+    const [selectedAcademicYear, setSelectedAcademicYear] = useState('all');
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+
     // Routine Dialog State
     const [routineDialogOpen, setRoutineDialogOpen] = useState(false);
     const [selectedExamForRoutine, setSelectedExamForRoutine] = useState(null);
@@ -79,13 +84,23 @@ const CheckExams = () => {
 
     useEffect(() => {
         fetchExams();
-    }, []);
+    }, [selectedAcademicYear, startDate, endDate]);
 
     const fetchExams = async () => {
         try {
             setLoading(true);
-            const response = await API.get('/exam/student/exams');
+            const params = {};
+            if (selectedAcademicYear && selectedAcademicYear !== 'all') {
+                params.academic_year_id = selectedAcademicYear;
+            }
+            if (startDate) params.start_date = startDate;
+            if (endDate) params.end_date = endDate;
+
+            const response = await API.get('/exam/student/exams', { params });
             setExams(response.data.exams || []);
+            if (response.data.academic_years && response.data.academic_years.length > 0) {
+                setAcademicYears(response.data.academic_years);
+            }
         } catch (error) {
             console.error("Error fetching exams:", error);
             toast.error("Failed to load exams");
@@ -93,6 +108,15 @@ const CheckExams = () => {
             setLoading(false);
         }
     };
+
+    const clearFilters = () => {
+        setSearchQuery('');
+        setSelectedAcademicYear('all');
+        setStartDate('');
+        setEndDate('');
+    };
+
+    const hasActiveFilters = searchQuery || selectedAcademicYear !== 'all' || startDate || endDate;
 
     const handleOpenRoutine = (exam) => {
         setSelectedExamForRoutine(exam);
@@ -263,23 +287,84 @@ const CheckExams = () => {
 
     return (
         <div className="container mx-auto p-4 md:p-6 space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="flex flex-col gap-4">
                 <div>
                     <h1 className="text-2xl md:text-3xl font-bold tracking-tight">My Exams & Routines</h1>
-                    <p className="text-muted-foreground text-xs md:text-sm mt-1">Check exam schedules, routines, and detailed subject marks & grades.</p>
+                    <p className="text-muted-foreground text-xs md:text-sm mt-1">Check current & previous academic session exams, routines, and detailed marks & grades.</p>
                 </div>
 
-                <div className="flex flex-col sm:flex-row gap-3 w-full md:w-auto">
-                    <div className="relative">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            type="search"
-                            placeholder="Search exams..."
-                            className="pl-9 w-full md:w-[250px]"
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                        />
+                {/* Filter Bar */}
+                <div className="bg-card border rounded-xl p-4 shadow-sm space-y-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                type="search"
+                                placeholder="Search exams..."
+                                className="pl-9 text-xs"
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                            />
+                        </div>
+
+                        {/* Session / Academic Year Filter */}
+                        <div>
+                            <Select
+                                value={String(selectedAcademicYear)}
+                                onValueChange={(val) => setSelectedAcademicYear(val)}
+                            >
+                                <SelectTrigger className="w-full h-9 text-xs font-medium">
+                                    <SelectValue placeholder="All Academic Sessions" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all" className="text-xs font-medium">
+                                        All Academic Sessions
+                                    </SelectItem>
+                                    {academicYears.map((ay) => (
+                                        <SelectItem key={ay.id} value={String(ay.id)} className="text-xs font-medium">
+                                            Session: {ay.name} ({ay.grade_name || ''} {ay.section_name ? `- ${ay.section_name}` : ''})
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {/* Start Date */}
+                        <div className="relative">
+                            <span className="absolute left-2.5 top-1 text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">From Date</span>
+                            <Input
+                                type="date"
+                                className="text-xs pt-3 pb-1 h-9 font-medium"
+                                value={startDate}
+                                onChange={(e) => setStartDate(e.target.value)}
+                            />
+                        </div>
+
+                        {/* End Date */}
+                        <div className="relative">
+                            <span className="absolute left-2.5 top-1 text-[9px] text-muted-foreground font-semibold uppercase tracking-wider">To Date</span>
+                            <Input
+                                type="date"
+                                className="text-xs pt-3 pb-1 h-9 font-medium"
+                                value={endDate}
+                                onChange={(e) => setEndDate(e.target.value)}
+                            />
+                        </div>
                     </div>
+
+                    {hasActiveFilters && (
+                        <div className="flex justify-end pt-1">
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={clearFilters}
+                                className="text-xs text-muted-foreground hover:text-foreground h-7 gap-1"
+                            >
+                                Clear all filters
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -302,10 +387,10 @@ const CheckExams = () => {
                     </div>
                     <h3 className="text-lg font-semibold">No exams found</h3>
                     <p className="text-muted-foreground mt-1 text-xs">
-                        {searchQuery ? "Try adjusting your filters." : "You don't have any exams scheduled yet."}
+                        {hasActiveFilters ? "No exams match your selected session or date filters." : "You don't have any exams scheduled yet."}
                     </p>
-                    {searchQuery && (
-                        <Button variant="link" onClick={() => setSearchQuery('')} className="mt-2 text-xs">
+                    {hasActiveFilters && (
+                        <Button variant="link" onClick={clearFilters} className="mt-2 text-xs">
                             Clear all filters
                         </Button>
                     )}
@@ -369,7 +454,7 @@ const CheckExams = () => {
                                             </span>
                                         </div>
                                     </div>
-                                    
+
                                     {isPublished && (
                                         <div className="bg-green-50 dark:bg-green-950/40 border border-green-200 dark:border-green-800 text-green-800 dark:text-green-300 p-2.5 rounded-lg flex items-center justify-center gap-2 cursor-pointer hover:bg-green-100 dark:hover:bg-green-900/50 transition-colors" onClick={() => handleOpenMarks(exam)}>
                                             <CheckCircle className="h-4 w-4 text-green-600 shrink-0" />
@@ -381,9 +466,9 @@ const CheckExams = () => {
                                     <Button variant="outline" className="w-full sm:flex-1 text-xs gap-1.5" onClick={() => handleOpenRoutine(exam)}>
                                         <BookOpen className="h-3.5 w-3.5 text-blue-600 shrink-0" /> Exam Routine
                                     </Button>
-                                    <Button 
-                                        variant={isPublished ? "default" : "outline"} 
-                                        className={`w-full sm:flex-1 text-xs gap-1.5 ${isPublished ? "bg-green-600 hover:bg-green-700 text-white" : ""}`} 
+                                    <Button
+                                        variant={isPublished ? "default" : "outline"}
+                                        className={`w-full sm:flex-1 text-xs gap-1.5 ${isPublished ? "bg-green-600 hover:bg-green-700 text-white" : ""}`}
                                         onClick={() => handleOpenMarks(exam)}
                                     >
                                         <Award className="h-3.5 w-3.5 shrink-0" /> Marksheet & Marks

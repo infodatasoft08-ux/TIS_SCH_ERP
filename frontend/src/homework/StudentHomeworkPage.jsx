@@ -44,14 +44,14 @@ export default function StudentHomeworkPage() {
                 Daily Homework
               </Badge>
             </div>
-            <h1 className="text-4xl md:text-5xl font-black tracking-tight mb-2">My Homework</h1>
-            <p className="text-indigo-100 text-lg md:text-xl font-medium opacity-90">
+            <h1 className="text-2xl md:text-4xl font-black tracking-tight mb-1 sm:mb-2">My Homework</h1>
+            <p className="text-indigo-100 text-xs sm:text-lg font-medium opacity-90">
               Stay on top of your studies with daily assignments.
             </p>
           </div>
         </div>
 
-        <div className="px-4 md:px-8 max-w-5xl mx-auto">
+        <div className="px-2 sm:px-4 md:px-6 max-w-5xl mx-auto">
           {isLoading ? (
             <div className="space-y-6">
               {[1, 2, 3].map(i => (

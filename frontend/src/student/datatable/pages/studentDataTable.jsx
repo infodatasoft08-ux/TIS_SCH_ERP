@@ -388,14 +388,14 @@ export default function StudentsPage() {
 
 
   return (
-    <div className="space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+    <div className="space-y-4 sm:space-y-6 pb-28 sm:pb-12 animate-in fade-in slide-in-from-bottom-10 duration-1000">
       {/* Header Section with Gradient */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 p-8 shadow-lg text-white">
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-indigo-600 to-violet-600 p-4 sm:p-8 shadow-lg text-white">
         <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-6">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Student Management</h1>
-            <p className="mt-2 text-blue-100/90 text-lg max-w-xl">
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">Student Management</h1>
+            <p className="mt-1 text-blue-100/90 text-xs sm:text-base max-w-xl">
               Manage student enrollments, profiles, and academic status efficiently.
             </p>
           </div>
@@ -403,15 +403,15 @@ export default function StudentsPage() {
             <Button
               onClick={() => setBulkOpen(true)}
               size="sm"
-              className="bg-white/10 border-white/20 text-white hover:bg-white/20"
+              className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs font-bold rounded-xl h-9"
             >
-              <FileUp className="mr-2 h-4 w-4" />
+              <FileUp className="mr-1.5 h-3.5 w-3.5" />
               Bulk Import
             </Button>
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="outline" className="bg-white/10 border-white/20 text-white hover:bg-white/20">
-                  <FileDown className="mr-2 h-4 w-4" />
+                <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-white hover:bg-white/20 text-xs font-bold rounded-xl h-9">
+                  <FileDown className="mr-1.5 h-3.5 w-3.5" />
                   Export Data
                 </Button>
               </DropdownMenuTrigger>
@@ -425,9 +425,9 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      <div className="px-2 md:px-6 max-w-7xl mx-auto">
-        <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-          <CardContent className="pt-6">
+      <div className="px-2 sm:px-4 md:px-6 max-w-7xl mx-auto">
+        <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl">
+          <CardContent className="p-3 sm:p-6">
             <DataTable
               data={students}
               columns={studentColumns}
@@ -455,7 +455,7 @@ export default function StudentsPage() {
               onRefresh={loadStudents}
               leftOfSearch={
                 <Select onValueChange={handleGradeChange} value={selectedGrade}>
-                  <SelectTrigger className="w-[160px]">
+                  <SelectTrigger className="w-full sm:w-[160px] text-xs h-9 sm:h-10 rounded-xl">
                     <SelectValue placeholder="All Classes" />
                   </SelectTrigger>
                   <SelectContent>

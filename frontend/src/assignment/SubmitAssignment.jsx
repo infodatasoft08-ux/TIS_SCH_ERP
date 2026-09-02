@@ -88,17 +88,17 @@ export default function SubmitAssignment() {
     // }
 
     return (
-        <div className="p-6 w-full mx-auto space-y-8 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <div className="flex flex-col gap-2">
-                <h1 className="text-4xl font-extrabold tracking-tight flex items-center gap-3">
-                    <ClipboardList className="w-10 h-10 text-indigo-600" />
+        <div className="p-2 sm:p-4 md:p-6 w-full mx-auto space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <div className="flex flex-col gap-1">
+                <h1 className="text-2xl sm:text-4xl font-extrabold tracking-tight flex items-center gap-2 sm:gap-3">
+                    <ClipboardList className="w-7 h-7 sm:w-10 sm:h-10 text-indigo-600" />
                     My Assignments
                 </h1>
-                <p className="text-muted-foreground text-lg">Tracks your tasks, deadlines, and submissions.</p>
+                <p className="text-muted-foreground text-xs sm:text-base">Tracks your tasks, deadlines, and submissions.</p>
             </div>
 
             {isLoading ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {[1, 2, 3].map((i) => (
                         <Card key={i} className="animate-pulse">
                             <CardHeader className="h-24 bg-muted/50 rounded-t-xl" />
@@ -111,7 +111,7 @@ export default function SubmitAssignment() {
                 </div>
             ) :
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
                     {assignments.length > 0 ? (
                         assignments.map((assignment) => (
                             <Card key={assignment.id} className="rounded-[2rem] border-none shadow-lg bg-white dark:bg-gray-900/50 hover:shadow-xl transition-all group overflow-hidden relative">

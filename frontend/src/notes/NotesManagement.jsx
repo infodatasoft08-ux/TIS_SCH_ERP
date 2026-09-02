@@ -191,19 +191,19 @@ export default function NotesManagement() {
     ], [user]);
 
     return (
-        <div className="space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700">
-            <div className="relative overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-purple-700 p-8 shadow-xl text-white">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-5 duration-700 p-2 sm:p-4 md:p-6">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-indigo-600 to-purple-700 p-4 sm:p-8 shadow-xl text-white">
                 <div className="absolute top-0 right-0 -mt-12 -mr-12 h-48 w-48 rounded-full bg-white/10 blur-3xl invisible md:visible"></div>
                 <div className="relative z-10">
-                    <h1 className="text-3xl font-bold tracking-tight">Study Notes Management</h1>
-                    <p className="mt-2 text-indigo-100 max-w-xl">
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Study Notes Management</h1>
+                    <p className="mt-1 sm:mt-2 text-indigo-100 text-xs sm:text-sm max-w-xl">
                         Upload and manage study materials for your students. Supports PDFs, Word documents, and images.
                     </p>
                 </div>
             </div>
 
-            <Card className="border-0 shadow-sm overflow-hidden">
-                <CardContent className="p-6">
+            <Card className="border-0 shadow-sm overflow-hidden rounded-2xl">
+                <CardContent className="p-3 sm:p-6">
                     <DataTable
                         data={notes}
                         columns={columns}

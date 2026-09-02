@@ -28,6 +28,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import ResponsiveDataTable from '@/components/common/ResponsiveDataTable';
 
 const StudentFeeDetails = () => {
@@ -379,16 +380,20 @@ const StudentFeeDetails = () => {
 
                     <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">View Year:</span>
-                        <select
-                            value={selectedAcademicYear}
-                            onChange={(e) => setSelectedAcademicYear(e.target.value)}
-                            className="bg-background border-2 border-primary/20 rounded-xl px-4 py-1.5 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-primary/40 transition-all cursor-pointer"
+                        <Select
+                            value={String(selectedAcademicYear)}
+                            onValueChange={(val) => setSelectedAcademicYear(val)}
                         >
-                            <option value="current">Current Active</option>
-                            {academicYears.map(ay => (
-                                <option key={ay.id} value={ay.id}>{ay.name}</option>
-                            ))}
-                        </select>
+                            <SelectTrigger className="w-[180px] h-9 text-xs font-bold border-2 border-primary/20 rounded-xl">
+                                <SelectValue placeholder="Current Active" />
+                            </SelectTrigger>
+                            <SelectContent>
+                                <SelectItem value="current" className="text-xs font-bold">Current Active</SelectItem>
+                                {academicYears.map(ay => (
+                                    <SelectItem key={ay.id} value={String(ay.id)} className="text-xs font-bold">{ay.name}</SelectItem>
+                                ))}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import API from "@/api";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,7 +39,10 @@ import {
   CheckSquare,
   Eye,
   Edit,
-  MoreVertical
+  MoreVertical,
+  Search,
+  Check,
+  UserCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
@@ -54,10 +57,10 @@ export default function TakeAttendance() {
   const [date, setDate] = useState(new Date().toISOString().split("T")[0]);
   const [isTodayAttendanceTaken, setIsTodayAttendanceTaken] = useState(false);
   const [todayAttendanceData, setTodayAttendanceData] = useState([]);
-  const [selectedStudentForUpdate, setSelectedStudentForUpdate] =
-    useState(null);
+  const [selectedStudentForUpdate, setSelectedStudentForUpdate] = useState(null);
   const [updateStatus, setUpdateStatus] = useState("");
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -77,7 +80,6 @@ export default function TakeAttendance() {
     }
   }, [selectedClassId, date]);
 
-  // Check if today's date is selected
   const isSelectedDateToday = () => {
     const today = new Date().toISOString().split("T")[0];
     return date === today;
@@ -86,13 +88,11 @@ export default function TakeAttendance() {
   async function loadSupervisedClasses() {
     try {
       if (user.role_id === 2 && user.supervised_classes) {
-        // Teacher logic: Load their supervised classes from session data
         setClasses(user.supervised_classes);
         if (user.supervised_classes.length > 0) {
           setSelectedClassId(user.supervised_classes[0].id.toString());
         }
       } else if (user.role_id === 3) {
-        // Admin logic: Fetch all classes from the database
         const res = await API.get("/admin/get/classes");
         const allClasses = res.data.classes || res.data || [];
         setClasses(allClasses);
@@ -117,10 +117,10 @@ export default function TakeAttendance() {
       const studentsList = res.data.students || res.data || [];
       setStudents(studentsList);
 
-      // Initialize attendance status for all students
+      // Initialize attendance status for all students to present by default
       const initialStatus = {};
       studentsList.forEach((student) => {
-        initialStatus[student.student_id] = "present"; // Default to present
+        initialStatus[student.student_id] = "present";
       });
       setAttendanceStatus(initialStatus);
 
@@ -134,12 +134,10 @@ export default function TakeAttendance() {
     }
   }
 
-  // Check if attendance is already taken for the selected date
   async function checkTodayAttendance() {
     if (!selectedClassId) return;
 
     try {
-      // const today = new Date().toISOString().split("T")[0];
       const res = await API.get(`/attendance/get/attend/summery`, {
         params: {
           class_id: selectedClassId,
@@ -148,11 +146,9 @@ export default function TakeAttendance() {
         }
       });
 
-      // Check if there are attendance records for this date
       if (res.data.records && res.data.records.length > 0) {
         setIsTodayAttendanceTaken(true);
         setTodayAttendanceData(res.data.records);
-        console.log(res.data.records);
       } else {
         setIsTodayAttendanceTaken(false);
         setTodayAttendanceData([]);
@@ -176,7 +172,7 @@ export default function TakeAttendance() {
       newStatus[student.student_id] = status;
     });
     setAttendanceStatus(newStatus);
-    toast.info(`Marked all students as ${status}`);
+    toast.info(`Marked all students as ${status.toUpperCase()}`);
   };
 
   const handleSubmitAttendance = async () => {
@@ -201,13 +197,11 @@ export default function TakeAttendance() {
         recorded_by: user.id
       }));
 
-      const res = await API.post(`/attendance/add/attendance`, {
+      await API.post(`/attendance/add/attendance`, {
         records: attendanceRecords
       });
 
       toast.success(`Attendance recorded for ${students.length} students`);
-
-      // After successful submission, reload attendance data
       await checkTodayAttendance();
     } catch (err) {
       console.error("Failed to submit attendance", err);
@@ -217,35 +211,26 @@ export default function TakeAttendance() {
     }
   };
 
-  // Open update dialog for a specific student
   const openUpdateDialog = (studentRecord) => {
     setSelectedStudentForUpdate(studentRecord);
     setUpdateStatus(studentRecord.status);
     setUpdateDialogOpen(true);
   };
 
-  // Handle update attendance for a single student
   const handleUpdateAttendance = async () => {
     if (!selectedStudentForUpdate || !updateStatus) return;
 
     setUpdating(true);
     try {
-      const res = await API.put(`/attendance/update/attend/update-single`, {
-        // student_id: selectedStudentForUpdate.student_id,
+      await API.put(`/attendance/update/attend/update-single`, {
         attendance_id: selectedStudentForUpdate.id,
-        // class_id: parseInt(selectedClassId),
         status: updateStatus,
         recorded_by: user.id
       });
 
-      toast.success(
-        `Attendance updated for ${selectedStudentForUpdate.student_name}`
-      );
-
-      // Refresh today's attendance data
+      toast.success(`Attendance updated for ${selectedStudentForUpdate.student_name}`);
       await checkTodayAttendance();
 
-      // Close dialog
       setUpdateDialogOpen(false);
       setSelectedStudentForUpdate(null);
       setUpdateStatus("");
@@ -257,16 +242,39 @@ export default function TakeAttendance() {
     }
   };
 
+  // Filtered Students list by search query
+  const filteredStudents = useMemo(() => {
+    if (!searchQuery.trim()) return students;
+    const q = searchQuery.toLowerCase().trim();
+    return students.filter(s => 
+      (s.student_name && s.student_name.toLowerCase().includes(q)) ||
+      (s.roll_no && String(s.roll_no).toLowerCase().includes(q)) ||
+      (s.student_email && s.student_email.toLowerCase().includes(q))
+    );
+  }, [students, searchQuery]);
+
+  // Attendance live counters
+  const attendanceCounts = useMemo(() => {
+    let present = 0, absent = 0, late = 0, excused = 0;
+    Object.values(attendanceStatus).forEach(st => {
+      if (st === 'present') present++;
+      else if (st === 'absent') absent++;
+      else if (st === 'late') late++;
+      else if (st === 'excused') excused++;
+    });
+    return { present, absent, late, excused };
+  }, [attendanceStatus]);
+
   const getStatusColor = (status) => {
     switch (status) {
       case "present":
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-emerald-100 text-emerald-800 border-emerald-300 dark:bg-emerald-950/50 dark:text-emerald-300";
       case "absent":
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-rose-100 text-rose-800 border-rose-300 dark:bg-rose-950/50 dark:text-rose-300";
       case "late":
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-950/50 dark:text-amber-300";
       case "excused":
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 text-blue-800 border-blue-300 dark:bg-blue-950/50 dark:text-blue-300";
       default:
         return "bg-gray-100 text-gray-800 border-gray-200";
     }
@@ -275,68 +283,53 @@ export default function TakeAttendance() {
   const getStatusIcon = (status) => {
     switch (status) {
       case "present":
-        return <CheckCircle className="h-4 w-4" />;
+        return <CheckCircle className="h-3.5 w-3.5 text-emerald-600" />;
       case "absent":
-        return <XCircle className="h-4 w-4" />;
+        return <XCircle className="h-3.5 w-3.5 text-rose-600" />;
       case "late":
-        return <Clock className="h-4 w-4" />;
+        return <Clock className="h-3.5 w-3.5 text-amber-600" />;
       default:
         return null;
     }
   };
 
-  // Desktop Table View for taking attendance
   const DesktopTableView = () => (
-    <div className="rounded-md border">
+    <div className="rounded-xl border shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
       <Table>
-        <TableHeader>
+        <TableHeader className="bg-gray-50 dark:bg-gray-800/60">
           <TableRow>
             <TableHead className="w-20">Roll No</TableHead>
             <TableHead>Student Name</TableHead>
             <TableHead className="w-32">Class</TableHead>
-            <TableHead className="w-64">Attendance Status</TableHead>
-            <TableHead className="w-48">Current Status</TableHead>
+            <TableHead className="w-64">Attendance Mark</TableHead>
+            <TableHead className="w-40">Status</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {students.map((student) => (
+          {filteredStudents.map((student) => (
             <TableRow key={student.student_id}>
-              <TableCell className="font-medium">
-                <div className="font-bold">{student.roll_no || "N/A"}</div>
+              <TableCell className="font-bold text-gray-800 dark:text-gray-200">
+                {student.roll_no || "N/A"}
               </TableCell>
               <TableCell>
-                <div className="font-medium">{student.student_name}</div>
-                {student.email && (
-                  <div className="text-xs text-gray-500">
-                    {student.student_email}
-                  </div>
+                <div className="font-semibold text-gray-900 dark:text-white">{student.student_name}</div>
+                {student.student_email && (
+                  <div className="text-xs text-gray-400">{student.student_email}</div>
                 )}
               </TableCell>
               <TableCell>
-                <Badge variant="outline">
-                  {student.class_name ||
-                    classes.find((c) => c.id === parseInt(selectedClassId))
-                      ?.name ||
-                    "N/A"}
+                <Badge variant="outline" className="text-xs">
+                  {student.class_name || classes.find((c) => c.id === parseInt(selectedClassId))?.name || "N/A"}
                 </Badge>
               </TableCell>
               <TableCell>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5">
                   <Button
                     type="button"
                     size="sm"
-                    variant={
-                      attendanceStatus[student.student_id] === "present"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`${attendanceStatus[student.student_id] === "present"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/30"
-                      }`}
-                    onClick={() =>
-                      handleStatusChange(student.student_id, "present")
-                    }
+                    variant={attendanceStatus[student.student_id] === "present" ? "default" : "outline"}
+                    className={attendanceStatus[student.student_id] === "present" ? "bg-emerald-600 hover:bg-emerald-700 text-white font-bold" : "text-emerald-700 hover:bg-emerald-50"}
+                    onClick={() => handleStatusChange(student.student_id, "present")}
                     disabled={isTodayAttendanceTaken && isSelectedDateToday()}
                   >
                     Present
@@ -344,18 +337,9 @@ export default function TakeAttendance() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={
-                      attendanceStatus[student.student_id] === "absent"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`${attendanceStatus[student.student_id] === "absent"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30"
-                      }`}
-                    onClick={() =>
-                      handleStatusChange(student.student_id, "absent")
-                    }
+                    variant={attendanceStatus[student.student_id] === "absent" ? "default" : "outline"}
+                    className={attendanceStatus[student.student_id] === "absent" ? "bg-rose-600 hover:bg-rose-700 text-white font-bold" : "text-rose-700 hover:bg-rose-50"}
+                    onClick={() => handleStatusChange(student.student_id, "absent")}
                     disabled={isTodayAttendanceTaken && isSelectedDateToday()}
                   >
                     Absent
@@ -363,18 +347,9 @@ export default function TakeAttendance() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={
-                      attendanceStatus[student.student_id] === "late"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`${attendanceStatus[student.student_id] === "late"
-                      ? "bg-yellow-600 hover:bg-yellow-700"
-                      : "border-yellow-200 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-800 dark:text-yellow-300 dark:hover:bg-yellow-900/30"
-                      }`}
-                    onClick={() =>
-                      handleStatusChange(student.student_id, "late")
-                    }
+                    variant={attendanceStatus[student.student_id] === "late" ? "default" : "outline"}
+                    className={attendanceStatus[student.student_id] === "late" ? "bg-amber-500 hover:bg-amber-600 text-white font-bold" : "text-amber-700 hover:bg-amber-50"}
+                    onClick={() => handleStatusChange(student.student_id, "late")}
                     disabled={isTodayAttendanceTaken && isSelectedDateToday()}
                   >
                     Late
@@ -382,18 +357,9 @@ export default function TakeAttendance() {
                   <Button
                     type="button"
                     size="sm"
-                    variant={
-                      attendanceStatus[student.student_id] === "excused"
-                        ? "default"
-                        : "outline"
-                    }
-                    className={`${attendanceStatus[student.student_id] === "excused"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30"
-                      }`}
-                    onClick={() =>
-                      handleStatusChange(student.student_id, "excused")
-                    }
+                    variant={attendanceStatus[student.student_id] === "excused" ? "default" : "outline"}
+                    className={attendanceStatus[student.student_id] === "excused" ? "bg-blue-600 hover:bg-blue-700 text-white font-bold" : "text-blue-700 hover:bg-blue-50"}
+                    onClick={() => handleStatusChange(student.student_id, "excused")}
                     disabled={isTodayAttendanceTaken && isSelectedDateToday()}
                   >
                     Excused
@@ -401,15 +367,9 @@ export default function TakeAttendance() {
                 </div>
               </TableCell>
               <TableCell>
-                <div
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${getStatusColor(
-                    attendanceStatus[student.student_id]
-                  )}`}
-                >
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(attendanceStatus[student.student_id])}`}>
                   {getStatusIcon(attendanceStatus[student.student_id])}
-                  <span className="font-medium capitalize">
-                    {attendanceStatus[student.student_id]}
-                  </span>
+                  <span>{attendanceStatus[student.student_id]}</span>
                 </div>
               </TableCell>
             </TableRow>
@@ -419,19 +379,17 @@ export default function TakeAttendance() {
     </div>
   );
 
-  // Desktop Table View for viewing/updating today's attendance
   const TodayAttendanceTableView = () => (
-    <div className="rounded-md border">
-      <div className="p-4 bg-green-50 border-b">
+    <div className="rounded-xl border shadow-sm bg-white dark:bg-gray-900 overflow-hidden">
+      <div className="p-4 bg-emerald-50 dark:bg-emerald-950/40 border-b border-emerald-200">
         <div className="flex items-center gap-2">
-          <CheckSquare className="h-5 w-5 text-green-600" />
-          <span className="font-medium text-green-700">
-            Today's Attendance ({todayAttendanceData.length} records)
+          <CheckSquare className="h-5 w-5 text-emerald-600" />
+          <span className="font-bold text-emerald-800 dark:text-emerald-300">
+            Submitted Attendance ({todayAttendanceData.length} Students)
           </span>
         </div>
-        <p className="text-sm text-green-600 mt-1">
-          Attendance for today ({date}) has already been submitted. Click the
-          edit icon to update individual student status.
+        <p className="text-xs text-emerald-600 dark:text-emerald-400 mt-1">
+          Attendance for today ({date}) has already been recorded. Click the edit icon to update status.
         </p>
       </div>
       <Table>
@@ -448,101 +406,22 @@ export default function TakeAttendance() {
         <TableBody>
           {todayAttendanceData.map((record) => (
             <TableRow key={record.id}>
-              <TableCell className="font-medium">
-                <div className="font-bold">{record.roll_no || "N/A"}</div>
-              </TableCell>
+              <TableCell className="font-bold">{record.roll_no || "N/A"}</TableCell>
+              <TableCell className="font-semibold">{record.student_name}</TableCell>
+              <TableCell><Badge variant="outline" className="text-xs">{record.class_name}</Badge></TableCell>
               <TableCell>
-                <div className="font-medium">{record.student_name}</div>
-              </TableCell>
-              <TableCell>
-                <Badge variant="outline">{record.class_name}</Badge>
-              </TableCell>
-              <TableCell>
-                <div
-                  className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full ${getStatusColor(
-                    record.status
-                  )}`}
-                >
+                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
                   {getStatusIcon(record.status)}
-                  <span className="font-medium capitalize">
-                    {record.status}
-                  </span>
+                  <span>{record.status}</span>
                 </div>
               </TableCell>
-              <TableCell>
-                <div className="text-sm">
-                  {new Date(record.recorded_at).toLocaleTimeString([], {
-                    hour: "2-digit",
-                    minute: "2-digit"
-                  })}
-                </div>
+              <TableCell className="text-xs text-gray-500">
+                {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
               </TableCell>
               <TableCell>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-56 p-3">
-                    <div className="space-y-2">
-                      <div className="font-medium text-sm">
-                        Update Attendance
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
-                        <Button
-                          size="sm"
-                          variant={
-                            record.status === "present" ? "default" : "outline"
-                          }
-                          className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/30"
-                          onClick={() => openUpdateDialog(record)}
-                        >
-                          Present
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={
-                            record.status === "absent" ? "default" : "outline"
-                          }
-                          className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30"
-                          onClick={() => openUpdateDialog(record)}
-                        >
-                          Absent
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={
-                            record.status === "late" ? "default" : "outline"
-                          }
-                          className="bg-yellow-50 hover:bg-yellow-100 text-yellow-700 border-yellow-200 dark:border-yellow-800 dark:text-yellow-300 dark:hover:bg-yellow-900/30"
-                          onClick={() => openUpdateDialog(record)}
-                        >
-                          Late
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant={
-                            record.status === "excused" ? "default" : "outline"
-                          }
-                          className="bg-blue-50 hover:bg-blue-100 text-blue-700 border-blue-200 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30"
-                          onClick={() => openUpdateDialog(record)}
-                        >
-                          Excused
-                        </Button>
-                      </div>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="w-full"
-                        onClick={() => openUpdateDialog(record)}
-                      >
-                        <Edit className="h-4 w-4 mr-2" />
-                        Update Status
-                      </Button>
-                    </div>
-                  </PopoverContent>
-                </Popover>
+                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openUpdateDialog(record)}>
+                  <Edit className="h-4 w-4 text-gray-600" />
+                </Button>
               </TableCell>
             </TableRow>
           ))}
@@ -551,233 +430,194 @@ export default function TakeAttendance() {
     </div>
   );
 
-  // Mobile Card View for taking attendance
+  // Fast Touch-Optimized Mobile View
   const MobileCardView = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-      {students.map((student) => (
-        <Card key={student.student_id} className="relative">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="font-semibold text-lg">
-                    {student.student_name}
+    <div className="space-y-3 pb-24">
+      {filteredStudents.map((student) => {
+        const currentStatus = attendanceStatus[student.student_id] || "present";
+        return (
+          <Card 
+            key={student.student_id} 
+            className="rounded-2xl border shadow-sm transition-all overflow-hidden bg-white dark:bg-gray-900"
+          >
+            <CardContent className="p-3.5 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-center gap-2">
+                    <span className="font-extrabold text-base text-gray-900 dark:text-white truncate">
+                      {student.student_name}
+                    </span>
+                    {student.roll_no && (
+                      <Badge className="bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-200 text-[10px] font-bold px-1.5 py-0.5 border-none shrink-0">
+                        Roll #{student.roll_no}
+                      </Badge>
+                    )}
                   </div>
-                  {student.roll_no && (
-                    <Badge variant="outline" className="text-xs">
-                      #{student.roll_no}
-                    </Badge>
-                  )}
                 </div>
-                <div className="text-sm text-gray-500">
-                  {student.class_name ||
-                    classes.find((c) => c.id === parseInt(selectedClassId))
-                      ?.name ||
-                    "N/A"}
+
+                <div className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider shrink-0 ${getStatusColor(currentStatus)}`}>
+                  {getStatusIcon(currentStatus)}
+                  <span>{currentStatus}</span>
                 </div>
-                {student.email && (
-                  <div className="text-xs text-gray-400 mt-1">
-                    {student.student_email}
-                  </div>
-                )}
               </div>
-            </div>
 
-            <div className="space-y-3">
-              <Label className="text-sm font-medium">Attendance</Label>
-              <div className="grid grid-cols-2 gap-2">
-                {["present", "absent", "late", "excused"].map((status) => (
-                  <button
-                    key={status}
-                    type="button"
-                    onClick={() =>
-                      handleStatusChange(student.student_id, status)
-                    }
-                    disabled={isTodayAttendanceTaken && isSelectedDateToday()}
-                    className={`
-                      p-2 text-sm font-medium rounded-md border cursor-pointer transition-all
-                      ${isTodayAttendanceTaken && isSelectedDateToday()
-                        ? "opacity-50 cursor-not-allowed"
-                        : ""
-                      }
-                      ${attendanceStatus[student.student_id] === status
-                        ? getStatusColor(status) +
-                        " ring-2 ring-offset-2 ring-opacity-50"
-                        : "border-gray-200 hover:bg-gray-50"
-                      }
-                      ${status === "present"
-                        ? "ring-green-300"
-                        : status === "absent"
-                          ? "ring-red-300"
-                          : status === "late"
-                            ? "ring-yellow-300"
-                            : "ring-blue-300"
-                      }
-                    `}
-                  >
-                    <span className="capitalize">{status}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
+              {/* 4 Touch-Optimized Large Tap Buttons */}
+              <div className="grid grid-cols-4 gap-1.5 pt-1">
+                {/* Present Button */}
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(student.student_id, "present")}
+                  disabled={isTodayAttendanceTaken && isSelectedDateToday()}
+                  className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border active:scale-95 ${
+                    currentStatus === "present"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400/50"
+                      : "bg-emerald-50/50 text-emerald-700 border-emerald-200/80 hover:bg-emerald-100 dark:bg-emerald-950/20 dark:border-emerald-900 dark:text-emerald-300"
+                  }`}
+                >
+                  <CheckCircle className="w-3.5 h-3.5" />
+                  <span>PRESENT</span>
+                </button>
 
-            <div className="mt-4 pt-3 border-t">
-              <div
-                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs ${getStatusColor(
-                  attendanceStatus[student.student_id] || "present"
-                )}`}
-              >
-                {getStatusIcon(
-                  attendanceStatus[student.student_id] || "present"
-                )}
-                <span className="capitalize font-medium">
-                  {attendanceStatus[student.student_id] || "present"}
-                </span>
+                {/* Absent Button */}
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(student.student_id, "absent")}
+                  disabled={isTodayAttendanceTaken && isSelectedDateToday()}
+                  className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border active:scale-95 ${
+                    currentStatus === "absent"
+                      ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400/50"
+                      : "bg-rose-50/50 text-rose-700 border-rose-200/80 hover:bg-rose-100 dark:bg-rose-950/20 dark:border-rose-900 dark:text-rose-300"
+                  }`}
+                >
+                  <XCircle className="w-3.5 h-3.5" />
+                  <span>ABSENT</span>
+                </button>
+
+                {/* Late Button */}
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(student.student_id, "late")}
+                  disabled={isTodayAttendanceTaken && isSelectedDateToday()}
+                  className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border active:scale-95 ${
+                    currentStatus === "late"
+                      ? "bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-400/50"
+                      : "bg-amber-50/50 text-amber-700 border-amber-200/80 hover:bg-amber-100 dark:bg-amber-950/20 dark:border-amber-900 dark:text-amber-300"
+                  }`}
+                >
+                  <Clock className="w-3.5 h-3.5" />
+                  <span>LATE</span>
+                </button>
+
+                {/* Excused Button */}
+                <button
+                  type="button"
+                  onClick={() => handleStatusChange(student.student_id, "excused")}
+                  disabled={isTodayAttendanceTaken && isSelectedDateToday()}
+                  className={`py-2 px-1 rounded-xl text-xs font-extrabold transition-all duration-200 flex flex-col items-center justify-center gap-0.5 border active:scale-95 ${
+                    currentStatus === "excused"
+                      ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-400/50"
+                      : "bg-blue-50/50 text-blue-700 border-blue-200/80 hover:bg-blue-100 dark:bg-blue-950/20 dark:border-blue-900 dark:text-blue-300"
+                  }`}
+                >
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>LEAVE</span>
+                </button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
-      ))}
+            </CardContent>
+          </Card>
+        );
+      })}
     </div>
   );
 
-  // Mobile Card View for viewing/updating today's attendance
   const TodayAttendanceCardView = () => (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+    <div className="space-y-3 pb-6">
       {todayAttendanceData.map((record) => (
-        <Card key={record.id} className="relative">
-          <CardContent className="pt-6">
-            <div className="flex justify-between items-start mb-4">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <div className="font-semibold text-lg">
-                    {record.student_name}
-                  </div>
-                  {record.roll_no && (
-                    <Badge variant="outline" className="text-xs">
-                      #{record.roll_no}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-sm text-gray-500">{record.class_name}</div>
+        <Card key={record.id} className="rounded-2xl border shadow-sm p-3.5 bg-white dark:bg-gray-900">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <div className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                <span>{record.student_name}</span>
+                {record.roll_no && <Badge variant="outline" className="text-[10px]">#{record.roll_no}</Badge>}
               </div>
-              {/* <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => openUpdateDialog(record)}
-                className="h-8 w-8 p-0"
-              >
-                <Edit className="h-4 w-4" />
-              </Button> */}
+              <p className="text-xs text-gray-400">{record.class_name}</p>
             </div>
+            <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
+              {getStatusIcon(record.status)}
+              <span>{record.status}</span>
+            </div>
+          </div>
 
-            <div className="mb-4">
-              <div
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${getStatusColor(
-                  record.status
-                )}`}
-              >
-                {getStatusIcon(record.status)}
-                <span className="font-medium capitalize">{record.status}</span>
-              </div>
-            </div>
-
-            <div className="text-xs text-gray-500">
-              Recorded:{" "}
-              {new Date(record.recorded_at).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit"
-              })}
-            </div>
-
-            <div className="mt-4 pt-3 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full"
-                onClick={() => openUpdateDialog(record)}
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Update Attendance
-              </Button>
-            </div>
-          </CardContent>
+          <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-xs">
+            <span className="text-gray-400">
+              Recorded: {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+            </span>
+            <Button size="sm" variant="outline" className="h-7 text-xs font-bold" onClick={() => openUpdateDialog(record)}>
+              <Edit className="h-3 w-3 mr-1" /> Update
+            </Button>
+          </div>
         </Card>
       ))}
     </div>
   );
 
-  const selectedClassName =
-    classes.find((c) => c.id === parseInt(selectedClassId))?.name || "Class";
+  const selectedClassName = classes.find((c) => c.id === parseInt(selectedClassId))?.name || "Class";
 
   const TodayAttendanceTakenMessage = () => (
-    <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 dark:border-emerald-900/50">
-      <CardContent className="p-4">
-        <div className="flex items-center gap-4">
-          <div className="bg-emerald-100 p-2 rounded-full">
-            <CheckSquare className="h-6 w-6 text-emerald-600" />
+    <Card className="border-emerald-200 bg-emerald-50 dark:bg-emerald-950/40 rounded-2xl shadow-sm">
+      <CardContent className="p-3.5 sm:p-4">
+        <div className="flex items-center gap-3">
+          <div className="bg-emerald-100 p-2 rounded-xl text-emerald-600 shrink-0">
+            <CheckSquare className="h-5 w-5" />
           </div>
-          <div className="flex-1">
-            <h3 className="text-lg font-bold text-emerald-700 dark:text-emerald-300">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-sm sm:text-base font-bold text-emerald-800 dark:text-emerald-200">
               Attendance Records Found
             </h3>
-            <p className="text-sm text-emerald-600 dark:text-emerald-400">
-              Attendance for {date === new Date().toISOString().split("T")[0] ? "today" : date} has been submitted for {selectedClassName}.
-              You can update individual status below.
+            <p className="text-xs text-emerald-600 dark:text-emerald-400">
+              Attendance for {date === new Date().toISOString().split("T")[0] ? "today" : date} submitted for {selectedClassName}.
             </p>
           </div>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => navigate("/dashboard")}
-            className="hidden sm:flex border-emerald-200 text-emerald-700 hover:bg-emerald-100 dark:border-emerald-800 dark:text-emerald-300 dark:hover:bg-emerald-900/30"
-          >
-            <Eye className="h-4 w-4 mr-2" />
-            Dashboard
-          </Button>
         </div>
       </CardContent>
     </Card>
   );
 
   const canSubmitAttendance = !isTodayAttendanceTaken;
-  // const canSubmitAttendance = !(isTodayAttendanceTaken && isSelectedDateToday());
 
   return (
-    <div className="space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 w-full mx-auto p-4 md:p-6">
-
-      {/* Header Section */}
-      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-8 shadow-lg text-white">
-        <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-        <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+    <div className="space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000 w-full mx-auto p-2 sm:p-4 md:p-6 pb-16 sm:pb-24">
+      {/* Header Banner */}
+      <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-teal-600 p-4 sm:p-6 shadow-lg text-white">
+        <div className="relative z-10 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
           <div>
-            <h1 className="text-3xl font-extrabold tracking-tight">Mark Attendance</h1>
-            <p className="mt-2 text-emerald-100/90 text-lg">
-              Take or update daily attendance for your supervised classes.
+            <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Mark Attendance</h1>
+            <p className="mt-0.5 text-emerald-100 text-xs sm:text-sm font-medium">
+              Daily touch attendance for supervised classes.
             </p>
           </div>
           {selectedClassId && (
-            <div className="bg-white/20 backdrop-blur-md rounded-lg px-4 py-2 border border-white/10">
-              <span className="font-medium text-emerald-50 block uppercase tracking-wider text-xs">Current Class</span>
-              <span className="text-xl font-bold">{selectedClassName}</span>
+            <div className="bg-white/20 backdrop-blur-md rounded-xl px-3 py-1.5 border border-white/20 self-start sm:self-auto">
+              <span className="font-bold text-emerald-50 uppercase tracking-wider text-[10px] block">Current Class</span>
+              <span className="text-base sm:text-lg font-extrabold">{selectedClassName}</span>
             </div>
           )}
         </div>
       </div>
 
-      <div className="grid gap-6">
-        {/* Class Selection & Date */}
-        <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-          <CardContent className="p-6">
-            <div className="flex flex-col md:flex-row gap-4 items-stretch md:items-end">
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="class-select">Select Class</Label>
+      <div className="space-y-4">
+        {/* Class Selection & Refresh (Adaptive Light/Dark Theme Grid) */}
+        <Card className="rounded-2xl border shadow-sm bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-200 dark:border-gray-800 p-3 sm:p-4">
+          <CardContent className="p-0 space-y-3">
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-2.5 items-end">
+              <div className="space-y-1">
+                <Label htmlFor="class-select" className="text-[10px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Select Class</Label>
                 <Select
                   value={selectedClassId}
                   onValueChange={setSelectedClassId}
                   disabled={loading}
                 >
-                  <SelectTrigger id="class-select">
+                  <SelectTrigger id="class-select" className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white">
                     <SelectValue placeholder="Select a class" />
                   </SelectTrigger>
                   <SelectContent>
@@ -785,6 +625,7 @@ export default function TakeAttendance() {
                       <SelectItem
                         key={classItem.id}
                         value={classItem.id.toString()}
+                        className="text-xs font-medium"
                       >
                         {classItem.name}
                       </SelectItem>
@@ -793,61 +634,91 @@ export default function TakeAttendance() {
                 </Select>
               </div>
 
-              {/* Date Selector */}
-              <div className="flex-1 space-y-2">
-                <Label htmlFor="date-select">Attendance Date</Label>
-                <div className="flex items-center gap-2">
-                  <Calendar className="h-4 w-4 text-gray-500" />
-                  <Input
-                    id="date-select"
-                    type="date"
-                    value={date}
-                    max={new Date().toISOString().split("T")[0]}
-                    disabled={true}
-                    onChange={(e) => setDate(e.target.value)}
-                    className="flex-1"
-                  />
-                </div>
-              </div>
-
-              {/* <div className="flex-1 space-y-2 min-w-[200px]">
-                <Label>Attendance Date</Label>
+              <div className="space-y-1">
+                <Label htmlFor="date-select" className="text-[10px] sm:text-xs font-bold text-gray-600 dark:text-gray-400 uppercase tracking-wider">Attendance Date</Label>
                 <Input
+                  id="date-select"
                   type="date"
                   value={date}
-                  onChange={(e) => setDate(e.target.value)}
                   max={new Date().toISOString().split("T")[0]}
+                  disabled={true}
+                  onChange={(e) => setDate(e.target.value)}
+                  className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700 text-gray-900 dark:text-white"
                 />
-              </div> */}
+              </div>
 
-              <Button
-                variant="outline"
-                className={`w-full md:w-auto ${loading ? 'opacity-50' : ''}`}
-                onClick={() => {
-                  if (selectedClassId) {
-                    loadClassStudents();
-                    checkTodayAttendance();
-                  }
-                }}
-                disabled={loading}
-              >
-                <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-                Refresh List
-              </Button>
+              <div className="col-span-2 md:col-span-1">
+                <Button
+                  variant="outline"
+                  className={`w-full h-9 text-xs font-bold rounded-xl bg-gray-100 dark:bg-gray-800 border-gray-200 dark:border-gray-700 hover:bg-gray-200 dark:hover:bg-gray-700 text-gray-800 dark:text-gray-200 ${loading ? 'opacity-50' : ''}`}
+                  onClick={() => {
+                    if (selectedClassId) {
+                      loadClassStudents();
+                      checkTodayAttendance();
+                    }
+                  }}
+                  disabled={loading}
+                >
+                  <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
+                  Refresh List
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
 
-        {/* Global Actions (Mark All) - Only show if not already submitted */}
-        {canSubmitAttendance && students.length > 0 && (
-          <div className="flex flex-wrap gap-2 justify-center md:justify-end items-center bg-gray-50/50 dark:bg-gray-800/20 p-4 rounded-xl border border-dashed">
-            <span className="text-sm font-medium text-muted-foreground mr-2">Quick Mark All:</span>
-            <Button size="sm" variant="outline" onClick={() => markAll("present")} className="text-green-600 hover:text-green-700 hover:bg-green-50 border-green-200">
-              <CheckCircle className="h-4 w-4 mr-1" /> Present
-            </Button>
-            <Button size="sm" variant="outline" onClick={() => markAll("absent")} className="text-red-600 hover:text-red-700 hover:bg-red-50 border-red-200">
-              <XCircle className="h-4 w-4 mr-1" /> Absent
-            </Button>
+        {/* Search Bar & Live Counter Bar for Mobile Teachers */}
+        {students.length > 0 && (
+          <div className="space-y-2.5">
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-400" />
+              <Input
+                type="search"
+                placeholder="Search student by name or roll number..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 h-9 text-xs font-medium rounded-xl border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 text-gray-900 dark:text-white shadow-sm"
+              />
+            </div>
+
+            {/* Live Counter Badge Bar & Quick Mark All */}
+            <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-800">
+              <div className="flex items-center gap-1.5 text-xs font-bold flex-wrap">
+                <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px] px-2 py-0.5">
+                  🟢 {attendanceCounts.present} Present
+                </Badge>
+                <Badge className="bg-rose-100 text-rose-800 border-none text-[10px] px-2 py-0.5">
+                  🔴 {attendanceCounts.absent} Absent
+                </Badge>
+                {attendanceCounts.late > 0 && (
+                  <Badge className="bg-amber-100 text-amber-800 border-none text-[10px] px-2 py-0.5">
+                    🟡 {attendanceCounts.late} Late
+                  </Badge>
+                )}
+              </div>
+
+              {canSubmitAttendance && (
+                <div className="flex items-center gap-1.5">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => markAll("present")}
+                    className="h-7 text-[10px] font-bold px-2 rounded-lg text-emerald-700 bg-emerald-50 border-emerald-200 hover:bg-emerald-100"
+                  >
+                    All Present
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => markAll("absent")}
+                    className="h-7 text-[10px] font-bold px-2 rounded-lg text-rose-700 bg-rose-50 border-rose-200 hover:bg-rose-100"
+                  >
+                    All Absent
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
@@ -860,11 +731,9 @@ export default function TakeAttendance() {
         ) : (
           <>
             {isTodayAttendanceTaken ? (
-              <div className="space-y-6">
+              <div className="space-y-4">
                 <TodayAttendanceTakenMessage />
-
-                {/* Show different views based on screen size */}
-                <div className="hidden lg:block overflow-x-auto">
+                <div className="hidden lg:block">
                   <TodayAttendanceTableView />
                 </div>
                 <div className="lg:hidden">
@@ -873,12 +742,12 @@ export default function TakeAttendance() {
               </div>
             ) : (
               <>
-                {students.length === 0 ? (
+                {filteredStudents.length === 0 ? (
                   <div className="text-center py-12 text-muted-foreground border-2 border-dashed rounded-xl">
-                    No students found for this class.
+                    No students matching search criteria.
                   </div>
                 ) : (
-                  <div className="space-y-6">
+                  <div>
                     {/* Desktop View */}
                     <div className="hidden md:block">
                       <DesktopTableView />
@@ -889,28 +758,34 @@ export default function TakeAttendance() {
                       <MobileCardView />
                     </div>
 
-                    {/* Submit Button */}
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white/80 dark:bg-gray-950/80 backdrop-blur-lg border-t z-50 md:relative md:bg-transparent md:border-0 md:p-0">
-                      <div className="max-w-7xl mx-auto flex justify-end">
+                    {/* Clean Mobile & Desktop Bottom Submit Bar (Adaptive Light & Dark Theme) */}
+                    <div className="fixed bottom-0 left-0 right-0 p-3 pb-6 bg-white/95 dark:bg-gray-950/95 backdrop-blur-xl border-t border-gray-200 dark:border-gray-800 shadow-2xl z-50 md:sticky md:bottom-6 md:z-40 md:my-6 md:p-4 md:bg-white/90 dark:md:bg-gray-900/90 md:backdrop-blur-xl md:border md:border-gray-200/80 dark:md:border-gray-800 md:rounded-2xl md:shadow-xl transition-all duration-300">
+                      <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-3">
+                        <div className="hidden md:flex items-center gap-3 text-sm">
+                          <div className="w-9 h-9 rounded-xl bg-emerald-100 dark:bg-emerald-950/80 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-bold shrink-0 shadow-sm border border-emerald-200/60 dark:border-emerald-800/60">
+                            <CheckCircle className="w-5 h-5" />
+                          </div>
+                          <div>
+                            <p className="font-extrabold text-gray-900 dark:text-white text-xs sm:text-sm">Ready to Submit Attendance</p>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">
+                              <span className="text-emerald-600 dark:text-emerald-400 font-bold">{attendanceCounts.present} Present</span>
+                              {attendanceCounts.absent > 0 && <span className="text-rose-600 dark:text-rose-400 font-bold ml-2">• {attendanceCounts.absent} Absent</span>}
+                              {attendanceCounts.late > 0 && <span className="text-amber-600 dark:text-amber-400 font-bold ml-2">• {attendanceCounts.late} Late</span>}
+                              {attendanceCounts.excused > 0 && <span className="text-blue-600 dark:text-blue-400 font-bold ml-2">• {attendanceCounts.excused} Leave</span>}
+                            </p>
+                          </div>
+                        </div>
                         <Button
                           size="lg"
                           onClick={handleSubmitAttendance}
                           disabled={submitting}
-                          className="w-full md:w-auto bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 shadow-lg"
+                          className="w-full md:w-auto text-xs sm:text-sm font-extrabold bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-xl hover:shadow-emerald-600/20 px-8 h-11 sm:h-12 rounded-xl flex items-center justify-center gap-2.5 transition-all duration-200 hover:scale-[1.02] active:scale-[0.98] cursor-pointer"
                         >
-                          {submitting ? (
-                            "Submitting..."
-                          ) : (
-                            <>
-                              <Save className="h-5 w-5 mr-2" />
-                              Submit Attendance ({students.length})
-                            </>
-                          )}
+                          {submitting ? <RefreshCw className="w-4 h-4 animate-spin shrink-0" /> : <CheckCircle className="w-4 h-4 shrink-0" />}
+                          <span>{submitting ? "Submitting Attendance..." : `Submit Attendance (${attendanceCounts.present} Present, ${attendanceCounts.absent} Absent)`}</span>
                         </Button>
                       </div>
                     </div>
-                    {/* Spacer for fixed bottom button on mobile */}
-                    <div className="h-20 md:hidden"></div>
                   </div>
                 )}
               </>
@@ -918,110 +793,36 @@ export default function TakeAttendance() {
           </>
         )}
       </div>
-      {/* Update Attendance Dialog */}
+
+      {/* Single Student Update Dialog */}
       <Dialog open={updateDialogOpen} onOpenChange={setUpdateDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md rounded-2xl">
           <DialogHeader>
             <DialogTitle>Update Attendance</DialogTitle>
             <DialogDescription>
-              Update attendance status for{" "}
-              {selectedStudentForUpdate?.student_name}
+              Update status for {selectedStudentForUpdate?.student_name}
             </DialogDescription>
           </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <div className="font-medium">Current Status:</div>
-              <div
-                className={`inline-flex items-center gap-2 px-3 py-2 rounded-lg ${getStatusColor(
-                  selectedStudentForUpdate?.status
-                )}`}
-              >
-                {getStatusIcon(selectedStudentForUpdate?.status)}
-                <span className="font-medium capitalize">
-                  {selectedStudentForUpdate?.status}
-                </span>
-              </div>
+          <div className="space-y-4 py-3">
+            <div className="grid grid-cols-2 gap-2">
+              {["present", "absent", "late", "excused"].map((st) => (
+                <Button
+                  key={st}
+                  type="button"
+                  variant={updateStatus === st ? "default" : "outline"}
+                  className={`capitalize font-bold text-xs ${updateStatus === st ? getStatusColor(st) : ""}`}
+                  onClick={() => setUpdateStatus(st)}
+                >
+                  {st}
+                </Button>
+              ))}
             </div>
-
-            <div className="space-y-2">
-              <div className="font-medium">Select New Status:</div>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  variant={updateStatus === "present" ? "default" : "outline"}
-                  className={
-                    updateStatus === "present"
-                      ? "bg-green-600 hover:bg-green-700"
-                      : "border-green-200 text-green-700 hover:bg-green-50 dark:border-green-800 dark:text-green-300 dark:hover:bg-green-900/30"
-                  }
-                  onClick={() => setUpdateStatus("present")}
-                >
-                  Present
-                </Button>
-                <Button
-                  variant={updateStatus === "absent" ? "default" : "outline"}
-                  className={
-                    updateStatus === "absent"
-                      ? "bg-red-600 hover:bg-red-700"
-                      : "border-red-200 text-red-700 hover:bg-red-50 dark:border-red-800 dark:text-red-300 dark:hover:bg-red-900/30"
-                  }
-                  onClick={() => setUpdateStatus("absent")}
-                >
-                  Absent
-                </Button>
-                <Button
-                  variant={updateStatus === "late" ? "default" : "outline"}
-                  className={
-                    updateStatus === "late"
-                      ? "bg-yellow-600 hover:bg-yellow-700"
-                      : "border-yellow-200 text-yellow-700 hover:bg-yellow-50 dark:border-yellow-800 dark:text-yellow-300 dark:hover:bg-yellow-900/30"
-                  }
-                  onClick={() => setUpdateStatus("late")}
-                >
-                  Late
-                </Button>
-                <Button
-                  variant={updateStatus === "excused" ? "default" : "outline"}
-                  className={
-                    updateStatus === "excused"
-                      ? "bg-blue-600 hover:bg-blue-700"
-                      : "border-blue-200 text-blue-700 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-300 dark:hover:bg-blue-900/30"
-                  }
-                  onClick={() => setUpdateStatus("excused")}
-                >
-                  Excused
-                </Button>
-              </div>
-            </div>
-          </div>
-
-          <div className="flex justify-end space-x-2">
             <Button
-              variant="outline"
-              onClick={() => setUpdateDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button
+              className="w-full font-bold bg-emerald-600 hover:bg-emerald-700"
               onClick={handleUpdateAttendance}
-              disabled={
-                updating ||
-                !updateStatus ||
-                updateStatus === selectedStudentForUpdate?.status
-              }
-              className="bg-green-600 hover:bg-green-700"
+              disabled={updating}
             >
-              {updating ? (
-                <>
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Update Attendance
-                </>
-              )}
+              {updating ? "Saving..." : "Save Updated Status"}
             </Button>
           </div>
         </DialogContent>

@@ -386,28 +386,28 @@ export default function AddStudentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange} >
-      <DialogContent className="sm:max-w-4xl p-0 overflow-hidden flex flex-col max-h-[90vh] border-0 shadow-2xl"
+      <DialogContent className="sm:max-w-4xl max-w-[calc(100%-1rem)] p-0 overflow-hidden flex flex-col max-h-[92vh] border-0 shadow-2xl rounded-2xl"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <div className="bg-gradient-to-r from-violet-600 to-indigo-600 p-6 text-white shrink-0">
+        <div className="bg-gradient-to-r from-violet-600 via-indigo-600 to-blue-600 p-4 sm:p-6 text-white shrink-0">
           <DialogHeader className="p-0">
             <div className="flex justify-between items-center">
               <div>
-                <DialogTitle className="text-2xl font-bold flex items-center gap-2">
+                <DialogTitle className="text-xl sm:text-2xl font-extrabold flex items-center gap-2">
                   {isEditMode ? "Edit Student Profile" : "New Student Registration"}
                 </DialogTitle>
-                <p className="text-violet-100/80 text-sm mt-1">
+                <p className="text-violet-100/90 text-xs sm:text-sm mt-0.5">
                   {isEditMode ? "Update student details and information." : "Enroll a new student into the system."}
                 </p>
               </div>
             </div>
-            <div className="mt-6">
+            <div className="mt-4 sm:mt-6">
               <Stepper currentStep={step} steps={["Student Info", "Parent Info"]} />
             </div>
           </DialogHeader>
         </div>
-        <div className="flex-1 overflow-y-auto px-6 py-6 bg-white dark:bg-gray-900/10">
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-white dark:bg-gray-900">
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {step === 1 && (

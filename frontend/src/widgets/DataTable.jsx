@@ -343,37 +343,39 @@ const DataTable = ({
   };
 
   return (
-    <div className={`space-y-4 ${className}`}>
+    <div className={`space-y-4 pb-24 sm:pb-12 ${className}`}>
       {/* Header with Title, Search, and Actions */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h2 className="text-2xl font-bold tracking-tight">{title}</h2>
-          {description && (
-            <p className="text-sm text-muted-foreground mt-1">{description}</p>
-          )}
-        </div>
+      <div className="flex flex-col space-y-3">
+        {(title || description) && (
+          <div>
+            {title && <h2 className="text-xl sm:text-2xl font-extrabold tracking-tight">{title}</h2>}
+            {description && (
+              <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">{description}</p>
+            )}
+          </div>
+        )}
 
-        <div className="flex flex-col lg:flex-row items-start sm:items-center gap-3 w-full">
-          {/* Search Input */}
+        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-2.5 w-full">
+          {/* Search Input & Left Controls */}
           {(enableSearch || leftOfSearch) && (
-            <div className="relative w-full flex flex-col lg:flex-row gap-2">
-              {leftOfSearch}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 flex-1 w-full">
+              {leftOfSearch && <div className="w-full sm:w-auto flex flex-wrap gap-2">{leftOfSearch}</div>}
               {enableSearch && (
-                <div className="flex w-full lg:w-auto gap-2">
-                  <div className="relative w-full lg:w-80">
+                <div className="flex items-center gap-2 flex-1 w-full">
+                  <div className="relative flex-1">
                     <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
                       placeholder={searchPlaceholder}
                       value={searchValue ?? ''}
                       onChange={(e) => handleSearch(e.target.value)}
                       onKeyDown={handleKeyDown}
-                      className="pl-10 w-full"
+                      className="pl-9 text-xs sm:text-sm h-9 sm:h-10 rounded-xl w-full"
                     />
                   </div>
                   <Button
                     variant="secondary"
                     size="sm"
-                    className="h-10 shrink-0"
+                    className="h-9 sm:h-10 px-3.5 text-xs sm:text-sm font-semibold rounded-xl shrink-0"
                     onClick={() => triggerSearch()}
                   >
                     Search
@@ -383,15 +385,15 @@ const DataTable = ({
             </div>
           )}
 
-          {/* Column Visibility Toggle */}
-          <div className="flex justify-center align-center gap-4">
+          {/* Column Visibility & Add Action Buttons */}
+          <div className="flex items-center gap-2 w-full sm:w-auto">
             {enableColumnVisibility && (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="h-10">
-                    <Filter className="h-4 w-4 mr-2" />
+                  <Button variant="outline" size="sm" className="h-9 sm:h-10 text-xs sm:text-sm font-semibold rounded-xl flex-1 sm:flex-initial">
+                    <Filter className="h-3.5 w-3.5 mr-1.5" />
                     Columns
-                    <ChevronDown className="ml-2 h-4 w-4" />
+                    <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-70" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-40">
@@ -402,7 +404,7 @@ const DataTable = ({
                       return (
                         <DropdownMenuCheckboxItem
                           key={column.id}
-                          className="capitalize"
+                          className="capitalize text-xs font-medium"
                           checked={column.getIsVisible()}
                           onCheckedChange={(value) =>
                             column.toggleVisibility(!!value)
@@ -423,14 +425,13 @@ const DataTable = ({
               <Button
                 onClick={onAddNew}
                 size="sm"
-                className="h-10"
+                className="h-9 sm:h-10 text-xs sm:text-sm font-bold rounded-xl flex-1 sm:flex-initial bg-indigo-600 hover:bg-indigo-700 text-white shadow-md gap-1.5"
               >
-                <Plus className="h-3 w-3" />
-                {addButtonText}
+                <Plus className="h-4 w-4" />
+                <span>{addButtonText}</span>
               </Button>
             )}
           </div>
-
         </div>
       </div>
 

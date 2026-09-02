@@ -222,86 +222,92 @@ export default function PaymentHistory() {
 
 
   return (
-    <div className="p-3 space-y-6">
+    <div className="p-2 sm:p-4 md:p-6 pb-28 sm:pb-12 space-y-4 sm:space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Payment History</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Payment History</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
             View all payment transactions recorded in the system
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={loadPayments}
             disabled={loading}
+            className="flex-1 sm:flex-none h-9 text-xs font-bold rounded-xl"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
-          <Button variant="outline" onClick={handleExportCSV}>
-            <Download className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleExportCSV}
+            className="flex-1 sm:flex-none h-9 text-xs font-bold rounded-xl"
+          >
+            <Download className="h-3.5 w-3.5 mr-1.5" />
             Export CSV
           </Button>
         </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Card>
-          <CardContent className="p-6">
+      {/* Stats Cards (Premium Aligned KPI Cards) */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+        <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-5 bg-white dark:bg-gray-900 hover:shadow-md transition-all">
+          <CardContent className="p-0">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Payments</p>
-                <p className="text-2xl font-bold">{totalPaymentsCount}</p>
+              <span className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Payments</span>
+              <div className="p-2.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200/50 dark:border-emerald-800/50 text-emerald-600 dark:text-emerald-400">
+                <DollarSign className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div className="h-10 w-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                <DollarSign className="h-5 w-5 text-green-600 dark:text-green-400" />
-              </div>
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{totalPaymentsCount}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-5 bg-white dark:bg-gray-900 hover:shadow-md transition-all">
+          <CardContent className="p-0">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total Amount</p>
-                <p className="text-2xl font-bold">{formatCurrency(totalPaymentsAmount)}</p>
+              <span className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Total Amount</span>
+              <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200/50 dark:border-blue-800/50 text-blue-600 dark:text-blue-400">
+                <Filter className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                <Filter className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-              </div>
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl sm:text-3xl font-black text-emerald-600 dark:text-emerald-400 truncate">{formatCurrency(totalPaymentsAmount)}</span>
             </div>
           </CardContent>
         </Card>
 
-        <Card>
-          <CardContent className="p-6">
+        <Card className="rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm p-4 sm:p-5 bg-white dark:bg-gray-900 hover:shadow-md transition-all">
+          <CardContent className="p-0">
             <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Unique Students</p>
-                <p className="text-2xl font-bold">
-                  {uniqueStudentsCount}
-                </p>
+              <span className="text-[11px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Unique Students</span>
+              <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 border border-purple-200/50 dark:border-purple-800/50 text-purple-600 dark:text-purple-400">
+                <Calendar className="h-4 w-4 sm:h-5 sm:w-5" />
               </div>
-              <div className="h-10 w-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center">
-                <Calendar className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              </div>
+            </div>
+            <div className="mt-3 flex items-baseline justify-between">
+              <span className="text-2xl sm:text-3xl font-black text-gray-900 dark:text-white">{uniqueStudentsCount}</span>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4 space-y-2">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 border-b pb-4 mb-4">
+      {/* Filters (Mobile 2-Column Grid Hardened & Aligned) */}
+      <Card className="rounded-2xl border shadow-sm bg-white dark:bg-gray-900">
+        <CardContent className="p-3 sm:p-6 space-y-3">
+          {/* Row 1: Academic Year & Grade */}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5">
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Academic Year</label>
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</label>
               <Select value={filterAcademicYear} onValueChange={(val) => { setFilterAcademicYear(val); loadPayments(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Academic Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -314,9 +320,9 @@ export default function PaymentHistory() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Grade / Level</label>
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grade / Level</label>
               <Select value={filterGrade} onValueChange={(val) => { setFilterGrade(val); setFilterClass("all"); loadPayments(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -329,9 +335,9 @@ export default function PaymentHistory() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-semibold text-gray-500 uppercase tracking-wider">Class / Section</label>
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class / Section</label>
               <Select value={filterClass} onValueChange={(val) => { setFilterClass(val); loadPayments(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Class" />
                 </SelectTrigger>
                 <SelectContent>
@@ -345,82 +351,96 @@ export default function PaymentHistory() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Payment Method</label>
+              <Select value={filterMethod} onValueChange={setFilterMethod}>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Payment Method" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Methods</SelectItem>
+                  <SelectItem value="Cash">Cash</SelectItem>
+                  <SelectItem value="UPI">UPI</SelectItem>
+                  <SelectItem value="Card">Card</SelectItem>
+                  <SelectItem value="Cheque">Cheque</SelectItem>
+                  <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-            <div className="relative">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by student or reference..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
-            </div>
-            <Select value={filterMethod} onValueChange={setFilterMethod}>
-              <SelectTrigger>
-                <SelectValue placeholder="Payment Method" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Methods</SelectItem>
-                <SelectItem value="Cash">Cash</SelectItem>
-                <SelectItem value="UPI">UPI</SelectItem>
-                <SelectItem value="Card">Card</SelectItem>
-                <SelectItem value="Cheque">Cheque</SelectItem>
-                <SelectItem value="Bank Transfer">Bank Transfer</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={filterMonth} onValueChange={setFilterMonth}>
-              <SelectTrigger>
-                <SelectValue placeholder="Month" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Months</SelectItem>
-                <SelectItem value="1">January</SelectItem>
-                <SelectItem value="2">February</SelectItem>
-                <SelectItem value="3">March</SelectItem>
-                <SelectItem value="4">April</SelectItem>
-                <SelectItem value="5">May</SelectItem>
-                <SelectItem value="6">June</SelectItem>
-                <SelectItem value="7">July</SelectItem>
-                <SelectItem value="8">August</SelectItem>
-                <SelectItem value="9">September</SelectItem>
-                <SelectItem value="10">October</SelectItem>
-                <SelectItem value="11">November</SelectItem>
-                <SelectItem value="12">December</SelectItem>
-              </SelectContent>
-            </Select>
-            <div className="space-y-1.5 flex-1 min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">From</label>
-                <DatePicker
-                  value={dateRange.start}
-                  onChange={(date) => setDateRange({ ...dateRange, start: date })}
-                  placeholder="dd/mm/yyyy"
+          {/* Row 2: Search & Month */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2.5">
+            <div className="md:col-span-2 space-y-1">
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Search</label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <Input
+                  type="search"
+                  placeholder="Search by student or reference..."
+                  className="pl-9 h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
                 />
               </div>
             </div>
-            <div className="space-y-1.5 flex-1 min-w-[200px]">
-              <div className="flex items-center gap-2">
-                <label className="text-xs font-semibold text-gray-500 dark:text-gray-300 uppercase tracking-wider">To</label>
-                <DatePicker
-                  value={dateRange.end}
-                  onChange={(date) => setDateRange({ ...dateRange, end: date })}
-                  placeholder="dd/mm/yyyy"
-                />
-              </div>
+            <div className="space-y-1">
+              <label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Month</label>
+              <Select value={filterMonth} onValueChange={setFilterMonth}>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Month" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Months</SelectItem>
+                  <SelectItem value="1">January</SelectItem>
+                  <SelectItem value="2">February</SelectItem>
+                  <SelectItem value="3">March</SelectItem>
+                  <SelectItem value="4">April</SelectItem>
+                  <SelectItem value="5">May</SelectItem>
+                  <SelectItem value="6">June</SelectItem>
+                  <SelectItem value="7">July</SelectItem>
+                  <SelectItem value="8">August</SelectItem>
+                  <SelectItem value="9">September</SelectItem>
+                  <SelectItem value="10">October</SelectItem>
+                  <SelectItem value="11">November</SelectItem>
+                  <SelectItem value="12">December</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
-          <div className="flex items-center justify-between space-y-2">
-            <div className="text-sm text-muted-foreground">
+
+          {/* Row 3: From / To Dates */}
+          <div className="grid grid-cols-2 gap-2.5 pt-1">
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">From Date</label>
+              <DatePicker
+                value={dateRange.start}
+                onChange={(date) => setDateRange({ ...dateRange, start: date })}
+                placeholder="dd/mm/yyyy"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">To Date</label>
+              <DatePicker
+                value={dateRange.end}
+                onChange={(date) => setDateRange({ ...dateRange, end: date })}
+                placeholder="dd/mm/yyyy"
+              />
+            </div>
+          </div>
+
+          {/* Action Row */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <div className="text-xs font-semibold text-gray-500 dark:text-gray-400 self-start sm:self-auto">
               Showing {payments.length} of {totalPaymentsCount} payments
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 w-full sm:w-auto">
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
+                className="flex-1 sm:flex-none h-9 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
                 onClick={() => {
                   loadPayments();
                 }}
@@ -430,6 +450,7 @@ export default function PaymentHistory() {
               <Button
                 variant="ghost"
                 size="sm"
+                className="flex-1 sm:flex-none h-9 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800"
                 onClick={() => {
                   setSearchQuery("");
                   setFilterStatus("all");
@@ -444,9 +465,7 @@ export default function PaymentHistory() {
               >
                 Clear Filters
               </Button>
-
             </div>
-
           </div>
         </CardContent>
       </Card>

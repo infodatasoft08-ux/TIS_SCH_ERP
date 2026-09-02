@@ -348,35 +348,34 @@ export default function Assignment() {
     };
 
     return (
-        <div className="p-6 w-full mx-auto space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
-            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="p-2 sm:p-4 md:p-6 w-full mx-auto space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                    <h1 className="text-3xl font-extrabold tracking-tight flex items-center gap-2">
-                        <ClipboardList className="w-8 h-8 text-indigo-600" />
+                    <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight flex items-center gap-2">
+                        <ClipboardList className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-600" />
                         Assignment Management
                     </h1>
-                    <p className="text-muted-foreground mt-1">Create, track, and grade student assignments.</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-0.5">Create, track, and grade student assignments.</p>
                 </div>
-                <Button onClick={() => { setSelectedClass(null); setFilteredSubjects([]); setEditingAssignment(null); reset(); setIsDialogOpen(true); }} className="rounded-xl shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white gap-2 h-11 px-6">
-                    <Plus className="w-5 h-5" />
+                <Button onClick={() => { setSelectedClass(null); setFilteredSubjects([]); setEditingAssignment(null); reset(); setIsDialogOpen(true); }} className="rounded-xl shadow-lg bg-indigo-600 hover:bg-indigo-700 text-white gap-2 h-10 sm:h-11 px-4 sm:px-6 text-xs sm:text-sm self-start md:self-auto">
+                    <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
                     New Assignment
                 </Button>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <Card className="rounded-2xl border-none shadow-md bg-white dark:bg-gray-900/50">
-                    <CardHeader className="pb-2">
-                        <CardTitle className="text-sm font-medium text-muted-foreground uppercase tracking-wider">Total Assignments</CardTitle>
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-6">
+                <Card className="rounded-2xl border-none shadow-md bg-white dark:bg-gray-900/50 p-3 sm:p-4">
+                    <CardHeader className="p-0 pb-2">
+                        <CardTitle className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Total Assignments</CardTitle>
                     </CardHeader>
-                    <CardContent>
-                        <div className="text-3xl font-bold">{assignments.length}</div>
-                        <div className="flex items-center gap-1 text-xs text-emerald-500 mt-1 font-medium">
+                    <CardContent className="p-0">
+                        <div className="text-2xl sm:text-3xl font-bold">{assignments.length}</div>
+                        <div className="flex items-center gap-1 text-[10px] sm:text-xs text-emerald-500 mt-1 font-medium">
                             <CheckCircle2 className="w-3 h-3" />
                             Active learning items
                         </div>
                     </CardContent>
                 </Card>
-                {/* Add more stats card here if needed */}
             </div>
 
             <Card className="rounded-[2rem] border-none shadow-xl bg-white dark:bg-gray-900/50 overflow-hidden">

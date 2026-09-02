@@ -179,33 +179,23 @@ export default function HomeworkPage() {
   return (
     <div className="min-h-screen pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-6 md:p-10 mb-8 rounded-xl">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-8 mb-4 sm:mb-6 rounded-2xl text-white">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
-            <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight flex items-center gap-3">
-              <BookOpen className="w-10 h-10 text-blue-200" />
+            <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-2 sm:gap-3">
+              <BookOpen className="w-7 h-7 md:w-10 md:h-10 text-blue-200" />
               Homework Management
             </h1>
-            <p className="mt-2 text-blue-100/90 text-lg max-w-xl">
+            <p className="mt-1 text-blue-100/90 text-xs sm:text-base max-w-xl">
               Create, manage and distribute daily homework to students and parents.
             </p>
           </div>
-          {/* <Button
-            onClick={() => {
-              setSelectedHomework(null);
-              setIsFormOpen(true);
-            }}
-            className="bg-white text-blue-700 hover:bg-blue-50 font-bold px-6 h-12 shadow-lg"
-          >
-            <Plus className="mr-2 h-5 w-5" />
-            Create Homework
-          </Button> */}
         </div>
       </div>
 
-      <div className="px-4 md:px-8 max-w-7xl mx-auto relative z-20">
-        <Card className="border-0 shadow-xl backdrop-blur-md">
-          <CardContent className="p-6">
+      <div className="px-2 sm:px-4 md:px-6 max-w-7xl mx-auto relative z-20">
+        <Card className="border-0 shadow-xl backdrop-blur-md rounded-2xl">
+          <CardContent className="p-3 sm:p-6">
             <DataTable
               columns={columns}
               data={homeworks}
@@ -217,9 +207,9 @@ export default function HomeworkPage() {
               addButtonText="New Homework"
               onRefresh={loadHomeworks}
               leftOfSearch={
-                <div className="flex gap-2 w-full lg:w-auto">
+                <div className="grid grid-cols-2 gap-2 w-full lg:flex lg:w-auto">
                   <Select onValueChange={setSelectedGrade} value={selectedGrade}>
-                    <SelectTrigger className="w-full lg:w-[150px] bg-white">
+                    <SelectTrigger className="w-full lg:w-[150px] text-xs h-9 sm:h-10 rounded-xl">
                       <SelectValue placeholder="All Grades" />
                     </SelectTrigger>
                     <SelectContent>
@@ -231,7 +221,7 @@ export default function HomeworkPage() {
                   </Select>
 
                   <Select onValueChange={setSelectedClass} value={selectedClass}>
-                    <SelectTrigger className="w-full lg:w-[150px] bg-white">
+                    <SelectTrigger className="w-full lg:w-[150px] text-xs h-9 sm:h-10 rounded-xl">
                       <SelectValue placeholder="All Sections" />
                     </SelectTrigger>
                     <SelectContent>

@@ -849,39 +849,43 @@ export default function Invoices() {
 
   return (
 
-    <div className="p-3 space-y-6">
+    <div className="p-2 sm:p-4 md:p-6 pb-28 sm:pb-12 space-y-4 sm:space-y-6 animate-in fade-in duration-500">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Invoices</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Invoices</h1>
+          <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
             Manage student invoices and payments
           </p>
         </div>
-        <div className="flex items-center lg:flex-row flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={loadInvoices}
             disabled={loading}
+            className="flex-1 sm:flex-none h-9 text-xs font-bold rounded-xl"
           >
-            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            <RefreshCw className={`h-3.5 w-3.5 mr-1.5 ${loading ? 'animate-spin' : ''}`} />
             Refresh
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={handleExportCSV}
+            className="flex-1 sm:flex-none h-9 text-xs font-bold rounded-xl"
           >
-            <Download className="h-4 w-4 mr-2" />
+            <Download className="h-3.5 w-3.5 mr-1.5" />
             Export Dues CSV
           </Button>
           <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
             <DialogTrigger asChild>
-              <Button>
-                <Plus className="h-4 w-4 mr-2" />
+              <Button size="sm" className="w-full sm:w-auto h-9 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white">
+                <Plus className="h-3.5 w-3.5 mr-1.5" />
                 Generate Invoice
               </Button>
             </DialogTrigger>
-            <DialogContent className="sm:max-w-md"
+            <DialogContent className="sm:max-w-md max-w-[calc(100%-2rem)] rounded-2xl"
               onInteractOutside={(e) => e.preventDefault()}
               onEscapeKeyDown={(e) => e.preventDefault()}
             >
@@ -927,10 +931,6 @@ export default function Invoices() {
                               className="justify-between"
                               disabled={!formData.grade_id}
                             >
-                              {/* {formData.student_ids.length
-                                ? `${formData.student_ids.length} students selected`
-                                : "Select Students"} */}
-
                               {(formData.student_ids?.length ?? 0) > 0
                                 ? `${formData.student_ids.length} students selected`
                                 : "Select Students"
@@ -949,48 +949,27 @@ export default function Invoices() {
                                   {/* ✅ SELECT ALL / UNSELECT ALL */}
                                   {filteredStudents.length > 0 && (
                                     <CommandItem
-                                      onSelect={() => {
-                                        setFormData(prev => ({
-                                          ...prev,
-                                          student_ids: isAllSelected ? [] : allStudentIds
-                                        }));
-                                      }}
-                                      className="font-medium"
+                                      onSelect={handleSelectAllStudents}
+                                      className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer border-b mb-1"
                                     >
-                                      <Check
-                                        className={cn(
-                                          "mr-2 h-4 w-4",
-                                          isAllSelected ? "opacity-100" : "opacity-0"
-                                        )}
-                                      />
-                                      {isAllSelected ? "Unselect All" : "Select All"}
+                                      <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${isAllStudentsSelected ? 'bg-blue-600 text-white' : 'opacity-50'}`}>
+                                        {isAllStudentsSelected && <Check className="h-3 w-3" />}
+                                      </div>
+                                      {isAllStudentsSelected ? "Unselect All Students" : "Select All Students"}
                                     </CommandItem>
                                   )}
-                                </CommandGroup>
 
-                                <CommandGroup>
-                                  {filteredStudents.map(student => {
-                                    const checked = formData.student_ids.includes(student.id);
-
+                                  {filteredStudents.map((s) => {
+                                    const isSelected = formData.student_ids?.includes(s.id.toString());
                                     return (
                                       <CommandItem
-                                        key={student.id}
-                                        onSelect={() => {
-                                          setFormData(prev => ({
-                                            ...prev,
-                                            student_ids: checked
-                                              ? prev.student_ids.filter(id => id !== student.id)
-                                              : [...prev.student_ids, student.id]
-                                          }));
-                                        }}
+                                        key={s.id}
+                                        onSelect={() => toggleStudentSelection(s.id.toString())}
                                       >
-                                        <Check
-                                          className={cn(
-                                            "mr-2 h-4 w-4",
-                                            checked ? "opacity-100" : "opacity-0"
-                                          )}
-                                        />
-                                        {student.user_name}
+                                        <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${isSelected ? 'bg-blue-600 text-white' : 'opacity-50'}`}>
+                                          {isSelected && <Check className="h-3 w-3" />}
+                                        </div>
+                                        {s.name} ({s.roll_no || 'N/A'})
                                       </CommandItem>
                                     );
                                   })}
@@ -1110,14 +1089,14 @@ export default function Invoices() {
         </div>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-2">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
-            <div className="space-y-2">
-              <Label>Academic Year</Label>
+      {/* Filters (Aligned 2-Column Grid on Mobile) */}
+      <Card className="rounded-2xl border shadow-sm bg-white dark:bg-gray-900">
+        <CardContent className="p-3 sm:p-5 space-y-3">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 items-end">
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</Label>
               <Select value={filterAcademicYear} onValueChange={(val) => { setFilterAcademicYear(val); loadInvoices(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Academic Year" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1129,10 +1108,10 @@ export default function Invoices() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Grade / Level</Label>
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Grade / Level</Label>
               <Select value={filterGrade} onValueChange={(val) => { setFilterGrade(val); setFilterClass("all"); loadInvoices(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Grade" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1144,10 +1123,10 @@ export default function Invoices() {
               </Select>
             </div>
 
-            <div className="space-y-2">
-              <Label>Class / Section</Label>
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Class / Section</Label>
               <Select value={filterClass} onValueChange={(val) => { setFilterClass(val); loadInvoices(); }}>
-                <SelectTrigger>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Class" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1162,9 +1141,10 @@ export default function Invoices() {
               </Select>
             </div>
 
-            <div className="flex-1 min-w-[150px]">
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Month</Label>
               <Select value={filterMonth} onValueChange={setFilterMonth}>
-                <SelectTrigger className="w-full">
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
                   <SelectValue placeholder="Month" />
                 </SelectTrigger>
                 <SelectContent>
@@ -1184,36 +1164,30 @@ export default function Invoices() {
                 </SelectContent>
               </Select>
             </div>
+          </div>
 
-            <div className="hidden md:flex items-center gap-2">
-              <Button variant="outline" onClick={() => {
+          <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-9 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400"
+              onClick={() => {
                 setFilterAcademicYear("all");
                 setFilterGrade("all");
                 setFilterClass("all");
                 setFilterMonth("all");
                 loadInvoices();
-              }}>
-                Clear Filters
-              </Button>
-              <Button onClick={loadInvoices} disabled={loading}>
-                {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
-                Apply
-              </Button>
-            </div>
-          </div>
-
-          <div className="block md:hidden mt-2 items-center gap-2">
-            <Button variant="outline" onClick={() => {
-              setFilterAcademicYear("all");
-              setFilterGrade("all");
-              setFilterClass("all");
-              setFilterMonth("all");
-              loadInvoices();
-            }}>
+              }}
+            >
               Clear Filters
             </Button>
-            <Button onClick={loadInvoices} disabled={loading}>
-              {loading ? <RefreshCw className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4 mr-2" />}
+            <Button
+              size="sm"
+              className="h-9 text-xs font-extrabold rounded-xl bg-blue-600 hover:bg-blue-700 text-white"
+              onClick={loadInvoices}
+              disabled={loading}
+            >
+              {loading ? <RefreshCw className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Search className="h-3.5 w-3.5 mr-1.5" />}
               Apply
             </Button>
           </div>

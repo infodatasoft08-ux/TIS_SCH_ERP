@@ -253,30 +253,31 @@ export default function AcademicRecordsPage() {
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
             {/* Header Section with Gradient */}
-            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-8 shadow-lg text-white">
+            <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-emerald-600 via-teal-600 to-cyan-600 p-4 sm:p-8 shadow-lg text-white">
                 <div className="absolute top-0 right-0 -mt-10 -mr-10 h-40 w-40 rounded-full bg-white/10 blur-3xl"></div>
-                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
+                <div className="relative z-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-3 sm:gap-6">
                     <div>
-                        <h1 className="text-3xl md:text-4xl font-extrabold tracking-tight">Academic Records</h1>
-                        <p className="mt-2 text-emerald-100/90 text-lg max-w-xl">
+                        <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight">Academic Records</h1>
+                        <p className="mt-1 text-emerald-100/90 text-xs sm:text-base max-w-xl">
                             Manage student academic history, track promotions, and maintain comprehensive records.
                         </p>
                     </div>
-                    <div className="flex flex-wrap gap-3">
+                    <div className="flex flex-wrap gap-2">
                         <Button
                             onClick={() => setIsBulkPromoteDialogOpen(true)}
-                            className="bg-white text-emerald-700 hover:bg-emerald-50 border-0"
+                            size="sm"
+                            className="bg-white text-emerald-700 hover:bg-emerald-50 border-0 text-xs font-bold rounded-xl h-9"
                         >
-                            <UserPlus className="mr-2 h-4 w-4" />
+                            <UserPlus className="mr-1.5 h-3.5 w-3.5" />
                             Bulk Promote
                         </Button>
                     </div>
                 </div>
             </div>
 
-            <div className="px-2 md:px-6 max-w-7xl mx-auto">
-                <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm">
-                    <CardContent className="pt-6">
+            <div className="px-2 sm:px-4 md:px-6 max-w-7xl mx-auto">
+                <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl">
+                    <CardContent className="p-3 sm:p-6">
                         <DataTable
                             data={records}
                             columns={columns}
@@ -299,9 +300,9 @@ export default function AcademicRecordsPage() {
                             onSearch={handleSearch}
                             onPageSizeChange={handlePageSizeChange}
                             leftOfSearch={
-                                <div className="flex gap-2">
+                                <div className="grid grid-cols-2 gap-2 w-full lg:flex lg:w-auto">
                                     <Select onValueChange={handleYearChange} value={selectedYear}>
-                                        <SelectTrigger className="w-[140px]">
+                                        <SelectTrigger className="w-full lg:w-[140px] text-xs h-9 sm:h-10 rounded-xl">
                                             <SelectValue placeholder="All Years" />
                                         </SelectTrigger>
                                         <SelectContent>
@@ -313,13 +314,13 @@ export default function AcademicRecordsPage() {
                                     </Select>
 
                                     <Select onValueChange={handleGradeChange} value={selectedGrade}>
-                                        <SelectTrigger className="w-[140px]">
+                                        <SelectTrigger className="w-full lg:w-[140px] text-xs h-9 sm:h-10 rounded-xl">
                                             <SelectValue placeholder="All Classes" />
                                         </SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="all">All Classes</SelectItem>
-                                            {grades.map((g) => (
-                                                <SelectItem key={g.id} value={g.id.toString()}>{g.name}</SelectItem>
+                                            {grades.map((grade) => (
+                                                <SelectItem key={grade.id} value={grade.id.toString()}>{grade.name}</SelectItem>
                                             ))}
                                         </SelectContent>
                                     </Select>

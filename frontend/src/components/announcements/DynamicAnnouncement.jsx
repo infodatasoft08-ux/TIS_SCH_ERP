@@ -7,12 +7,12 @@ export default function DynamicAnnouncement() {
     const { user } = useAuth();
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-4 sm:space-y-6 p-2 sm:p-4 md:p-6">
             {/* Announcements & Events */}
-            <div className="p-2 sm:p-6 bg-white dark:bg-gray-900/50 rounded-[2rem] border shadow-sm">
-                <div className="flex items-center gap-2 mb-6">
-                    <Megaphone className="w-6 h-6 text-blue-500" />
-                    <h3 className="text-2xl font-bold">Announcements & Events</h3>
+            <div className="p-3 sm:p-6 bg-white dark:bg-gray-900/50 rounded-2xl border shadow-sm">
+                <div className="flex items-center gap-2 mb-4 sm:mb-6">
+                    <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
+                    <h3 className="text-xl sm:text-2xl font-bold">Announcements & Events</h3>
                 </div>
                 {user.role_id === 1 ? (
                     <AnnouncementDashboard

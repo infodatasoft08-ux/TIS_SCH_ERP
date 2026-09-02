@@ -373,7 +373,14 @@ const UpdateExamGroup = async (req, res) => {
     if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
     if (from_class_to_class != undefined) { updates.push('from_class_to_class = ?'); params.push(from_class_to_class.trim()); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-    if (is_results_published !== undefined) { updates.push('is_results_published = ?'); params.push(is_results_published ? 1 : 0); }
+    if (is_results_published !== undefined) { 
+        updates.push('is_results_published = ?'); 
+        params.push(is_results_published ? 1 : 0); 
+        if (is_results_published && status === undefined) {
+            updates.push('status = ?');
+            params.push('Published');
+        }
+    }
 
     if (updates.length === 0 && (!subjects || !Array.isArray(subjects))) return res.status(400).json({ error: 'Nothing to update' });
 
@@ -1580,43 +1587,76 @@ const GetExamGroupResults = async (req, res) => {
 
 const GetExamsForStudent = async (req, res) => {
     const userId = req.user.id;
+    const academicYearId = req.query.academic_year_id && req.query.academic_year_id !== 'all' ? toInt(req.query.academic_year_id) : null;
+    const startDate = req.query.start_date || null;
+    const endDate = req.query.end_date || null;
+
     try {
         const conn = await db.getConnection();
 
-        // 1. Get the student's ID and current academic record (class_id, grade_id)
-        const [studentRows] = await conn.execute(
-            `SELECT s.id as student_id, sar.id as student_academic_id, sar.class_id, sar.grade_id, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
-             FROM students s
-             JOIN student_academic_records sar ON sar.student_id = s.id
-             JOIN classes c ON c.id = sar.class_id
-             JOIN grades g ON g.id = c.grade_id
-             WHERE s.user_id = ? 
-             ORDER BY sar.academic_year_id DESC LIMIT 1`,
+        // 1. Get student ID
+        const [studentInfo] = await conn.execute(
+            `SELECT id FROM students WHERE user_id = ? LIMIT 1`,
             [userId]
         );
 
-        if (studentRows.length === 0) {
+        if (studentInfo.length === 0) {
             conn.release();
             return res.status(404).json({ error: 'Student record not found' });
         }
 
-        const { class_id, grade_id, student_id } = studentRows[0];
+        const student_id = studentInfo[0].id;
 
-        // 2. Fetch exam groups that are Published or Over for this class
-        const [examRows] = await conn.execute(`
-            SELECT eg.*, ay.name AS academic_year_name, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
+        // 2. Fetch distinct academic years/classes enrolled for this student
+        const [academicYearRows] = await conn.execute(`
+            SELECT DISTINCT ay.id, ay.name, g.name as grade_name, c.name as section_name
+            FROM student_academic_records sar
+            JOIN academic_years ay ON ay.id = sar.academic_year_id
+            JOIN grades g ON g.id = sar.grade_id
+            LEFT JOIN classes c ON c.id = sar.class_id
+            WHERE sar.student_id = ?
+            ORDER BY ay.id DESC
+        `, [student_id]);
+
+        // 3. Build dynamic exam query matching student's academic records
+        let sql = `
+            SELECT DISTINCT eg.*, ay.name AS academic_year_name, g.name as class_name, c.name as section_name, sar.roll_no as roll_no
             FROM exam_groups eg
-            JOIN students s ON s.user_id = ?
             LEFT JOIN academic_years ay ON ay.id = eg.academic_year_id
-            LEFT JOIN student_academic_records sar ON sar.student_id = s.id
+            JOIN student_academic_records sar ON sar.student_id = ?
+                AND (eg.academic_year_id = sar.academic_year_id OR eg.academic_year_id IS NULL)
+                AND (
+                    eg.class_id = sar.class_id 
+                    OR (JSON_VALID(eg.section_ids) AND JSON_CONTAINS(eg.section_ids, CAST(sar.class_id AS CHAR)))
+                    OR (eg.class_id IS NULL AND (eg.section_ids IS NULL OR eg.section_ids = '' OR eg.section_ids = '[]') AND eg.grade_id = sar.grade_id)
+                )
             JOIN classes c ON c.id = sar.class_id
             JOIN grades g ON g.id = c.grade_id
-            WHERE (eg.class_id = ? OR JSON_CONTAINS(COALESCE(eg.section_ids, "[]"), CAST(? AS CHAR)) OR (eg.class_id IS NULL AND eg.section_ids IS NULL AND eg.grade_id = ?)) 
-            AND eg.status IN ('Published', 'Over')
-            ORDER BY eg.created_at DESC
-        `, [student_id, class_id, class_id, grade_id]);
+            WHERE eg.status IN ('Published', 'Over')
+        `;
 
-        // Fetch subjects and results for these exams
+        const queryParams = [student_id];
+
+        if (academicYearId) {
+            sql += ` AND (sar.academic_year_id = ? OR eg.academic_year_id = ?)`;
+            queryParams.push(academicYearId, academicYearId);
+        }
+
+        if (startDate) {
+            sql += ` AND (eg.start_date >= ? OR eg.end_date >= ?)`;
+            queryParams.push(startDate, startDate);
+        }
+
+        if (endDate) {
+            sql += ` AND (eg.start_date <= ? OR eg.end_date <= ?)`;
+            queryParams.push(endDate, endDate);
+        }
+
+        sql += ` ORDER BY eg.created_at DESC`;
+
+        const [examRows] = await conn.execute(sql, queryParams);
+
+        // 4. Fetch subjects and results for these exams
         if (examRows.length > 0) {
             const groupIds = examRows.map(r => r.id);
             const [subjectRows] = await conn.query(`
@@ -1677,7 +1717,7 @@ const GetExamsForStudent = async (req, res) => {
             };
         });
 
-        return res.json({ exams: formattedExams });
+        return res.json({ exams: formattedExams, academic_years: academicYearRows });
 
     } catch (err) {
         console.error('GET /api/student/exams error', err);
@@ -1946,8 +1986,133 @@ const GetAllStudentExamSummaries = async (req, res) => {
 }
 
 const GetSupervisedClassExamTrends = async (req, res) => {
-    return res.json({ trends: [] });
-}
+    try {
+        const userId = req.user.id;
+
+        // 1. Get teacher profile ID
+        const [teacherRows] = await db.execute(
+            `SELECT id FROM teachers WHERE user_id = ? LIMIT 1`,
+            [userId]
+        );
+
+        if (!teacherRows.length) {
+            return res.json({ success: true, trends: [], overall_top_rankers: [], class_name: null });
+        }
+
+        const teacherId = teacherRows[0].id;
+
+        // 2. Find supervised class for this teacher from classes table
+        const [classRows] = await db.execute(
+            `SELECT c.id as class_id, c.name as class_name, c.grade_id 
+             FROM classes c 
+             WHERE c.supervisor_teacher_id = ? 
+             LIMIT 1`,
+            [teacherId]
+        );
+
+        if (!classRows.length) {
+            return res.json({ success: true, trends: [], overall_top_rankers: [], class_name: null });
+        }
+
+        const class_id = classRows[0].class_id;
+        const class_name = classRows[0].class_name;
+
+        // 2. Fetch published exam performance for students in this class
+        const [rows] = await db.execute(`
+            SELECT 
+                eg.id as exam_id,
+                COALESCE(NULLIF(TRIM(eg.custom_exam_name), ''), eg.name) as exam_name,
+                st.id as student_id,
+                u.name as student_name,
+                u.avatar_url,
+                sar.roll_no,
+                SUM(COALESCE(egr.marks_obtained, 0)) as total_obtained,
+                SUM(
+                    COALESCE(egs.theory_max_marks, 0) + 
+                    COALESCE(egs.lab_max_marks, 0) + 
+                    COALESCE(egs.oral_max_marks, 0) + 
+                    COALESCE(egs.written_max_marks, 0) + 
+                    COALESCE(egs.reading_max_marks, 0) + 
+                    COALESCE(egs.writing_comp_max_marks, 0) + 
+                    COALESCE(egs.dictation_max_marks, 0) + 
+                    COALESCE(egs.recitation_max_marks, 0) + 
+                    COALESCE(egs.ia_pr_max_marks, 0)
+                ) as total_max
+            FROM exam_groups eg
+            JOIN exam_group_subjects egs ON egs.exam_group_id = eg.id
+            JOIN exam_group_results egr ON egr.exam_group_subject_id = egs.id
+            JOIN students st ON st.id = egr.student_id
+            JOIN users u ON u.id = st.user_id
+            JOIN student_academic_records sar ON sar.student_id = st.id 
+                AND (sar.academic_year_id = eg.academic_year_id OR eg.academic_year_id IS NULL)
+            WHERE sar.class_id = ?
+              AND (eg.status IN ('Published', 'Over') OR eg.is_results_published = 1)
+            GROUP BY eg.id, eg.name, eg.custom_exam_name, st.id, u.name, u.avatar_url, sar.roll_no
+            ORDER BY eg.id DESC, total_obtained DESC
+        `, [class_id]);
+
+        const examMap = {};
+        rows.forEach(r => {
+            if (!examMap[r.exam_id]) {
+                examMap[r.exam_id] = {
+                    exam_id: r.exam_id,
+                    exam_name: r.exam_name,
+                    students: []
+                };
+            }
+
+            let maxMarks = Number(r.total_max);
+            if (maxMarks <= 0) maxMarks = 100;
+            const obtained = Number(r.total_obtained);
+            const percentage = Number(((obtained / maxMarks) * 100).toFixed(1));
+
+            examMap[r.exam_id].students.push({
+                student_id: r.student_id,
+                student_name: r.student_name,
+                roll_no: r.roll_no,
+                avatar_url: r.avatar_url,
+                total_obtained: obtained,
+                total_max: maxMarks,
+                percentage
+            });
+        });
+
+        const trends = Object.values(examMap).map(e => {
+            e.students.sort((a, b) => b.percentage - a.percentage);
+
+            const totalPct = e.students.reduce((acc, s) => acc + s.percentage, 0);
+            const avg_percentage = e.students.length > 0 ? Number((totalPct / e.students.length).toFixed(1)) : 0;
+
+            const top_rankers = e.students.slice(0, 5).map((s, idx) => ({
+                ...s,
+                rank: idx + 1
+            }));
+
+            return {
+                exam_id: e.exam_id,
+                exam_name: e.exam_name,
+                avg_percentage,
+                total_students: e.students.length,
+                top_rankers,
+                all_students: e.students
+            };
+        });
+
+        const latestExam = trends[0];
+        const overall_top_rankers = latestExam ? latestExam.top_rankers : [];
+
+        return res.json({
+            success: true,
+            class_name,
+            trends,
+            overall_top_rankers
+        });
+
+    } catch (err) {
+        console.error('GET /api/exam/supervised-class/trends error', err);
+        return res.status(500).json({ error: 'Internal server error' });
+    }
+};
 
 
 const GenerateMarksheetPDF = async (req, res) => {

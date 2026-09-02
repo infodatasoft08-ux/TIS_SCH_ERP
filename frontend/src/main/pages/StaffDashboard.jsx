@@ -27,6 +27,7 @@ import { toast } from "sonner";
 import AnnouncementDashboard from "@/components/announcements/AnnouncementDashboard";
 import { Skeleton } from "@/components/ui/skeleton";
 import EmployeeAttendanceCalendar from "@/widgets/employeeAttendanceCalendar";
+import GlowingAlertBanner from "@/components/common/GlowingAlertBanner";
 
 export default function StaffDashboard() {
     const navigate = useNavigate();
@@ -159,7 +160,8 @@ export default function StaffDashboard() {
     }
 
     return (
-        <div className="p-6 space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+        <div className="p-2 sm:p-4 md:p-6 space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
+            <GlowingAlertBanner userRole="staff" />
             {/* Dashboard Title & Quick Refresh */}
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
