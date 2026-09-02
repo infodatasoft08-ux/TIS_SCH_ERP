@@ -46,7 +46,8 @@ import {
   ReceiptIndianRupee,
   ChevronsUpDown,
   Check,
-  History
+  History,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -260,12 +261,36 @@ export default function Invoices() {
 
   const filteredStudents = students;
 
+  const isAllStudentsSelected =
+    filteredStudents.length > 0 &&
+    filteredStudents.every(s => formData.student_ids?.includes(s.id.toString()));
 
-  const allStudentIds = filteredStudents.map(s => s.id);
+  const toggleStudentSelection = (studentId) => {
+    const idStr = studentId.toString();
+    setFormData(prev => {
+      const current = prev.student_ids || [];
+      const exists = current.includes(idStr);
+      const updated = exists
+        ? current.filter(id => id !== idStr)
+        : [...current, idStr];
+      return { ...prev, student_ids: updated };
+    });
+  };
 
-  const isAllSelected =
-    allStudentIds.length > 0 &&
-    allStudentIds.every(id => formData.student_ids.includes(id));
+  const handleSelectAllStudents = () => {
+    if (isAllStudentsSelected) {
+      setFormData(prev => ({
+        ...prev,
+        student_ids: []
+      }));
+    } else {
+      const allIds = filteredStudents.map(s => s.id.toString());
+      setFormData(prev => ({
+        ...prev,
+        student_ids: allIds
+      }));
+    }
+  };
 
   async function loadInvoices() {
     setLoading(true);
@@ -363,18 +388,55 @@ export default function Invoices() {
     }
   };
 
-  const handleDeleteInvoice = async (invoiceId) => {
-    if (!confirm("Are you sure you want to delete this invoice? This action cannot be undone.")) {
-      return;
-    }
+  const [deleteSingleDialogOpen, setDeleteSingleDialogOpen] = useState(false);
+  const [singleInvoiceToDelete, setSingleInvoiceToDelete] = useState(null);
+  const [isDeletingSingle, setIsDeletingSingle] = useState(false);
 
+  const handleDeleteInvoice = (invoiceId) => {
+    setSingleInvoiceToDelete(invoiceId);
+    setDeleteSingleDialogOpen(true);
+  };
+
+  const confirmDeleteSingleInvoice = async () => {
+    if (!singleInvoiceToDelete) return;
+    setIsDeletingSingle(true);
     try {
-      await API.delete(`/fee/delete/invoices/${invoiceId}`);
-      toast.success("Invoice deleted successfully");
+      await API.delete(`/fee/delete/invoices/${singleInvoiceToDelete}`);
+      toast.success("Invoice deleted and previous carried-forward invoices restored successfully.");
+      setDeleteSingleDialogOpen(false);
+      setSingleInvoiceToDelete(null);
       loadInvoices();
     } catch (err) {
       console.error("Failed to delete invoice", err);
       toast.error(err.response?.data?.error || "Failed to delete invoice");
+    } finally {
+      setIsDeletingSingle(false);
+    }
+  };
+
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [invoiceToRestore, setInvoiceToRestore] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleOpenRestoreDialog = (invoiceId) => {
+    setInvoiceToRestore(invoiceId);
+    setRestoreDialogOpen(true);
+  };
+
+  const confirmRestoreStatus = async () => {
+    if (!invoiceToRestore) return;
+    setIsRestoring(true);
+    try {
+      const res = await API.put(`/fee/update/invoices/${invoiceToRestore}/restore-status`);
+      toast.success(res.data.message || "Invoice status restored successfully");
+      setRestoreDialogOpen(false);
+      setInvoiceToRestore(null);
+      loadInvoices();
+    } catch (err) {
+      console.error("Failed to restore invoice status", err);
+      toast.error(err.response?.data?.error || "Failed to restore invoice status");
+    } finally {
+      setIsRestoring(false);
     }
   };
 
@@ -949,6 +1011,7 @@ export default function Invoices() {
                                   {/* ✅ SELECT ALL / UNSELECT ALL */}
                                   {filteredStudents.length > 0 && (
                                     <CommandItem
+                                      value="select all unselect all students"
                                       onSelect={handleSelectAllStudents}
                                       className="font-semibold text-blue-600 hover:text-blue-700 cursor-pointer border-b mb-1"
                                     >
@@ -961,15 +1024,18 @@ export default function Invoices() {
 
                                   {filteredStudents.map((s) => {
                                     const isSelected = formData.student_ids?.includes(s.id.toString());
+                                    const studentName = s.name || s.user_name || "Unknown Student";
+                                    const rollInfo = s.roll_no ? `Roll: ${s.roll_no}` : (s.admission_no ? `Adm: ${s.admission_no}` : 'N/A');
                                     return (
                                       <CommandItem
                                         key={s.id}
+                                        value={`${studentName} ${s.roll_no || ''} ${s.admission_no || ''} ${s.id}`}
                                         onSelect={() => toggleStudentSelection(s.id.toString())}
                                       >
                                         <div className={`mr-2 flex h-4 w-4 items-center justify-center rounded-sm border ${isSelected ? 'bg-blue-600 text-white' : 'opacity-50'}`}>
                                           {isSelected && <Check className="h-3 w-3" />}
                                         </div>
-                                        {s.name} ({s.roll_no || 'N/A'})
+                                        {studentName} ({rollInfo})
                                       </CommandItem>
                                     );
                                   })}
@@ -1464,6 +1530,17 @@ export default function Invoices() {
                                 <FileText className="h-4 w-4" />
                               )}
                             </Button>
+                              {invoice.status === 'carried_forward' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleOpenRestoreDialog(invoice.id)}
+                                title="Restore Carried Forward Status"
+                                disabled={selectedInvoiceIds.length > 0}
+                              >
+                                <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -2029,6 +2106,72 @@ export default function Invoices() {
           </ScrollArea>
         </DialogContent>
       </Dialog>
-    </div >
+
+      {/* Delete Single Invoice Confirmation Modal */}
+      <Dialog open={deleteSingleDialogOpen} onOpenChange={setDeleteSingleDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" /> Confirm Invoice Deletion
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to delete <strong>Invoice #{singleInvoiceToDelete}</strong>? 
+              <br /><br />
+              If this invoice carried forward dues from a previous invoice, the previous invoice's status will be automatically restored so you can collect payment on it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setDeleteSingleDialogOpen(false); setSingleInvoiceToDelete(null); }}
+              disabled={isDeletingSingle}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteSingleInvoice}
+              disabled={isDeletingSingle}
+            >
+              {isDeletingSingle ? "Deleting..." : "Delete Invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Status Confirmation Modal */}
+      <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" /> Confirm Status Restoration
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to restore <strong>Invoice #{invoiceToRestore}</strong> back to active status from Carried Forward?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setRestoreDialogOpen(false); setInvoiceToRestore(null); }}
+              disabled={isRestoring}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={confirmRestoreStatus}
+              disabled={isRestoring}
+            >
+              {isRestoring ? "Restoring..." : "Yes, Restore Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

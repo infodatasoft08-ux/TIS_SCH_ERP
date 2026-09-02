@@ -6,6 +6,7 @@ const path = require('path');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
+const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -18,17 +19,6 @@ const AddExamGroup = async (req, res) => {
 
     if (!isNonEmptyString(name) || !grade_id) {
         return res.status(400).json({ error: 'Name and grade_id are required' });
-    }
-
-    let finalAyId = toInt(academic_year_id);
-    if (!finalAyId) {
-        const [activeAy] = await db.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
-        if (activeAy.length > 0) finalAyId = activeAy[0].id;
-    } else {
-        const [ayCheck] = await db.execute("SELECT status FROM academic_years WHERE id = ?", [finalAyId]);
-        if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
-            return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
-        }
     }
 
     if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -47,6 +37,10 @@ const AddExamGroup = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
+
+        // Validate active academic year
+        const activeAy = await getActiveAcademicYear(academic_year_id, conn);
+        const finalAyId = activeAy.id;
 
         const createdExamGroupIds = [];
 

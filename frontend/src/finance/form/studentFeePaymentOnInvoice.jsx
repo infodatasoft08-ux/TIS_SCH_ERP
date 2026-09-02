@@ -44,7 +44,8 @@ import {
   IndianRupeeIcon,
   ReceiptIndianRupee,
   ChevronsUpDown,
-  Check
+  Check,
+  RotateCcw
 } from "lucide-react";
 import { toast } from "sonner";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -103,6 +104,58 @@ export default function StudentFeePayment() {
     }
   }
 
+
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [invoiceToDelete, setInvoiceToDelete] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  const handleDeleteInvoice = (invoiceId) => {
+    setInvoiceToDelete(invoiceId);
+    setDeleteDialogOpen(true);
+  };
+
+  const confirmDeleteInvoice = async () => {
+    if (!invoiceToDelete) return;
+    setIsDeleting(true);
+    try {
+      await API.delete(`/fee/delete/invoices/${invoiceToDelete}`);
+      toast.success("Invoice deleted and previous carried-forward invoices restored successfully.");
+      setDeleteDialogOpen(false);
+      setInvoiceToDelete(null);
+      loadInvoices();
+    } catch (err) {
+      console.error("Failed to delete invoice", err);
+      toast.error(err.response?.data?.error || "Failed to delete invoice");
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const [restoreDialogOpen, setRestoreDialogOpen] = useState(false);
+  const [invoiceToRestore, setInvoiceToRestore] = useState(null);
+  const [isRestoring, setIsRestoring] = useState(false);
+
+  const handleOpenRestoreDialog = (invoiceId) => {
+    setInvoiceToRestore(invoiceId);
+    setRestoreDialogOpen(true);
+  };
+
+  const confirmRestoreStatus = async () => {
+    if (!invoiceToRestore) return;
+    setIsRestoring(true);
+    try {
+      const res = await API.put(`/fee/update/invoices/${invoiceToRestore}/restore-status`);
+      toast.success(res.data.message || "Invoice status restored successfully");
+      setRestoreDialogOpen(false);
+      setInvoiceToRestore(null);
+      loadInvoices();
+    } catch (err) {
+      console.error("Failed to restore invoice status", err);
+      toast.error(err.response?.data?.error || "Failed to restore invoice status");
+    } finally {
+      setIsRestoring(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -514,6 +567,16 @@ export default function StudentFeePayment() {
                                 <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
                               </Button>
                             )}
+                             {invoice.status === 'carried_forward' && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                title="Restore Carried Forward Status"
+                                onClick={() => handleOpenRestoreDialog(invoice.id)}
+                              >
+                                <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                              </Button>
+                            )}
                             <Button
                               variant="ghost"
                               size="icon"
@@ -600,6 +663,72 @@ export default function StudentFeePayment() {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Modal */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-red-600 flex items-center gap-2">
+              <AlertCircle className="h-5 w-5" /> Confirm Invoice Deletion
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to delete <strong>Invoice #{invoiceToDelete}</strong>? 
+              <br /><br />
+              If this invoice carried forward dues from a previous invoice, the previous invoice's status will be automatically restored so you can collect payment on it.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setDeleteDialogOpen(false); setInvoiceToDelete(null); }}
+              disabled={isDeleting}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={confirmDeleteInvoice}
+              disabled={isDeleting}
+            >
+              {isDeleting ? "Deleting..." : "Delete Invoice"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Restore Status Confirmation Modal */}
+      <Dialog open={restoreDialogOpen} onOpenChange={setRestoreDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="text-amber-600 dark:text-amber-400 flex items-center gap-2">
+              <RotateCcw className="h-5 w-5" /> Confirm Status Restoration
+            </DialogTitle>
+            <DialogDescription className="pt-2">
+              Are you sure you want to restore <strong>Invoice #{invoiceToRestore}</strong> back to active status from Carried Forward?
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="gap-2 sm:gap-0 mt-4">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => { setRestoreDialogOpen(false); setInvoiceToRestore(null); }}
+              disabled={isRestoring}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              className="bg-amber-600 hover:bg-amber-700 text-white"
+              onClick={confirmRestoreStatus}
+              disabled={isRestoring}
+            >
+              {isRestoring ? "Restoring..." : "Yes, Restore Status"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

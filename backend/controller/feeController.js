@@ -3,6 +3,7 @@ const { generateInvoicePDF, generatePaymentReceiptPDF, generateCombinedInvoiceRe
 const crypto = require('crypto');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
+const { getActiveAcademicYear, ensureAcademicYearInFeeStructure } = require('../utils/academicYearHelper');
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -138,9 +139,8 @@ const DeleteFeeType = async (req, res) => {
  * Body: { class_id, fee_type_id, monthly_amount }
  */
 
-
 const CreateClassFeeStructure = async (req, res) => {
-  const { grade_id, fee_type_id, monthly_amount } = req.body;
+  const { grade_id, fee_type_id, monthly_amount, academic_year_id } = req.body;
   if (!grade_id || !fee_type_id || monthly_amount === undefined) return res.status(400).json({ error: 'grade_id, fee_type_id, monthly_amount required' });
 
   const feeTypeIds = Array.isArray(fee_type_id) ? fee_type_id : [fee_type_id];
@@ -149,25 +149,39 @@ const CreateClassFeeStructure = async (req, res) => {
   try {
     await conn.beginTransaction();
 
+    await ensureAcademicYearInFeeStructure(conn);
+
+    let validAyId = null;
+    if (academic_year_id) {
+      const activeAy = await getActiveAcademicYear(academic_year_id, conn);
+      validAyId = activeAy.id;
+    }
+
     const results = [];
     for (const ftid of feeTypeIds) {
       const [ins] = await conn.execute(
-        `INSERT INTO class_fee_structure (grade_id, fee_type_id, monthly_amount, created_at)
-              VALUES (?, ?, ?, NOW())`,
-        [grade_id, ftid, Number(monthly_amount)]
+        `INSERT INTO class_fee_structure (grade_id, academic_year_id, fee_type_id, monthly_amount, created_at)
+              VALUES (?, ?, ?, ?, NOW())`,
+        [grade_id, validAyId, ftid, Number(monthly_amount)]
       );
       results.push(ins.insertId);
     }
 
     await conn.commit();
 
-    const [rows] = await pool.execute('SELECT * FROM class_fee_structure WHERE grade_id = ?', [grade_id]);
+    const [rows] = await pool.execute(
+      `SELECT cfs.*, ay.name AS academic_year_name 
+       FROM class_fee_structure cfs 
+       LEFT JOIN academic_years ay ON ay.id = cfs.academic_year_id 
+       WHERE cfs.grade_id = ?`,
+      [grade_id]
+    );
     return res.status(201).json({ class_fees: rows });
   } catch (err) {
     await conn.rollback();
     console.error('POST /api/fees/class-structure error', err);
-    if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Structure already exists for this class and fee type' });
-    return res.status(500).json({ error: 'Internal server error' });
+    if (err && err.code === 'ER_DUP_ENTRY') return res.status(409).json({ error: 'Structure already exists for this class and fee type in selected session' });
+    return res.status(500).json({ error: err.message || 'Internal server error' });
   } finally {
     conn.release();
   }
@@ -181,6 +195,7 @@ const CreateClassFeeStructure = async (req, res) => {
 
 const GetClassFeeStructure = async (req, res) => {
   const gradeId = req.query.grade_id ? Number(req.query.grade_id) : null;
+  const academicYearId = req.query.academic_year_id ? Number(req.query.academic_year_id) : null;
   let limit = parseInt(req.query.limit || '200', 10);
   let offset = parseInt(req.query.offset || '0', 10);
   if (!Number.isFinite(limit) || limit < 1) limit = 200;
@@ -188,37 +203,38 @@ const GetClassFeeStructure = async (req, res) => {
   limit = Math.min(limit, 2000);
 
   try {
+    await ensureAcademicYearInFeeStructure(pool);
+
+    let whereClause = [];
+    let params = [];
+
     if (gradeId) {
-      const countSql = `SELECT COUNT(*) AS total FROM class_fee_structure cfs JOIN fee_types ft ON ft.id = cfs.fee_type_id WHERE cfs.grade_id = ?`;
-      const [cnt] = await pool.execute(countSql, [gradeId]);
-      const total = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total || 0) : 0;
-
-      const [rows] = await pool.execute(
-        `SELECT cfs.*, ft.code AS fee_code, ft.name AS fee_name
-            FROM class_fee_structure cfs
-            JOIN fee_types ft ON ft.id = cfs.fee_type_id
-            WHERE cfs.grade_id = ?
-            ORDER BY ft.name
-            LIMIT ${limit} OFFSET ${offset}
-            `,
-        [gradeId]
-      );
-      return res.json({ total, limit, offset, grade_id: gradeId, fee_structure: rows });
-    } else {
-      const countSql = `SELECT COUNT(*) AS total FROM class_fee_structure cfs JOIN fee_types ft ON ft.id = cfs.fee_type_id`;
-      const [cnt] = await pool.execute(countSql);
-      const total = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total || 0) : 0;
-
-      const [rows] = await pool.execute(
-        `SELECT cfs.*, ft.code AS fee_code, ft.name AS fee_name
-            FROM class_fee_structure cfs
-            JOIN fee_types ft ON ft.id = cfs.fee_type_id
-            ORDER BY cfs.grade_id, ft.name
-            LIMIT ${limit} OFFSET ${offset}
-            `
-      );
-      return res.json({ total, limit, offset, fee_structure: rows });
+      whereClause.push('cfs.grade_id = ?');
+      params.push(gradeId);
     }
+    if (academicYearId) {
+      whereClause.push('(cfs.academic_year_id = ? OR cfs.academic_year_id IS NULL)');
+      params.push(academicYearId);
+    }
+
+    const whereSql = whereClause.length > 0 ? `WHERE ${whereClause.join(' AND ')}` : '';
+
+    const countSql = `SELECT COUNT(*) AS total FROM class_fee_structure cfs JOIN fee_types ft ON ft.id = cfs.fee_type_id ${whereSql}`;
+    const [cnt] = await pool.execute(countSql, params);
+    const total = (Array.isArray(cnt) && cnt[0]) ? Number(cnt[0].total || 0) : 0;
+
+    const [rows] = await pool.execute(
+      `SELECT cfs.*, ft.code AS fee_code, ft.name AS fee_name, ay.name AS academic_year_name
+          FROM class_fee_structure cfs
+          JOIN fee_types ft ON ft.id = cfs.fee_type_id
+          LEFT JOIN academic_years ay ON ay.id = cfs.academic_year_id
+          ${whereSql}
+          ORDER BY cfs.grade_id, ft.name
+          LIMIT ${limit} OFFSET ${offset}
+          `,
+      params
+    );
+    return res.json({ total, limit, offset, grade_id: gradeId, fee_structure: rows });
   } catch (err) {
     console.error('GET /api/fees/class-structure error', err);
     return res.status(500).json({ error: 'Internal server error' });
@@ -278,13 +294,26 @@ const DeleteClassFeeStructure = async (req, res) => {
  */
 
 async function computeInvoiceLinesForClass(conn, grade_id, months_count = 1, fee_type_ids = null) {
-  // fetch class fee structure
-  let sql = `SELECT cfs.fee_type_id, cfs.monthly_amount, ft.name AS fee_name, ft.code AS fee_code
+  let activeAyId = null;
+  try {
+    const activeAy = await getActiveAcademicYear(null, conn);
+    activeAyId = activeAy.id;
+  } catch (_) {}
+
+  await ensureAcademicYearInFeeStructure(conn);
+
+  // fetch class fee structure prioritizing active academic year with fallback to base fees
+  let sql = `SELECT cfs.fee_type_id, cfs.monthly_amount, cfs.academic_year_id, ft.name AS fee_name, ft.code AS fee_code
         FROM class_fee_structure cfs
         JOIN fee_types ft ON ft.id = cfs.fee_type_id
         WHERE cfs.grade_id = ?`;
 
   const params = [grade_id];
+
+  if (activeAyId) {
+    sql += ` AND (cfs.academic_year_id = ? OR cfs.academic_year_id IS NULL)`;
+    params.push(activeAyId);
+  }
 
   if (Array.isArray(fee_type_ids) && fee_type_ids.length > 0) {
     const placeholders = fee_type_ids.map(() => "?").join(",");
@@ -292,9 +321,21 @@ async function computeInvoiceLinesForClass(conn, grade_id, months_count = 1, fee
     params.push(...fee_type_ids);
   }
 
+  sql += ` ORDER BY cfs.academic_year_id DESC`;
+
   const [rows] = await conn.execute(sql, params);
 
-  const lines = rows.map(r => {
+  // Pick unique fee_type_id (giving priority to academic_year_id match)
+  const seenFeeTypes = new Set();
+  const selectedRows = [];
+  for (const r of rows) {
+    if (!seenFeeTypes.has(r.fee_type_id)) {
+      seenFeeTypes.add(r.fee_type_id);
+      selectedRows.push(r);
+    }
+  }
+
+  const lines = selectedRows.map(r => {
     const months = Number(months_count);
     const amount = Number(r.monthly_amount) * months;
     return {
@@ -307,9 +348,7 @@ async function computeInvoiceLinesForClass(conn, grade_id, months_count = 1, fee
     };
   });
 
-  // console.log(lines);
   const total = lines.reduce((s, l) => s + l.amount, 0);
-  // console.log(total);
   return { lines, total: Number(total.toFixed(2)) };
 }
 
@@ -334,6 +373,9 @@ const CreateInvoice = async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
+
+    // Validate system has an active academic year
+    await getActiveAcademicYear(null, conn);
 
     // fetch student and class (latest academic record)
     const [arRows] = await conn.execute(
@@ -585,6 +627,9 @@ const CreateBulkInvoices = async (req, res) => {
 
   try {
     await conn.beginTransaction();
+
+    // Validate system has an active academic year
+    await getActiveAcademicYear(null, conn);
 
     // Get students of class from academic records
     // ...
@@ -1509,6 +1554,53 @@ const DownloadPaymentReceiptPDF = async (req, res) => {
 };
 
 
+async function restoreCarriedForwardInvoicesForStudents(conn, studentIds) {
+  if (!Array.isArray(studentIds) || studentIds.length === 0) return;
+  const placeholders = studentIds.map(() => '?').join(',');
+
+  // Fetch all carried_forward invoices for these students
+  const [cfInvoices] = await conn.execute(
+    `SELECT id, student_id, amount_due, amount_paid, period_start, period_end 
+     FROM student_invoices 
+     WHERE student_id IN (${placeholders}) AND status = 'carried_forward'`,
+    [...studentIds]
+  );
+
+  for (const inv of cfInvoices) {
+    // Check if there is still ANY remaining active invoice created AFTER this one that is carrying its dues forward
+    const [newerInvoices] = await conn.execute(
+      `SELECT id FROM student_invoices 
+       WHERE student_id = ? AND id > ? AND status IN ('pending', 'partially_paid', 'overdue') LIMIT 1`,
+      [inv.student_id, inv.id]
+    );
+
+    // If no newer active invoice exists carrying its dues forward, restore this invoice status
+    if (newerInvoices.length === 0) {
+      const paid = Number(inv.amount_paid || 0);
+      const due = Number(inv.amount_due || 0);
+      let newStatus = 'pending';
+      if (paid >= due && due > 0) {
+        newStatus = 'paid';
+      } else if (paid > 0) {
+        newStatus = 'partially_paid';
+      } else {
+        const today = new Date().toISOString().slice(0, 10);
+        const endStr = new Date(inv.period_end).toISOString().slice(0, 10);
+        if (endStr < today) {
+          newStatus = 'overdue';
+        } else {
+          newStatus = 'pending';
+        }
+      }
+
+      await conn.execute(
+        `UPDATE student_invoices SET status = ? WHERE id = ?`,
+        [newStatus, inv.id]
+      );
+    }
+  }
+}
+
 /**
  * DELETE /api/fees/invoices/:id
  * Delete invoice and its lines/payments (if allowed). Only allows deletion if amount_paid == 0
@@ -1521,13 +1613,19 @@ const DeleteInvoice = async (req, res) => {
   const conn = await pool.getConnection();
   try {
     await conn.beginTransaction();
-    const [rows] = await conn.execute('SELECT amount_paid FROM student_invoices WHERE id = ? FOR UPDATE', [id]);
+    const [rows] = await conn.execute('SELECT student_id, amount_paid FROM student_invoices WHERE id = ? FOR UPDATE', [id]);
     if (rows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Invoice not found' }); }
-    // if (Number(rows[0].amount_paid || 0) > 0) { await conn.rollback(); conn.release(); return res.status(409).json({ error: 'Cannot delete invoice with payments' }); }
+
+    const studentId = rows[0].student_id;
 
     await conn.execute('DELETE FROM invoice_lines WHERE invoice_id = ?', [id]);
-    await conn.execute('DELETE FROM student_invoices WHERE id = ?', [id]);
     await conn.execute('DELETE FROM invoice_fines WHERE invoice_id = ?', [id]);
+    await conn.execute('DELETE FROM invoice_discounts WHERE invoice_id = ?', [id]);
+    await conn.execute('DELETE FROM student_invoices WHERE id = ?', [id]);
+
+    if (studentId) {
+      await restoreCarriedForwardInvoicesForStudents(conn, [studentId]);
+    }
 
     await conn.commit();
     conn.release();
@@ -1538,7 +1636,69 @@ const DeleteInvoice = async (req, res) => {
     console.error('DELETE /api/fees/invoices/:id error', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
-}
+};
+
+/**
+ * PUT /api/fees/invoices/:id/restore-status
+ * Manually restores carried_forward (or stuck) invoice status back to pending, partially_paid, or overdue based on payments.
+ */
+const RestoreInvoiceStatus = async (req, res) => {
+  const id = toInt(req.params.id);
+  if (!id) return res.status(400).json({ error: 'Invalid id' });
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [rows] = await conn.execute(
+      'SELECT id, student_id, amount_due, amount_paid, period_start, period_end, status FROM student_invoices WHERE id = ? FOR UPDATE',
+      [id]
+    );
+
+    if (rows.length === 0) {
+      await conn.rollback();
+      conn.release();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    const inv = rows[0];
+    const paid = Number(inv.amount_paid || 0);
+    const due = Number(inv.amount_due || 0);
+
+    let newStatus = 'pending';
+    if (paid >= due && due > 0) {
+      newStatus = 'paid';
+    } else if (paid > 0) {
+      newStatus = 'partially_paid';
+    } else {
+      const today = new Date().toISOString().slice(0, 10);
+      const endStr = new Date(inv.period_end).toISOString().slice(0, 10);
+      if (endStr < today) {
+        newStatus = 'overdue';
+      } else {
+        newStatus = 'pending';
+      }
+    }
+
+    await conn.execute('UPDATE student_invoices SET status = ? WHERE id = ?', [newStatus, id]);
+
+    await conn.commit();
+    conn.release();
+
+    return res.json({
+      success: true,
+      message: `Invoice #${id} status restored to '${newStatus}'`,
+      invoice_id: id,
+      previous_status: inv.status,
+      new_status: newStatus
+    });
+  } catch (err) {
+    await conn.rollback();
+    conn.release();
+    console.error('PUT /api/fees/invoices/:id/restore-status error', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
 
 
 /** ----------------------
@@ -2618,5 +2778,6 @@ module.exports = {
   BulkDeleteInvoices,
   DownloadBulkInvoicePDF,
   ExportDueInvoicesCSV,
-  ExportPaymentHistoryCSV
+  ExportPaymentHistoryCSV,
+  RestoreInvoiceStatus
 };

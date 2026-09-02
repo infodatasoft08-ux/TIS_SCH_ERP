@@ -1,4 +1,5 @@
 const db = require('../db');
+const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const toId = v => (v === "" || v === undefined || v === null ? null : v);
 
@@ -11,20 +12,8 @@ exports.createAcademicRecord = async (req, res) => {
             return res.status(400).json({ error: 'student_id and grade_id are required' });
         }
 
-        let targetAyId = toId(academic_year_id);
-        if (!targetAyId) {
-            const [activeAy] = await db.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
-            if (activeAy.length > 0) targetAyId = activeAy[0].id;
-        } else {
-            const [ayCheck] = await db.execute("SELECT status FROM academic_years WHERE id = ?", [targetAyId]);
-            if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
-                return res.status(400).json({ error: 'Selected target academic year is inactive. Please select an active academic year for promotion.' });
-            }
-        }
-
-        if (!targetAyId) {
-            return res.status(400).json({ error: 'No active academic year found for promotion' });
-        }
+        const activeAy = await getActiveAcademicYear(academic_year_id, db);
+        const targetAyId = activeAy.id;
 
         const [result] = await db.query(
             `INSERT INTO student_academic_records 
@@ -114,18 +103,8 @@ exports.bulkPromote = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        let targetAyId = toId(academic_year_id);
-        if (!targetAyId) {
-            const [activeAy] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
-            if (activeAy.length > 0) targetAyId = activeAy[0].id;
-        } else {
-            const [ayCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [targetAyId]);
-            if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
-                await conn.rollback();
-                conn.release();
-                return res.status(400).json({ error: 'Selected target academic year is inactive. Please select an active academic year for promotion.' });
-            }
-        }
+        const activeAy = await getActiveAcademicYear(academic_year_id, conn);
+        const targetAyId = activeAy.id;
 
         // 1) Validate section (class_id) for target grade
         let resolvedClassId = class_id || null;

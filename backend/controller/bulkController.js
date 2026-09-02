@@ -27,7 +27,7 @@ const BulkAddStudents = async (req, res) => {
         // Fetch meta-data maps
         const [grRows] = await conn.execute("SELECT id, name FROM grades");
         const [clRows] = await conn.execute("SELECT id, name FROM classes");
-        const [ayRows] = await conn.execute("SELECT id, name FROM academic_years");
+        const [ayRows] = await conn.execute("SELECT id, name FROM academic_years WHERE status = 'active'");
         const [settingsRows] = await conn.execute('SELECT setting_key, setting_value FROM school_settings WHERE setting_key IN ("admission_no_prefix")');
 
         const grMap = {}; grRows.forEach(r => grMap[r.name.toLowerCase()] = r.id);

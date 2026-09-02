@@ -774,14 +774,18 @@ export default function InvoiceDetails() {
                           <Badge variant="outline">{fine.description}</Badge>
                         </TableCell>
                         <TableCell>
-                          {fine.is_reversed && (
-                            <Badge className="bg-muted text-muted-foreground hover:text-white mt-1">
-                              Reversed - {fine.reversed_reason}
+                          {Boolean(fine.is_reversed) ? (
+                            <Badge className="bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300">
+                              Reversed {fine.reversed_reason ? `- ${fine.reversed_reason}` : ""}
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300">
+                              Active
                             </Badge>
                           )}
                         </TableCell>
                         <TableCell>
-                          {!fine.is_reversed && (
+                          {!Boolean(fine.is_reversed) && (
                             <Button
                               size="sm"
                               variant="outline"
@@ -948,13 +952,17 @@ export default function InvoiceDetails() {
                     </div>
                     <div className="flex justify-between items-center mt-2 border-t pt-2">
                       <div>
-                        {fine.is_reversed && (
-                          <Badge className="bg-muted text-muted-foreground">
+                        {Boolean(fine.is_reversed) ? (
+                          <Badge className="bg-red-100 text-red-800 border-red-200 dark:bg-red-900/30 dark:text-red-300">
                             Reversed
+                          </Badge>
+                        ) : (
+                          <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-300">
+                            Active
                           </Badge>
                         )}
                       </div>
-                      {!fine.is_reversed && (
+                      {!Boolean(fine.is_reversed) && (
                         <Button
                           size="sm"
                           variant="outline"

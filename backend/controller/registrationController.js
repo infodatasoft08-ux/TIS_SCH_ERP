@@ -3,6 +3,7 @@ const bcrypt = require('bcryptjs');
 const { generateNextId } = require("../utils/idGenerator");
 const formatMySQLDate = require("../config/deateConverter");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { getActiveAcademicYear } = require("../utils/academicYearHelper");
 
 const SALT_ROUNDS = 10;
 
@@ -17,6 +18,13 @@ const registerStudent = async (req, res) => {
 
     if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
       return res.status(400).json({ error: "Name, email, and valid contact number are required." });
+    }
+
+    // Verify system has an active academic year configured
+    try {
+      await getActiveAcademicYear(null, db);
+    } catch (ayErr) {
+      return res.status(400).json({ error: "Registration is currently unavailable: No active academic year found in system." });
     }
 
     // Duplicate checks
@@ -261,21 +269,10 @@ const approveRegistration = async (req, res) => {
         const [rows] = await conn.execute('SELECT id FROM classes LIMIT 1');
         classId = rows.length > 0 ? rows[0].id : 1;
       }
-      if (!ayId) {
-        const [rows] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
-        if (rows.length > 0) {
-          ayId = rows[0].id;
-        } else {
-          const [fallback] = await conn.execute("SELECT id FROM academic_years ORDER BY id DESC LIMIT 1");
-          ayId = fallback.length > 0 ? fallback[0].id : 1;
-        }
-      } else {
-        const [ayCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [ayId]);
-        if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
-          await conn.rollback();
-          return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
-        }
-      }
+
+      // Validate active academic year
+      const activeAy = await getActiveAcademicYear(ayId, conn);
+      ayId = activeAy.id;
 
       // 2) Students Entry
       await conn.execute(

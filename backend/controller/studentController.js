@@ -5,6 +5,7 @@ const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
 const { generateAdmissionFormPDF } = require("../helper/pdfHelper");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { getActiveAcademicYear } = require("../utils/academicYearHelper");
 require('dotenv').config();
 const SALT_ROUNDS = 10;
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -107,18 +108,14 @@ const AddStudent = async (req, res) => {
     );
     const studentId = studentRes.insertId;
 
-    if (!grade_id || !class_id || !academic_year_id) {
+    if (!grade_id || !class_id) {
       if (avatar_url) await deleteFromCloudinary(avatar_url);
       await conn.rollback();
-      return res.status(400).json({ error: "grade_id, class_id and academic_year_id are required for admission" });
+      return res.status(400).json({ error: "grade_id and class_id are required for admission" });
     }
 
-    const [ayRowsCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [academic_year_id]);
-    if (ayRowsCheck.length > 0 && ayRowsCheck[0].status === 'inactive') {
-      if (avatar_url) await deleteFromCloudinary(avatar_url);
-      await conn.rollback();
-      return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
-    }
+    const activeAy = await getActiveAcademicYear(academic_year_id, conn);
+    const validAyId = activeAy.id;
 
     await conn.execute(
       `INSERT INTO student_academic_records
@@ -126,7 +123,7 @@ const AddStudent = async (req, res) => {
       VALUES (?, ?, ?, ?, ?, 'pass')`,
       [
         userId,
-        academic_year_id || null,
+        validAyId,
         grade_id,
         class_id,
         roll_no || null
@@ -283,6 +280,7 @@ const GetStudentsForInvoice = async (req, res) => {
       `
       SELECT
         s.id,
+        u.name,
         u.name AS user_name,
         ar.roll_no,
         s.admission_no
@@ -968,10 +966,16 @@ const GetStudentsByClassId = async (req, res) => {
       sql += ` AND sar.academic_year_id = ?`;
       params.push(academicYearId);
     } else {
-      // If no year specified, get only from the latest year for each student
-      sql += ` AND sar.id IN (
-        SELECT MAX(id) FROM student_academic_records GROUP BY student_id
-      )`;
+      try {
+        const activeAy = await getActiveAcademicYear(null, db);
+        sql += ` AND sar.academic_year_id = ?`;
+        params.push(activeAy.id);
+      } catch (_) {
+        // Fallback if no active academic year set
+        sql += ` AND sar.id IN (
+          SELECT MAX(id) FROM student_academic_records GROUP BY student_id
+        )`;
+      }
     }
 
     sql += ` ORDER BY sar.roll_no ASC`;

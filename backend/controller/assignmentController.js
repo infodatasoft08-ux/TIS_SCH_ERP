@@ -3,6 +3,7 @@ const db = require('../db');
 // const { sendWhatsAppMessage } = require('../helper/whatsappHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
+const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
@@ -35,6 +36,10 @@ const AddAssignment = async (req, res) => {
     try {
         await conn.beginTransaction();
 
+        // Validate active academic year
+        const activeAy = await getActiveAcademicYear(academic_year_id, conn);
+        const finalAyId = activeAy.id;
+
         let finalClassId = null;
         let finalSubjectId = subject_id || null;
 
@@ -55,12 +60,6 @@ const AddAssignment = async (req, res) => {
         // Resolve teacher ID from the authenticated user's ID
         const [trows] = await conn.execute('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
         const creatorTeacherId = trows.length > 0 ? trows[0].id : null;
-
-        let finalAyId = toInt(academic_year_id);
-        if (!finalAyId) {
-            const [activeAy] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
-            if (activeAy.length > 0) finalAyId = activeAy[0].id;
-        }
 
         const [ins] = await conn.execute(
             `INSERT INTO assignments (lesson_id, academic_year_id, subject_id, title, description, assigned_date, due_date, max_marks, created_at, class_id, teacher_id)

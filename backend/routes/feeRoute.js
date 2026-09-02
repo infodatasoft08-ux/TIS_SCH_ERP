@@ -1,7 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
-const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF, ExportDueInvoicesCSV, ExportPaymentHistoryCSV } = require('../controller/feeController');
+const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF, ExportDueInvoicesCSV, ExportPaymentHistoryCSV, RestoreInvoiceStatus } = require('../controller/feeController');
 
 
 // Fee Type Routes
@@ -41,6 +41,7 @@ router.delete('/delete/invoices/:id', auth, DeleteInvoice);
 router.post('/delete/invoices-bulk', auth, BulkDeleteInvoices);
 router.post('/get/invoices-bulk/pdf', auth, DownloadBulkInvoicePDF);
 router.put('/update/invoices/:id/disable-auto-generate', auth, DisableAutoGenerate);
+router.put('/update/invoices/:id/restore-status', auth, RestoreInvoiceStatus);
 
 /** ----------------------
  * PAYMENTS Routes

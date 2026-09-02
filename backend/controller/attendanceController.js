@@ -3,6 +3,7 @@ const db = require('../db');
 const formatMySQLDate = require("../config/deateConverter");
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
+const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const VALID_STATUSES = new Set(['present', 'absent', 'late', 'excused']);
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -32,12 +33,6 @@ const TakeAttendance = async (req, res) => {
     normalized.push({ student_id, class_id, student_academic_id, lesson_id, attendance_date, status, recorded_by });
   }
 
-  // const [arRows] = await conn.execute(
-  //   `SELECT ar.id AS student_academic_id, ar.class_id, ar.student_id, ar.grade_id
-  //     FROM student_academic_records ar
-  //     WHERE ar.student_id = ?
-  //     ORDER BY ar.id DESC LIMIT 1
-  //     FOR UPDATE`,
   //   [student_id]
   // );
 
@@ -46,6 +41,9 @@ const TakeAttendance = async (req, res) => {
   const conn = await db.getConnection();
   try {
     await conn.beginTransaction();
+
+    // Validate active academic year
+    await getActiveAcademicYear(null, conn);
 
     // Build bulk insert values
     // Columns: student_id, class_id, lesson_id, date, status, recorded_by, recorded_at

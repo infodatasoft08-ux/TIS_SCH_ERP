@@ -54,14 +54,16 @@ export default function ClassFeeStructure() {
   const [classes, setClasses] = useState([]);
   const [grades, setGrades] = useState([]);
   const [feeTypes, setFeeTypes] = useState([]);
+  const [academicYears, setAcademicYears] = useState([]);
+  const [selectedAcademicYear, setSelectedAcademicYear] = useState("all");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
-    // class_id: "",
     fee_type_ids: [],
     monthly_amount: "",
-    grade_id: ""
+    grade_id: "",
+    academic_year_id: ""
   });
 
   const [currentPage, setCurrentPage] = useState(1);
@@ -69,9 +71,9 @@ export default function ClassFeeStructure() {
 
   useEffect(() => {
     loadFeeStructures();
-    // loadClasses();
     loadFeeTypes();
     loadGrades();
+    loadAcademicYears();
   }, []);
 
   useEffect(() => {
@@ -81,9 +83,11 @@ export default function ClassFeeStructure() {
       const filtered = feeStructures.filter(structure => {
         const gradeName = grades.find(c => c.id === structure.grade_id)?.name || "";
         const feeTypeName = feeTypes.find(f => f.id === structure.fee_type_id)?.name || "";
+        const ayName = structure.academic_year_name || "";
         return (
           gradeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          feeTypeName.toLowerCase().includes(searchQuery.toLowerCase())
+          feeTypeName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          ayName.toLowerCase().includes(searchQuery.toLowerCase())
         );
       });
       setFilteredStructures(filtered);
@@ -94,11 +98,23 @@ export default function ClassFeeStructure() {
     setCurrentPage(1);
   }, [searchQuery]);
 
-  async function loadFeeStructures() {
+  async function loadAcademicYears() {
+    try {
+      const res = await API.get("/admin/get/academic-years?limit=100");
+      setAcademicYears(res.data.academic_years || res.data.academicYears || res.data || []);
+    } catch (err) {
+      console.error("Failed to load academic years", err);
+    }
+  }
+
+  async function loadFeeStructures(ayId = selectedAcademicYear) {
     setLoading(true);
     try {
-      // Note: You'll need to create this API endpoint or modify existing one
-      const res = await API.get(`/fee/list/class-structure`);
+      const params = {};
+      if (ayId && ayId !== "all") {
+        params.academic_year_id = ayId;
+      }
+      const res = await API.get(`/fee/list/class-structure`, { params });
       setFeeStructures(res.data.fee_structure || []);
       setFilteredStructures(res.data.fee_structure || []);
     } catch (err) {
@@ -180,8 +196,8 @@ export default function ClassFeeStructure() {
 
     try {
       await API.post(`/fee/add/class-structure`, {
-        // class_id: parseInt(formData.class_id),
         grade_id: parseInt(formData.grade_id),
+        academic_year_id: formData.academic_year_id ? parseInt(formData.academic_year_id) : null,
         fee_type_id: formData.fee_type_ids, // Passing the array
         monthly_amount: parseFloat(formData.monthly_amount)
       });
@@ -239,13 +255,13 @@ export default function ClassFeeStructure() {
 
   const resetForm = () => {
     setFormData({
-      // class_id: "",
       fee_type_ids: [],
       monthly_amount: "",
       months_count: "1",
       period_start: new Date().toISOString().split('T')[0],
       student_ids: [],
-      grade_id: ""
+      grade_id: "",
+      academic_year_id: ""
     });
   };
 
@@ -350,6 +366,21 @@ export default function ClassFeeStructure() {
                     searchPlaceholder="Search class..."
                     emptyMessage="No grade found."
                   />
+                  <ComboboxFormField
+                    field={{
+                      value: formData.academic_year_id,
+                      onChange: (value) => handleSelectChange("academic_year_id", value)
+                    }}
+                    label="Academic Session (Optional)"
+                    items={[{ id: "", name: "All Sessions / Base Fee" }, ...academicYears]}
+                    valueKey="id"
+                    labelKey="name"
+                    searchKey="name"
+                    placeholder="Select Session (Default: Base Fee)"
+                    searchPlaceholder="Search session..."
+                    emptyMessage="No academic session found."
+                  />
+
                   <div className="space-y-2 flex flex-col">
                     <label className="text-sm font-medium">Fee Types *</label>
                     <Popover>
@@ -445,9 +476,6 @@ export default function ClassFeeStructure() {
               <div className="space-y-4 py-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Class</label>
-                  {/* <div className="p-2 border rounded bg-muted/50">
-                    {getClassName(editingStructure.class_id)}
-                  </div> */}
                   <div className="p-2 border rounded bg-muted/50">
                     {getGradeName(editingStructure.grade_id)}
                   </div>
@@ -489,15 +517,33 @@ export default function ClassFeeStructure() {
       <Card>
         <CardContent className="p-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative w-full md:w-96">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                type="search"
-                placeholder="Search by class or fee type..."
-                className="pl-9"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-              />
+            <div className="flex flex-col md:flex-row items-center gap-3 w-full md:w-auto">
+              <div className="relative w-full md:w-80">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  type="search"
+                  placeholder="Search by class or fee type..."
+                  className="pl-9"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                />
+              </div>
+              <div className="w-full md:w-64">
+                <ComboboxFormField
+                  field={{
+                    value: selectedAcademicYear,
+                    onChange: (value) => {
+                      setSelectedAcademicYear(value);
+                      loadFeeStructures(value);
+                    }
+                  }}
+                  items={[{ id: "all", name: "All Academic Sessions" }, ...academicYears]}
+                  valueKey="id"
+                  labelKey="name"
+                  searchKey="name"
+                  placeholder="Filter by Session"
+                />
+              </div>
             </div>
             <div className="flex items-center gap-4">
               <Badge variant="outline" className="px-3 py-1">
@@ -514,7 +560,7 @@ export default function ClassFeeStructure() {
         <CardHeader>
           <CardTitle>Class Fee Structures</CardTitle>
           <CardDescription>
-            Monthly fee amounts by class and fee type
+            Monthly fee amounts by class, academic session, and fee type
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -539,6 +585,7 @@ export default function ClassFeeStructure() {
                     <TableRow>
                       <TableHead>Class</TableHead>
                       <TableHead>Fee Type</TableHead>
+                      <TableHead>Session / Academic Year</TableHead>
                       <TableHead className="text-right">Monthly Amount</TableHead>
                       <TableHead className="w-32">Created</TableHead>
                       <TableHead className="w-20">Actions</TableHead>
@@ -548,7 +595,6 @@ export default function ClassFeeStructure() {
                     {filteredStructures.slice((currentPage - 1) * pageSize, currentPage * pageSize).map((structure) => (
                       <TableRow key={structure.id}>
                         <TableCell>
-                          {/* <div className="font-medium">{getClassName(structure.class_id)}</div> */}
                           <div className="font-medium">{getGradeName(structure.grade_id)}</div>
                         </TableCell>
                         <TableCell>
@@ -556,6 +602,17 @@ export default function ClassFeeStructure() {
                           <div className="text-xs text-muted-foreground">
                             Code: {getFeeTypeCode(structure.fee_type_id)}
                           </div>
+                        </TableCell>
+                        <TableCell>
+                          {structure.academic_year_name ? (
+                            <Badge variant="default" className="bg-emerald-600 hover:bg-emerald-700 text-white">
+                              {structure.academic_year_name}
+                            </Badge>
+                          ) : (
+                            <Badge variant="outline" className="text-muted-foreground">
+                              Base / All Sessions
+                            </Badge>
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           <span className="font-bold">{formatCurrency(structure.monthly_amount)}</span>

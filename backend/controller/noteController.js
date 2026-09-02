@@ -1,5 +1,6 @@
 const db = require("../db");
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
+const { getActiveAcademicYear } = require("../utils/academicYearHelper");
 
 const toInt = v => (v === undefined || v === null ? null : Number(v));
 
@@ -23,6 +24,9 @@ const AddNote = async (req, res) => {
     else if (['doc', 'docx'].includes(ext)) file_type = 'word';
 
     try {
+        // Validate active academic year
+        await getActiveAcademicYear(req.body.academic_year_id, db);
+
         const [result] = await db.execute(
             `INSERT INTO notes (subject_id, teacher_id, grade_id, class_id, note_name, description, file_url, file_type, uploaded_date)
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
