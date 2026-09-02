@@ -56,10 +56,16 @@ const AddAssignment = async (req, res) => {
         const [trows] = await conn.execute('SELECT id FROM teachers WHERE user_id = ?', [req.user.id]);
         const creatorTeacherId = trows.length > 0 ? trows[0].id : null;
 
+        let finalAyId = toInt(academic_year_id);
+        if (!finalAyId) {
+            const [activeAy] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+            if (activeAy.length > 0) finalAyId = activeAy[0].id;
+        }
+
         const [ins] = await conn.execute(
             `INSERT INTO assignments (lesson_id, academic_year_id, subject_id, title, description, assigned_date, due_date, max_marks, created_at, class_id, teacher_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?, ?)`,
-            [toInt(lesson_id), toInt(academic_year_id), finalSubjectId, title.trim(), description || null, assigned_date || null, due_date || null, max_marks || null, finalClassId || null, creatorTeacherId]
+            [toInt(lesson_id), finalAyId, finalSubjectId, title.trim(), description || null, assigned_date || null, due_date || null, max_marks || null, finalClassId || null, creatorTeacherId]
         );
 
         await conn.commit();

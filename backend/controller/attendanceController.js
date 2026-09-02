@@ -897,10 +897,19 @@ const GetAttendanceSummery = async (req, res) => {
     };
 
     // Get total students in class for statistics
-    const [studentsCount] = await db.execute(
-      `SELECT COUNT(*) as total_students FROM student_academic_records WHERE class_id = ? AND academic_year_id = (SELECT academic_year_id FROM student_academic_records WHERE class_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1)`,
-      [classId, classId]
-    );
+    const academicYearId = req.query.academic_year_id ? Number(req.query.academic_year_id) : null;
+    let studentsCount;
+    if (academicYearId) {
+      [studentsCount] = await db.execute(
+        `SELECT COUNT(*) as total_students FROM student_academic_records WHERE class_id = ? AND academic_year_id = ?`,
+        [classId, academicYearId]
+      );
+    } else {
+      [studentsCount] = await db.execute(
+        `SELECT COUNT(*) as total_students FROM student_academic_records sar WHERE sar.class_id = ? AND sar.id = (SELECT MAX(id) FROM student_academic_records WHERE student_id = sar.student_id)`,
+        [classId]
+      );
+    }
 
     // Get class name
     const [classRows] = await db.execute(

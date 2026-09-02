@@ -77,7 +77,10 @@ const UpdateAcademicYear = async (req, res) => {
       params
     );
 
-    if (result.affectedRows === 0) return res.status(404).json({ error: 'Not found' });
+    if (result.affectedRows === 0) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Not found' });
+    }
 
     const [rows] = await conn.execute(`SELECT * FROM academic_years WHERE id = ?`, [id]);
     await conn.commit();

@@ -108,7 +108,16 @@ const AddStudent = async (req, res) => {
     const studentId = studentRes.insertId;
 
     if (!grade_id || !class_id || !academic_year_id) {
-      throw new Error("grade_id, class_id and academic_year_id are required for admission");
+      if (avatar_url) await deleteFromCloudinary(avatar_url);
+      await conn.rollback();
+      return res.status(400).json({ error: "grade_id, class_id and academic_year_id are required for admission" });
+    }
+
+    const [ayRowsCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [academic_year_id]);
+    if (ayRowsCheck.length > 0 && ayRowsCheck[0].status === 'inactive') {
+      if (avatar_url) await deleteFromCloudinary(avatar_url);
+      await conn.rollback();
+      return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
     }
 
     await conn.execute(

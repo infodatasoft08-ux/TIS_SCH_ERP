@@ -873,11 +873,34 @@ const GetStudentsOfMySupervisedClass = async (req, res) => {
     }
 
     // 2️⃣ get students of that class
+    const academicYearId = req.query.academic_year_id ? Number(req.query.academic_year_id) : null;
+
+    let sarJoinCondition = `sar.id = (SELECT MAX(id) FROM student_academic_records WHERE student_id = s.id)`;
+    const queryParams = [];
+
+    if (academicYearId) {
+      sarJoinCondition = `sar.academic_year_id = ?`;
+      queryParams.push(academicYearId);
+    } else {
+      const [activeAy] = await db.execute(`SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1`);
+      if (activeAy.length > 0) {
+        const activeAyId = activeAy[0].id;
+        const [checkRecords] = await db.execute(`SELECT id FROM student_academic_records WHERE class_id = ? AND academic_year_id = ? LIMIT 1`, [classId, activeAyId]);
+        if (checkRecords.length > 0) {
+          sarJoinCondition = `sar.academic_year_id = ?`;
+          queryParams.push(activeAyId);
+        }
+      }
+    }
+
+    queryParams.push(classId);
+
     const [students] = await db.execute(
       `SELECT 
          s.id AS student_id,
          sar.roll_no,
          sar.id AS student_academic_id,
+         sar.academic_year_id,
          u.gender,
          u.name AS student_name,
          u.email AS student_email,
@@ -897,12 +920,12 @@ const GetStudentsOfMySupervisedClass = async (req, res) => {
        FROM students s
        JOIN users u ON u.id = s.user_id
        JOIN student_academic_records sar ON sar.student_id = s.id
-         AND sar.academic_year_id = (SELECT academic_year_id FROM student_academic_records WHERE class_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1)
+         AND ${sarJoinCondition}
        JOIN classes c ON c.id = sar.class_id
        JOIN grades g ON g.id = sar.grade_id
        WHERE sar.class_id = ?
        ORDER BY sar.roll_no ASC`,
-      [classId, classId]
+      queryParams
     );
 
     // Format dates correctly

@@ -16,8 +16,19 @@ const AddExamGroup = async (req, res) => {
     const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects, from_class_to_class } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
 
-    if (!isNonEmptyString(name) || !grade_id || !academic_year_id) {
-        return res.status(400).json({ error: 'Name, grade_id, and academic_year_id are required' });
+    if (!isNonEmptyString(name) || !grade_id) {
+        return res.status(400).json({ error: 'Name and grade_id are required' });
+    }
+
+    let finalAyId = toInt(academic_year_id);
+    if (!finalAyId) {
+        const [activeAy] = await db.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+        if (activeAy.length > 0) finalAyId = activeAy[0].id;
+    } else {
+        const [ayCheck] = await db.execute("SELECT status FROM academic_years WHERE id = ?", [finalAyId]);
+        if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
+            return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
+        }
     }
 
     if (!Array.isArray(subjects) || subjects.length === 0) {
@@ -43,7 +54,7 @@ const AddExamGroup = async (req, res) => {
 
         const [egRes] = await conn.execute(
             `INSERT INTO exam_groups (name, exam_type, custom_exam_name, class_id, grade_id, academic_year_id, note, start_date, end_date, status, created_at, section_ids, from_class_to_class) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'Draft', NOW(), ?, ?)`,
-            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), toInt(academic_year_id), note || null, start_date || null, end_date || null, sectionIdsJson, from_class_to_class?.trim() || null]
+            [name.trim(), exam_type || 'OTHER', custom_exam_name || null, null, toInt(grade_id), finalAyId, note || null, start_date || null, end_date || null, sectionIdsJson, from_class_to_class?.trim() || null]
         );
         const examGroupId = egRes.insertId;
         createdExamGroupIds.push(examGroupId);

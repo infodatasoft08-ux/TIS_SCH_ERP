@@ -28,9 +28,15 @@ const createHomework = async (req, res) => {
         const targetClassId = (class_id === "all" || !class_id) ? null : class_id;
         const attachment_url = req.file ? req.file.path : null;
 
+        let finalAyId = academic_year_id ? Number(academic_year_id) : null;
+        if (!finalAyId) {
+            const [activeAy] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+            if (activeAy.length > 0) finalAyId = activeAy[0].id;
+        }
+
         const [hwResult] = await conn.execute(
             "INSERT INTO homeworks (title, grade_id, class_id, academic_year_id, homework_date, attachment_url, created_at) VALUES (?, ?, ?, ?, ?, ?, NOW())",
-            [title, grade_id, targetClassId, academic_year_id || null, homework_date, attachment_url]
+            [title, grade_id, targetClassId, finalAyId, homework_date, attachment_url]
         );
         const homeworkId = hwResult.insertId;
 

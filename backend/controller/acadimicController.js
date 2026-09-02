@@ -7,8 +7,23 @@ exports.createAcademicRecord = async (req, res) => {
     try {
         const { student_id, academic_year_id, grade_id, class_id, roll_no, promoted_from_grade_id, result_status } = req.body;
 
-        if (!student_id || !academic_year_id || !grade_id) {
-            return res.status(400).json({ error: 'student_id, academic_year_id, and grade_id are required' });
+        if (!student_id || !grade_id) {
+            return res.status(400).json({ error: 'student_id and grade_id are required' });
+        }
+
+        let targetAyId = toId(academic_year_id);
+        if (!targetAyId) {
+            const [activeAy] = await db.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+            if (activeAy.length > 0) targetAyId = activeAy[0].id;
+        } else {
+            const [ayCheck] = await db.execute("SELECT status FROM academic_years WHERE id = ?", [targetAyId]);
+            if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
+                return res.status(400).json({ error: 'Selected target academic year is inactive. Please select an active academic year for promotion.' });
+            }
+        }
+
+        if (!targetAyId) {
+            return res.status(400).json({ error: 'No active academic year found for promotion' });
         }
 
         const [result] = await db.query(
@@ -23,7 +38,7 @@ exports.createAcademicRecord = async (req, res) => {
                 result_status = VALUES(result_status)`,
             [
                 toId(student_id),
-                toId(academic_year_id),
+                targetAyId,
                 toId(grade_id),
                 toId(class_id),
                 toId(roll_no),
@@ -91,13 +106,26 @@ exports.bulkPromote = async (req, res) => {
     if (!Array.isArray(student_ids) || student_ids.length === 0) {
         return res.status(400).json({ error: 'student_ids array is required' });
     }
-    if (!academic_year_id || !grade_id) {
-        return res.status(400).json({ error: 'academic_year_id and grade_id are required' });
+    if (!grade_id) {
+        return res.status(400).json({ error: 'grade_id is required' });
     }
 
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
+
+        let targetAyId = toId(academic_year_id);
+        if (!targetAyId) {
+            const [activeAy] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+            if (activeAy.length > 0) targetAyId = activeAy[0].id;
+        } else {
+            const [ayCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [targetAyId]);
+            if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
+                await conn.rollback();
+                conn.release();
+                return res.status(400).json({ error: 'Selected target academic year is inactive. Please select an active academic year for promotion.' });
+            }
+        }
 
         // 1) Validate section (class_id) for target grade
         let resolvedClassId = class_id || null;
@@ -159,7 +187,7 @@ exports.bulkPromote = async (req, res) => {
                     result_status = VALUES(result_status)`,
                 [
                     studentId,
-                    academic_year_id,
+                    targetAyId,
                     currentGradeId,
                     currentClassId,
                     currentRollNo,

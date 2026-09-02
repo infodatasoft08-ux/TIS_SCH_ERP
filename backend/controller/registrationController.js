@@ -262,8 +262,19 @@ const approveRegistration = async (req, res) => {
         classId = rows.length > 0 ? rows[0].id : 1;
       }
       if (!ayId) {
-        const [rows] = await conn.execute('SELECT id FROM academic_years LIMIT 1');
-        ayId = rows.length > 0 ? rows[0].id : 1;
+        const [rows] = await conn.execute("SELECT id FROM academic_years WHERE status = 'active' ORDER BY id DESC LIMIT 1");
+        if (rows.length > 0) {
+          ayId = rows[0].id;
+        } else {
+          const [fallback] = await conn.execute("SELECT id FROM academic_years ORDER BY id DESC LIMIT 1");
+          ayId = fallback.length > 0 ? fallback[0].id : 1;
+        }
+      } else {
+        const [ayCheck] = await conn.execute("SELECT status FROM academic_years WHERE id = ?", [ayId]);
+        if (ayCheck.length > 0 && ayCheck[0].status === 'inactive') {
+          await conn.rollback();
+          return res.status(400).json({ error: "Selected academic year is inactive. Please select an active academic year." });
+        }
       }
 
       // 2) Students Entry
