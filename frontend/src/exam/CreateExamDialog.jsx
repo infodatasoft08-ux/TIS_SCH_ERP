@@ -16,6 +16,8 @@ import { ComboboxFormField } from "@/widgets/comboboxFormField";
 import { MultiSelectCombobox } from "@/widgets/multiSelectCombobox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
+import { useAuth } from "@/auth/AuthContext";
+import { Badge } from "@/components/ui/badge";
 
 const schema = z.object({
   name: z.string().min(1, "Name is required"),
@@ -41,6 +43,8 @@ const schema = z.object({
 });
 
 export default function CreateExamDialog({ open, onOpenChange, classes, grades, subjects, onSuccess, examToEdit }) {
+  const { user } = useAuth();
+  const isTeacher = user?.role_id === 2;
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [filteredSubjects, setFilteredSubjects] = useState([]);
   const [academicYears, setAcademicYears] = useState([]);
@@ -52,7 +56,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
     resolver: zodResolver(schema),
     defaultValues: {
       name: "",
-      exam_type: "UNIT_TEST_1",
+      exam_type: isTeacher ? "OTHER" : "UNIT_TEST_1",
       custom_exam_name: "",
       class_ids: [],
       grade_id: "",
@@ -176,7 +180,7 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
       } else {
         form.reset({
           name: "",
-          exam_type: "UNIT_TEST_1",
+          exam_type: isTeacher ? "OTHER" : "UNIT_TEST_1",
           custom_exam_name: "",
           class_ids: [],
           grade_id: "",
@@ -403,10 +407,15 @@ export default function CreateExamDialog({ open, onOpenChange, classes, grades, 
                     <FormItem>
                       <FormLabel>Exam Type *</FormLabel>
                       <FormControl>
-                        {field.value === 'OTHER' ? (
+                        {isTeacher ? (
+                          <div className="p-2.5 bg-indigo-50 dark:bg-indigo-950/40 rounded-md border border-indigo-200 dark:border-indigo-800 text-sm font-semibold text-indigo-700 dark:text-indigo-300 flex items-center justify-between">
+                            <span>Other / Custom Exam</span>
+                            <Badge variant="outline" className="text-[10px] bg-indigo-100 dark:bg-indigo-900 border-indigo-300">Teacher Mode</Badge>
+                          </div>
+                        ) : field.value === 'OTHER' ? (
                           <div className="flex gap-2">
                             <Input
-                              placeholder="Enter custom exam name"
+                              placeholder="Enter custom exam tag"
                               value={form.watch('custom_exam_name')}
                               disabled={isExamLocked}
                               onChange={(e) => form.setValue('custom_exam_name', e.target.value)}
