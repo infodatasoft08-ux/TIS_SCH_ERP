@@ -73,6 +73,7 @@ const getTodayNotifications = async (req, res) => {
                     LEFT JOIN parent_children pc ON pc.student_id = s.id
                     LEFT JOIN parents p ON p.id = pc.parent_id
                     WHERE (s.user_id = ? OR p.user_id = ?)
+                      AND eg.status IN ('Published', 'Over')
                       AND (
                           -- 1. Upcoming or ongoing exams (end_date is today or in future)
                           ((eg.end_date IS NULL OR eg.end_date >= CURDATE()) AND eg.is_results_published = 0)
@@ -88,7 +89,8 @@ const getTodayNotifications = async (req, res) => {
                 examSql = `
                     SELECT id, COALESCE(NULLIF(TRIM(custom_exam_name), ''), name) as title, name, custom_exam_name, exam_type, 'exam' as type, start_date, end_date, is_results_published, status, created_at
                     FROM exam_groups
-                    WHERE (
+                    WHERE status IN ('Published', 'Over')
+                      AND (
                         ((end_date IS NULL OR end_date >= CURDATE()) AND is_results_published = 0)
                         OR
                         (is_results_published = 1 AND created_at >= DATE_SUB(NOW(), INTERVAL 14 DAY))
