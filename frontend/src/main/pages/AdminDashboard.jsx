@@ -4,7 +4,7 @@ import {
   LineChart, Line, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar, PieChart, Pie, Cell, Legend
 } from 'recharts';
-import { Users, GraduationCap, DollarSign, Activity, Calendar as CalendarIcon, TrendingUp, Zap, Megaphone } from 'lucide-react';
+import { Users, GraduationCap, DollarSign, Activity, Calendar as CalendarIcon, TrendingUp, TrendingDown, Zap, Megaphone } from 'lucide-react';
 import AnnouncementDashboard from '@/components/announcements/AnnouncementDashboard';
 import UpcomingActivities from '@/components/announcements/UpcomingActivities';
 import API from '@/api';
@@ -15,6 +15,20 @@ import { useNavigate } from 'react-router-dom';
 const COLORS = ['#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6'];
 const DARK_GRAY = '#1f2937';
 const LIGHT_GRAY = '#9ca3af';
+
+const STATUS_COLORS = {
+  present: '#10b981', // Green
+  absent: '#ef4444',  // Red
+  late: '#f59e0b',    // Amber
+  excused: '#3b82f6', // Blue
+  leave: '#3b82f6'    // Blue
+};
+
+const getStatusColorByName = (name) => {
+  if (!name) return '#6b7280';
+  const key = String(name).toLowerCase().trim();
+  return STATUS_COLORS[key] || '#3b82f6';
+};
 
 const CustomTooltip = ({ active, payload, label, title, subtitle }) => {
   if (active && payload && payload.length) {
@@ -28,7 +42,7 @@ const CustomTooltip = ({ active, payload, label, title, subtitle }) => {
             <div key={index} className="flex items-center gap-2">
               <div
                 className="w-2 h-2 rounded-full"
-                style={{ backgroundColor: entry.color || entry.fill || COLORS[index % COLORS.length] }}
+                style={{ backgroundColor: entry.color || entry.fill || getStatusColorByName(entry.name) }}
               />
               <p className="text-xs font-medium text-slate-200">
                 <span className="capitalize">{entry.name}</span>: <span className="text-white font-bold">{entry.value}</span>
@@ -214,23 +228,36 @@ export default function AdminDashboard() {
 
       {/* Stats Cards Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-6">
-        {stats.map((stat, idx) => (
-          <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md relative overflow-hidden group hover:border-blue-500/30 transition-all cursor-pointer" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.label}</span>
-              <div className={`p-2 rounded-xl ${stat.bg}`}>
-                <stat.icon className={`w-5 h-5 ${stat.color}`} />
+        {stats.map((stat, idx) => {
+          const isNegative = typeof stat.trend === 'string' && stat.trend.startsWith('-');
+          const isPositive = typeof stat.trend === 'string' && stat.trend.startsWith('+');
+          const TrendIconComponent = isNegative ? TrendingDown : TrendingUp;
+          const trendColorClass = isNegative
+            ? 'text-rose-500 bg-rose-500/10'
+            : isPositive
+            ? 'text-emerald-500 bg-emerald-500/10'
+            : 'text-gray-400 bg-gray-500/10';
+
+          return (
+            <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md relative overflow-hidden group hover:border-blue-500/30 transition-all cursor-pointer" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.label}</span>
+                <div className={`p-2 rounded-xl ${stat.bg}`}>
+                  <stat.icon className={`w-5 h-5 ${stat.color}`} />
+                </div>
+              </div>
+              <div className="mt-3 flex items-baseline justify-between">
+                <h3 className="text-2xl sm:text-3xl font-black">{stat.value}</h3>
+                {stat.trend && (
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${trendColorClass}`}>
+                    <TrendIconComponent className="w-3 h-3 shrink-0" />
+                    <span>{stat.trend}</span>
+                  </span>
+                )}
               </div>
             </div>
-            <div className="mt-3 flex items-baseline justify-between">
-              <h3 className="text-2xl sm:text-3xl font-black">{stat.value}</h3>
-              <span className="text-xs font-bold text-emerald-500 flex items-center gap-0.5">
-                <TrendingUp className="w-3 h-3" />
-                {stat.trend}
-              </span>
-            </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* Main Charts & Analytics */}
@@ -277,7 +304,7 @@ export default function AdminDashboard() {
                       stroke="none"
                     >
                       {data.attendanceData.length > 0 ? data.attendanceData.map((entry, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                        <Cell key={`cell-${index}`} fill={getStatusColorByName(entry.name)} />
                       )) : <Cell fill="#374151" />}
                     </Pie>
                     <Tooltip content={<CustomTooltip title="Attendance" subtitle={selectedAttendanceClassName} />} />
@@ -293,7 +320,7 @@ export default function AdminDashboard() {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 {data.attendanceData.map((entry, idx) => (
                   <div key={idx} className="flex items-center gap-2 px-2.5 py-1 bg-gray-100 dark:bg-gray-800/80 rounded-xl border border-gray-200 dark:border-gray-700">
-                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: COLORS[idx % COLORS.length] }}></div>
+                    <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: getStatusColorByName(entry.name) }}></div>
                     <span className="text-xs font-semibold capitalize text-gray-700 dark:text-gray-300 truncate">{entry.name}: {entry.value}</span>
                   </div>
                 ))}

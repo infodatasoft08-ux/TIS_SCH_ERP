@@ -61,6 +61,7 @@ export default function TakeAttendance() {
   const [updateStatus, setUpdateStatus] = useState("");
   const [updateDialogOpen, setUpdateDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("all");
   const { user } = useAuth();
   const navigate = useNavigate();
 
@@ -75,6 +76,7 @@ export default function TakeAttendance() {
 
   useEffect(() => {
     if (selectedClassId) {
+      setStatusFilter("all");
       loadClassStudents();
       checkTodayAttendance();
     }
@@ -242,28 +244,70 @@ export default function TakeAttendance() {
     }
   };
 
-  // Filtered Students list by search query
-  const filteredStudents = useMemo(() => {
-    if (!searchQuery.trim()) return students;
-    const q = searchQuery.toLowerCase().trim();
-    return students.filter(s => 
-      (s.student_name && s.student_name.toLowerCase().includes(q)) ||
-      (s.roll_no && String(s.roll_no).toLowerCase().includes(q)) ||
-      (s.student_email && s.student_email.toLowerCase().includes(q))
-    );
-  }, [students, searchQuery]);
-
-  // Attendance live counters
+  // Live attendance counter calculation (works for both marking phase & submitted phase)
   const attendanceCounts = useMemo(() => {
-    let present = 0, absent = 0, late = 0, excused = 0;
-    Object.values(attendanceStatus).forEach(st => {
-      if (st === 'present') present++;
-      else if (st === 'absent') absent++;
-      else if (st === 'late') late++;
-      else if (st === 'excused') excused++;
-    });
-    return { present, absent, late, excused };
-  }, [attendanceStatus]);
+    let present = 0, absent = 0, late = 0, excused = 0, total = 0;
+    if (isTodayAttendanceTaken && todayAttendanceData.length > 0) {
+      total = todayAttendanceData.length;
+      todayAttendanceData.forEach((rec) => {
+        const st = (rec.status || "").toLowerCase();
+        if (st === "present") present++;
+        else if (st === "absent") absent++;
+        else if (st === "late") late++;
+        else if (st === "excused") excused++;
+      });
+    } else {
+      total = students.length;
+      students.forEach((s) => {
+        const st = (attendanceStatus[s.student_id] || "present").toLowerCase();
+        if (st === "present") present++;
+        else if (st === "absent") absent++;
+        else if (st === "late") late++;
+        else if (st === "excused") excused++;
+      });
+    }
+    return { present, absent, late, excused, total };
+  }, [isTodayAttendanceTaken, todayAttendanceData, students, attendanceStatus]);
+
+  // Filtered Students list (for marking mode) by search query & status filter
+  const filteredStudents = useMemo(() => {
+    let list = students;
+    if (statusFilter !== "all") {
+      list = list.filter(
+        (s) => (attendanceStatus[s.student_id] || "present").toLowerCase() === statusFilter
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (s) =>
+          (s.student_name && s.student_name.toLowerCase().includes(q)) ||
+          (s.roll_no && String(s.roll_no).toLowerCase().includes(q)) ||
+          (s.student_email && s.student_email.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [students, attendanceStatus, statusFilter, searchQuery]);
+
+  // Filtered Submitted Attendance Records (for update mode) by search query & status filter
+  const filteredTodayAttendanceRecords = useMemo(() => {
+    let list = todayAttendanceData;
+    if (statusFilter !== "all") {
+      list = list.filter(
+        (r) => (r.status || "").toLowerCase() === statusFilter
+      );
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      list = list.filter(
+        (r) =>
+          (r.student_name && r.student_name.toLowerCase().includes(q)) ||
+          (r.roll_no && String(r.roll_no).toLowerCase().includes(q)) ||
+          (r.student_email && r.student_email.toLowerCase().includes(q))
+      );
+    }
+    return list;
+  }, [todayAttendanceData, statusFilter, searchQuery]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -404,27 +448,35 @@ export default function TakeAttendance() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {todayAttendanceData.map((record) => (
-            <TableRow key={record.id}>
-              <TableCell className="font-bold">{record.roll_no || "N/A"}</TableCell>
-              <TableCell className="font-semibold">{record.student_name}</TableCell>
-              <TableCell><Badge variant="outline" className="text-xs">{record.class_name}</Badge></TableCell>
-              <TableCell>
-                <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
-                  {getStatusIcon(record.status)}
-                  <span>{record.status}</span>
-                </div>
-              </TableCell>
-              <TableCell className="text-xs text-gray-500">
-                {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-              </TableCell>
-              <TableCell>
-                <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openUpdateDialog(record)}>
-                  <Edit className="h-4 w-4 text-gray-600" />
-                </Button>
+          {filteredTodayAttendanceRecords.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={6} className="text-center py-8 text-gray-500 font-medium">
+                No attendance records matching status or search criteria.
               </TableCell>
             </TableRow>
-          ))}
+          ) : (
+            filteredTodayAttendanceRecords.map((record) => (
+              <TableRow key={record.id}>
+                <TableCell className="font-bold">{record.roll_no || "N/A"}</TableCell>
+                <TableCell className="font-semibold">{record.student_name}</TableCell>
+                <TableCell><Badge variant="outline" className="text-xs">{record.class_name}</Badge></TableCell>
+                <TableCell>
+                  <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
+                    {getStatusIcon(record.status)}
+                    <span>{record.status}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="text-xs text-gray-500">
+                  {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                </TableCell>
+                <TableCell>
+                  <Button size="sm" variant="ghost" className="h-8 w-8 p-0" onClick={() => openUpdateDialog(record)}>
+                    <Edit className="h-4 w-4 text-gray-600" />
+                  </Button>
+                </TableCell>
+              </TableRow>
+            ))
+          )}
         </TableBody>
       </Table>
     </div>
@@ -532,32 +584,38 @@ export default function TakeAttendance() {
 
   const TodayAttendanceCardView = () => (
     <div className="space-y-3 pb-6">
-      {todayAttendanceData.map((record) => (
-        <Card key={record.id} className="rounded-2xl border shadow-sm p-3.5 bg-white dark:bg-gray-900">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <div className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
-                <span>{record.student_name}</span>
-                {record.roll_no && <Badge variant="outline" className="text-[10px]">#{record.roll_no}</Badge>}
+      {filteredTodayAttendanceRecords.length === 0 ? (
+        <div className="text-center py-8 text-sm text-gray-500 font-medium border-2 border-dashed rounded-2xl bg-white dark:bg-gray-900">
+          No attendance records matching status or search criteria.
+        </div>
+      ) : (
+        filteredTodayAttendanceRecords.map((record) => (
+          <Card key={record.id} className="rounded-2xl border shadow-sm p-3.5 bg-white dark:bg-gray-900">
+            <div className="flex items-center justify-between gap-2">
+              <div>
+                <div className="font-extrabold text-base text-gray-900 dark:text-white flex items-center gap-2">
+                  <span>{record.student_name}</span>
+                  {record.roll_no && <Badge variant="outline" className="text-[10px]">#{record.roll_no}</Badge>}
+                </div>
+                <p className="text-xs text-gray-400">{record.class_name}</p>
               </div>
-              <p className="text-xs text-gray-400">{record.class_name}</p>
+              <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
+                {getStatusIcon(record.status)}
+                <span>{record.status}</span>
+              </div>
             </div>
-            <div className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-bold capitalize ${getStatusColor(record.status)}`}>
-              {getStatusIcon(record.status)}
-              <span>{record.status}</span>
-            </div>
-          </div>
 
-          <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-xs">
-            <span className="text-gray-400">
-              Recorded: {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
-            </span>
-            <Button size="sm" variant="outline" className="h-7 text-xs font-bold" onClick={() => openUpdateDialog(record)}>
-              <Edit className="h-3 w-3 mr-1" /> Update
-            </Button>
-          </div>
-        </Card>
-      ))}
+            <div className="mt-3 pt-2.5 border-t flex items-center justify-between text-xs">
+              <span className="text-gray-400">
+                Recorded: {new Date(record.recorded_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+              </span>
+              <Button size="sm" variant="outline" className="h-7 text-xs font-bold" onClick={() => openUpdateDialog(record)}>
+                <Edit className="h-3 w-3 mr-1" /> Update
+              </Button>
+            </div>
+          </Card>
+        ))
+      )}
     </div>
   );
 
@@ -667,8 +725,8 @@ export default function TakeAttendance() {
           </CardContent>
         </Card>
 
-        {/* Search Bar & Live Counter Bar for Mobile Teachers */}
-        {students.length > 0 && (
+        {/* Search Bar & Interactive Status Filter Counter Bar */}
+        {(students.length > 0 || todayAttendanceData.length > 0) && (
           <div className="space-y-2.5">
             {/* Search Input */}
             <div className="relative">
@@ -682,19 +740,71 @@ export default function TakeAttendance() {
               />
             </div>
 
-            {/* Live Counter Badge Bar & Quick Mark All */}
+            {/* Interactive Status Filter Pills & Quick Mark All */}
             <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 bg-gray-50 dark:bg-gray-900/60 rounded-2xl border border-gray-200 dark:border-gray-800">
               <div className="flex items-center gap-1.5 text-xs font-bold flex-wrap">
-                <Badge className="bg-emerald-100 text-emerald-800 border-none text-[10px] px-2 py-0.5">
-                  🟢 {attendanceCounts.present} Present
-                </Badge>
-                <Badge className="bg-rose-100 text-rose-800 border-none text-[10px] px-2 py-0.5">
-                  🔴 {attendanceCounts.absent} Absent
-                </Badge>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter("all")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer border ${
+                    statusFilter === "all"
+                      ? "bg-gray-900 text-white border-gray-900 dark:bg-gray-100 dark:text-gray-900 dark:border-gray-100 shadow-sm"
+                      : "bg-gray-100 text-gray-700 border-gray-200 hover:bg-gray-200 dark:bg-gray-800 dark:text-gray-300 dark:border-gray-700"
+                  }`}
+                >
+                  All ({attendanceCounts.total})
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === "present" ? "all" : "present")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer border flex items-center gap-1 ${
+                    statusFilter === "present"
+                      ? "bg-emerald-600 text-white border-emerald-600 shadow-md ring-2 ring-emerald-400/50"
+                      : "bg-emerald-100/80 text-emerald-800 border-emerald-200 hover:bg-emerald-200 dark:bg-emerald-950/50 dark:text-emerald-300 dark:border-emerald-800"
+                  }`}
+                >
+                  <span>🟢</span>
+                  <span>{attendanceCounts.present} Present</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter(statusFilter === "absent" ? "all" : "absent")}
+                  className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer border flex items-center gap-1 ${
+                    statusFilter === "absent"
+                      ? "bg-rose-600 text-white border-rose-600 shadow-md ring-2 ring-rose-400/50"
+                      : "bg-rose-100/80 text-rose-800 border-rose-200 hover:bg-rose-200 dark:bg-rose-950/50 dark:text-rose-300 dark:border-rose-800"
+                  }`}
+                >
+                  <span>🔴</span>
+                  <span>{attendanceCounts.absent} Absent</span>
+                </button>
                 {attendanceCounts.late > 0 && (
-                  <Badge className="bg-amber-100 text-amber-800 border-none text-[10px] px-2 py-0.5">
-                    🟡 {attendanceCounts.late} Late
-                  </Badge>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter(statusFilter === "late" ? "all" : "late")}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer border flex items-center gap-1 ${
+                      statusFilter === "late"
+                        ? "bg-amber-500 text-white border-amber-500 shadow-md ring-2 ring-amber-400/50"
+                        : "bg-amber-100/80 text-amber-800 border-amber-200 hover:bg-amber-200 dark:bg-amber-950/50 dark:text-amber-300 dark:border-amber-800"
+                    }`}
+                  >
+                    <span>🟡</span>
+                    <span>{attendanceCounts.late} Late</span>
+                  </button>
+                )}
+                {attendanceCounts.excused > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter(statusFilter === "excused" ? "all" : "excused")}
+                    className={`px-2.5 py-1 rounded-full text-[11px] font-extrabold transition-all cursor-pointer border flex items-center gap-1 ${
+                      statusFilter === "excused"
+                        ? "bg-blue-600 text-white border-blue-600 shadow-md ring-2 ring-blue-400/50"
+                        : "bg-blue-100/80 text-blue-800 border-blue-200 hover:bg-blue-200 dark:bg-blue-950/50 dark:text-blue-300 dark:border-blue-800"
+                    }`}
+                  >
+                    <span>🔵</span>
+                    <span>{attendanceCounts.excused} Leave</span>
+                  </button>
                 )}
               </div>
 

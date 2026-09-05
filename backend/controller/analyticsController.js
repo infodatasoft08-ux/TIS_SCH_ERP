@@ -136,29 +136,29 @@ const getDashboardStats = async (req, res) => {
         // --- TREND CALCULATIONS ---
 
         const calculateTrend = (current, previous) => {
-            if (!previous || previous === 0) return (current > 0 ? `+${current.toFixed(2)}` : '0.0000') + '%';
+            if (!previous || previous === 0) return (current > 0 ? `+${current.toFixed(1)}%` : '0.0%');
             const diff = ((current - previous) / previous) * 100;
-            return (diff >= 0 ? '+' : '') + diff.toFixed(2) + '%';
+            return (diff >= 0 ? '+' : '') + diff.toFixed(1) + '%';
         };
 
-        // 1. Student Trend (Month over Month)
+        // 1. Student Trend (New admissions enrolled this month)
         const [curMonthStudents] = await pool.execute('SELECT COUNT(*) as total FROM students WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE())');
-        const [prevMonthStudents] = await pool.execute('SELECT COUNT(*) as total FROM students WHERE MONTH(created_at) = MONTH(CURDATE() - INTERVAL 1 MONTH) AND YEAR(created_at) = YEAR(CURDATE() - INTERVAL 1 MONTH)');
-        const studentTrend = calculateTrend(curMonthStudents[0].total, prevMonthStudents[0].total);
+        const newStudentsCount = curMonthStudents[0]?.total || 0;
+        const studentTrend = newStudentsCount > 0 ? `+${newStudentsCount} New` : 'Active';
 
-        // 2. Teacher Trend (Month over Month)
+        // 2. Teacher Trend (New teachers added this month)
         const [curMonthTeachers] = await pool.execute('SELECT COUNT(*) as total FROM teachers WHERE id IN (SELECT id FROM users WHERE MONTH(created_at) = MONTH(CURDATE()) AND YEAR(created_at) = YEAR(CURDATE()))');
-        const [prevMonthTeachers] = await pool.execute('SELECT COUNT(*) as total FROM teachers WHERE id IN (SELECT id FROM users WHERE MONTH(created_at) = MONTH(CURDATE() - INTERVAL 1 MONTH) AND YEAR(created_at) = YEAR(CURDATE() - INTERVAL 1 MONTH))');
-        const teacherTrend = calculateTrend(curMonthTeachers[0].total, prevMonthTeachers[0].total);
+        const newTeachersCount = curMonthTeachers[0]?.total || 0;
+        const teacherTrend = newTeachersCount > 0 ? `+${newTeachersCount} New` : 'Active';
 
         // 3. Finance Trend (Month over Month)
         const [curMonthFees] = await pool.execute('SELECT SUM(paid_amount) as total FROM student_payments WHERE MONTH(payment_date) = MONTH(CURDATE()) AND YEAR(payment_date) = YEAR(CURDATE())');
         const [prevMonthFees] = await pool.execute('SELECT SUM(paid_amount) as total FROM student_payments WHERE MONTH(payment_date) = MONTH(CURDATE() - INTERVAL 1 MONTH) AND YEAR(payment_date) = YEAR(CURDATE() - INTERVAL 1 MONTH)');
         const feesTrend = calculateTrend(Number(curMonthFees[0].total || 0), Number(prevMonthFees[0].total || 0));
 
-        // 4. Attendance Trend (Today vs Yesterday)
-        let trendQueryToday = 'SELECT COUNT(*) as total, SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present FROM attendance WHERE attendance_date = CURDATE()';
-        let trendQueryYesterday = 'SELECT COUNT(*) as total, SUM(CASE WHEN status = "present" THEN 1 ELSE 0 END) as present FROM attendance WHERE attendance_date = CURDATE() - INTERVAL 1 DAY';
+        // 4. Attendance Trend (Today vs Yesterday Attendance %)
+        let trendQueryToday = 'SELECT COUNT(*) as total, SUM(CASE WHEN status IN ("present", "late", "Present", "Late") THEN 1 ELSE 0 END) as present FROM attendance WHERE attendance_date = CURDATE()';
+        let trendQueryYesterday = 'SELECT COUNT(*) as total, SUM(CASE WHEN status IN ("present", "late", "Present", "Late") THEN 1 ELSE 0 END) as present FROM attendance WHERE attendance_date = CURDATE() - INTERVAL 1 DAY';
         const trendParams = [];
 
         if (attendanceClassId && attendanceClassId !== 'all') {
@@ -170,7 +170,7 @@ const getDashboardStats = async (req, res) => {
         const [[todayAttendance]] = await pool.execute(trendQueryToday, trendParams);
         const [[yesterdayAttendance]] = await pool.execute(trendQueryYesterday, trendParams);
 
-        const getPercent = (data) => (data.total > 0 ? (data.present / data.total) * 100 : 0);
+        const getPercent = (data) => (data && data.total > 0 ? (data.present / data.total) * 100 : 0);
         const todayPercent = getPercent(todayAttendance);
         const yesterdayPercent = getPercent(yesterdayAttendance);
         const attendanceTrend = calculateTrend(todayPercent, yesterdayPercent);
