@@ -128,6 +128,31 @@ const CheckExams = () => {
         setMarksDialogOpen(true);
     };
 
+    const handleDownloadPdfMarksheet = async () => {
+        if (!selectedExamForMarks) return;
+        try {
+            const loadingToast = toast.loading('Generating Marksheet PDF...');
+            const res = await API.post('/exam/generate-marksheet', {
+                exam_id: selectedExamForMarks.id,
+                student_id: selectedExamForMarks.student_id
+            }, { responseType: 'blob' });
+            toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: 'application/pdf' });
+            const url = window.URL.createObjectURL(blob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = `Marksheet_${selectedExamForMarks.name || 'Result'}.pdf`;
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            window.URL.revokeObjectURL(url);
+        } catch (err) {
+            console.error('Error downloading marksheet PDF:', err);
+            window.print();
+        }
+    };
+
     const filteredExams = exams.filter(exam => {
         return exam.name?.toLowerCase().includes(searchQuery.toLowerCase());
     });
@@ -170,13 +195,15 @@ const CheckExams = () => {
         selectedExamForMarks.subjects.forEach(s => {
             if (!isAcademicSubject(s)) return;
             const key = s.subject_id || s.subject_name;
+            const gradeVal = s.result_grade || s.grade;
             if (!map.has(key)) {
-                map.set(key, { ...s });
+                map.set(key, { ...s, result_grade: gradeVal, grade: gradeVal });
             } else {
                 const existing = map.get(key);
                 const pick = (a, b) => (a !== null && a !== undefined && a !== '' && a !== '-') ? a : b;
                 existing.marks_obtained = pick(existing.marks_obtained, s.marks_obtained);
-                existing.result_grade = pick(existing.result_grade, s.result_grade);
+                existing.result_grade = pick(existing.result_grade, gradeVal);
+                existing.grade = existing.result_grade;
                 existing.attendance_status = pick(existing.attendance_status, s.attendance_status);
 
                 existing.written_marks_obtained = pick(existing.written_marks_obtained, s.written_marks_obtained);
@@ -200,7 +227,34 @@ const CheckExams = () => {
                 existing.ia_pr_max_marks = existing.ia_pr_max_marks || s.ia_pr_max_marks;
             }
         });
-        return Array.from(map.values());
+
+        const list = Array.from(map.values());
+        list.forEach(sub => {
+            if ((sub.marks_obtained === null || sub.marks_obtained === undefined || sub.marks_obtained === '') && sub.attendance_status !== 'Absent') {
+                const comps = [
+                    sub.written_marks_obtained, sub.reading_marks_obtained, sub.writing_comp_marks_obtained,
+                    sub.dictation_marks_obtained, sub.recitation_marks_obtained, sub.oral_marks_obtained,
+                    sub.theory_marks_obtained, sub.lab_marks_obtained, sub.ia_pr_marks_obtained
+                ];
+                const hasComp = comps.some(v => v !== null && v !== undefined && v !== '' && v !== '-');
+                if (hasComp) {
+                    sub.marks_obtained = comps.reduce((acc, v) => acc + (Number(v) || 0), 0);
+                }
+            }
+            if (!sub.result_grade && sub.marks_obtained !== null && sub.marks_obtained !== undefined && sub.max_marks > 0 && sub.attendance_status !== 'Absent') {
+                const pct = (Number(sub.marks_obtained) / Number(sub.max_marks)) * 100;
+                if (pct >= 91) sub.result_grade = 'A+';
+                else if (pct >= 81) sub.result_grade = 'A';
+                else if (pct >= 71) sub.result_grade = 'B+';
+                else if (pct >= 61) sub.result_grade = 'B';
+                else if (pct >= 51) sub.result_grade = 'C';
+                else if (pct >= 41) sub.result_grade = 'D';
+                else sub.result_grade = 'P';
+                sub.grade = sub.result_grade;
+            }
+        });
+
+        return list;
     }, [selectedExamForMarks]);
 
     const renderRoutineTable = (subjectsList, title, badgeColor) => (
@@ -698,11 +752,11 @@ const CheckExams = () => {
                     </div>
 
                     <DialogFooter className="pt-3 border-t flex flex-col sm:flex-row justify-between items-center gap-2">
-                        {selectedExamForMarks?.is_results_published ? (
-                            <Button onClick={() => window.print()} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs">
+                        {/* {selectedExamForMarks?.is_results_published ? (
+                            <Button onClick={handleDownloadPdfMarksheet} className="w-full sm:w-auto bg-green-600 hover:bg-green-700 text-white gap-1.5 text-xs">
                                 <Printer className="h-4 w-4" /> Print / Download Marksheet
                             </Button>
-                        ) : <div />}
+                        ) : <div />} */}
                         <Button type="button" variant="outline" className="w-full sm:w-auto text-xs" onClick={() => setMarksDialogOpen(false)}>
                             Close
                         </Button>

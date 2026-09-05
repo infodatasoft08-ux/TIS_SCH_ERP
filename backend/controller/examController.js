@@ -1675,13 +1675,27 @@ const GetExamsForStudent = async (req, res) => {
                        COALESCE(egs.dictation_max_marks, egs_orig.dictation_max_marks) as dictation_max_marks,
                        COALESCE(egs.recitation_max_marks, egs_orig.recitation_max_marks) as recitation_max_marks,
                        COALESCE(egs.ia_pr_max_marks, egs_orig.ia_pr_max_marks) as ia_pr_max_marks,
-                       egr.marks_obtained, egr.grade as result_grade, egr.attendance_status,
-                       egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
-                       egr.written_marks_obtained, egr.reading_marks_obtained, egr.writing_comp_marks_obtained,
-                       egr.dictation_marks_obtained, egr.recitation_marks_obtained, egr.ia_pr_marks_obtained
+                       COALESCE(egr.marks_obtained, egr_fallback.marks_obtained) as marks_obtained,
+                       COALESCE(egr.grade, egr_fallback.grade) as result_grade,
+                       COALESCE(egr.attendance_status, egr_fallback.attendance_status) as attendance_status,
+                       COALESCE(egr.theory_marks_obtained, egr_fallback.theory_marks_obtained) as theory_marks_obtained,
+                       COALESCE(egr.lab_marks_obtained, egr_fallback.lab_marks_obtained) as lab_marks_obtained,
+                       COALESCE(egr.oral_marks_obtained, egr_fallback.oral_marks_obtained) as oral_marks_obtained,
+                       COALESCE(egr.written_marks_obtained, egr_fallback.written_marks_obtained) as written_marks_obtained,
+                       COALESCE(egr.reading_marks_obtained, egr_fallback.reading_marks_obtained) as reading_marks_obtained,
+                       COALESCE(egr.writing_comp_marks_obtained, egr_fallback.writing_comp_marks_obtained) as writing_comp_marks_obtained,
+                       COALESCE(egr.dictation_marks_obtained, egr_fallback.dictation_marks_obtained) as dictation_marks_obtained,
+                       COALESCE(egr.recitation_marks_obtained, egr_fallback.recitation_marks_obtained) as recitation_marks_obtained,
+                       COALESCE(egr.ia_pr_marks_obtained, egr_fallback.ia_pr_marks_obtained) as ia_pr_marks_obtained
                 FROM exam_group_subjects egs
                 JOIN subjects s ON s.id = egs.subject_id
                 LEFT JOIN exam_group_results egr ON egr.exam_group_subject_id = egs.id AND egr.student_id = ?
+                LEFT JOIN (
+                    SELECT egr2.*, egs2.exam_group_id, egs2.subject_id
+                    FROM exam_group_results egr2
+                    JOIN exam_group_subjects egs2 ON egs2.id = egr2.exam_group_subject_id
+                    WHERE egr2.student_id = ?
+                ) egr_fallback ON egr_fallback.exam_group_id = egs.exam_group_id AND egr_fallback.subject_id = egs.subject_id
                 LEFT JOIN (
                     SELECT exam_group_id, subject_id, 
                            MAX(theory_max_marks) as theory_max_marks,
@@ -1697,7 +1711,7 @@ const GetExamsForStudent = async (req, res) => {
                     GROUP BY exam_group_id, subject_id
                 ) egs_orig ON egs_orig.exam_group_id = egs.exam_group_id AND egs_orig.subject_id = egs.subject_id
                 WHERE egs.exam_group_id IN (?)
-            `, [student_id, groupIds]);
+            `, [student_id, student_id, groupIds]);
 
             for (const row of examRows) {
                 const rawSubs = subjectRows.filter(s => s.exam_group_id === row.id);
@@ -1708,15 +1722,22 @@ const GetExamsForStudent = async (req, res) => {
         conn.release();
 
         const formattedExams = examRows.map(exam => {
+            const isPublished = exam.is_results_published == 1 || exam.is_results_published === true || String(exam.is_results_published) === 'true';
             const subjects = (exam.subjects || []).map(s => {
-                if (!exam.is_results_published) {
-                    return { ...s, marks_obtained: null, result_grade: null };
+                if (!isPublished) {
+                    return { ...s, marks_obtained: null, result_grade: null, grade: null };
                 }
-                return s;
+                return {
+                    ...s,
+                    result_grade: s.result_grade || s.grade,
+                    grade: s.result_grade || s.grade
+                };
             });
 
             return {
                 ...exam,
+                student_id,
+                is_results_published: isPublished,
                 subjects,
                 end_date: exam.end_date ? formatMySQLDate(exam.end_date) : null
             };
@@ -2121,10 +2142,21 @@ const GetSupervisedClassExamTrends = async (req, res) => {
 
 
 const GenerateMarksheetPDF = async (req, res) => {
-    const { student_id, exam_id } = req.body;
+    let { student_id, exam_id } = req.body;
 
-    if (!student_id || !exam_id) {
-        return res.status(400).json({ error: 'student_id and exam_id are required' });
+    if (!exam_id) {
+        return res.status(400).json({ error: 'exam_id is required' });
+    }
+
+    if (!student_id && req.user) {
+        const [stu] = await db.execute(`SELECT id FROM students WHERE user_id = ? LIMIT 1`, [req.user.id]);
+        if (stu.length > 0) {
+            student_id = stu[0].id;
+        }
+    }
+
+    if (!student_id) {
+        return res.status(400).json({ error: 'student_id is required' });
     }
 
     try {
