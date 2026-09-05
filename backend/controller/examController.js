@@ -14,8 +14,13 @@ const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
-    const { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects, from_class_to_class } = req.body;
+    let { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects, from_class_to_class } = req.body;
     // subjects = [{ subject_id, max_marks, passing_marks }]
+
+    // Teachers can ONLY create OTHER / Custom exams
+    if (req.user && req.user.role_id === 2) {
+        exam_type = 'OTHER';
+    }
 
     if (!isNonEmptyString(name) || !grade_id) {
         return res.status(400).json({ error: 'Name and grade_id are required' });
@@ -378,9 +383,9 @@ const UpdateExamGroup = async (req, res) => {
     if (end_date !== undefined) { updates.push('end_date = ?'); params.push(end_date || null); }
     if (from_class_to_class != undefined) { updates.push('from_class_to_class = ?'); params.push(from_class_to_class.trim()); }
     if (status !== undefined) { updates.push('status = ?'); params.push(status); }
-    if (is_results_published !== undefined) { 
-        updates.push('is_results_published = ?'); 
-        params.push(is_results_published ? 1 : 0); 
+    if (is_results_published !== undefined) {
+        updates.push('is_results_published = ?');
+        params.push(is_results_published ? 1 : 0);
         if (is_results_published && status === undefined) {
             updates.push('status = ?');
             params.push('Published');
@@ -392,6 +397,17 @@ const UpdateExamGroup = async (req, res) => {
     const conn = await db.getConnection();
     try {
         await conn.beginTransaction();
+
+        if (req.user && req.user.role_id === 2) {
+            const [targetExam] = await conn.execute(`SELECT exam_type FROM exam_groups WHERE id = ?`, [id]);
+            if (targetExam.length > 0 && targetExam[0].exam_type !== 'OTHER') {
+                if (status !== undefined || is_results_published !== undefined) {
+                    await conn.rollback();
+                    conn.release();
+                    return res.status(403).json({ error: 'Teachers can only publish custom/other exams' });
+                }
+            }
+        }
 
         let shouldNotifyResult = false;
         let examInfo = null;
@@ -653,92 +669,92 @@ const UpdateExamGroup = async (req, res) => {
 
                 // WhatsApp queue
                 if (await isWhatsAppEnabled()) {
-                let usersQuery = '';
-                const usersParams = [];
-                if (sectionIds.length > 0) {
-                    const placeholders = sectionIds.map(() => '?').join(',');
-                    usersQuery = `
+                    let usersQuery = '';
+                    const usersParams = [];
+                    if (sectionIds.length > 0) {
+                        const placeholders = sectionIds.map(() => '?').join(',');
+                        usersQuery = `
                         SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                         FROM users u
                         JOIN students s ON s.user_id = u.id
                         JOIN student_academic_records sar ON sar.student_id = s.id
                         WHERE sar.class_id IN (${placeholders}) AND sar.academic_year_id = ?
                     `;
-                    usersParams.push(...sectionIds, examInfo.academic_year_id);
-                } else if (examInfo.grade_id) {
-                    usersQuery = `
+                        usersParams.push(...sectionIds, examInfo.academic_year_id);
+                    } else if (examInfo.grade_id) {
+                        usersQuery = `
                         SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                         FROM users u
                         JOIN students s ON s.user_id = u.id
                         JOIN student_academic_records sar ON sar.student_id = s.id
                         WHERE sar.grade_id = ? AND sar.academic_year_id = ?
                     `;
-                    usersParams.push(examInfo.grade_id, examInfo.academic_year_id);
-                } else {
-                    usersQuery = `
+                        usersParams.push(examInfo.grade_id, examInfo.academic_year_id);
+                    } else {
+                        usersQuery = `
                         SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                         FROM users u
                         JOIN students s ON s.user_id = u.id
                     `;
-                }
+                    }
 
-                const [contacts] = await db.execute(usersQuery, usersParams);
+                    const [contacts] = await db.execute(usersQuery, usersParams);
 
-                let whatsappMsg = '';
-                whatsappMsg += `🔔 *Exam Results Published!* 🔔\n\n`;
-                whatsappMsg += `✨ *${examInfo.name}* ✨\n\n`;
-                whatsappMsg += `*${examInfo.exam_type}*\n\n`;
-                if (examInfo.custom_exam_name) {
-                    whatsappMsg += `*${examInfo.custom_exam_name}*\n\n`;
-                }
-                if (className !== 'All Classes') {
-                    whatsappMsg += `📚 *Class:* ${className}\n`;
-                }
-                if (examInfo.start_date) {
-                    whatsappMsg += `📅 *Starts:* ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
-                }
-                if (examInfo.end_date) {
-                    whatsappMsg += `📅 *Ends:* ${new Date(examInfo.end_date).toLocaleDateString('en-IN')}\n`;
-                }
-                whatsappMsg += `\nPlease check the application for the detailed results.\n`;
-                whatsappMsg += `\nBest regards,\n`;
-                whatsappMsg += `TIMES INTERNATIONAL SCHOOL`;
+                    let whatsappMsg = '';
+                    whatsappMsg += `🔔 *Exam Results Published!* 🔔\n\n`;
+                    whatsappMsg += `✨ *${examInfo.name}* ✨\n\n`;
+                    whatsappMsg += `*${examInfo.exam_type}*\n\n`;
+                    if (examInfo.custom_exam_name) {
+                        whatsappMsg += `*${examInfo.custom_exam_name}*\n\n`;
+                    }
+                    if (className !== 'All Classes') {
+                        whatsappMsg += `📚 *Class:* ${className}\n`;
+                    }
+                    if (examInfo.start_date) {
+                        whatsappMsg += `📅 *Starts:* ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
+                    }
+                    if (examInfo.end_date) {
+                        whatsappMsg += `📅 *Ends:* ${new Date(examInfo.end_date).toLocaleDateString('en-IN')}\n`;
+                    }
+                    whatsappMsg += `\nPlease check the application for the detailed results.\n`;
+                    whatsappMsg += `\nBest regards,\n`;
+                    whatsappMsg += `TIMES INTERNATIONAL SCHOOL`;
 
-                const processedPhones = new Set();
+                    const processedPhones = new Set();
 
-                for (const c of contacts) {
-                    const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
+                    for (const c of contacts) {
+                        const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
 
-                    for (const phone of phonesToNotify) {
-                        if (!processedPhones.has(phone)) {
-                            processedPhones.add(phone);
+                        for (const phone of phonesToNotify) {
+                            if (!processedPhones.has(phone)) {
+                                processedPhones.add(phone);
+                                await whatsappQueue.add('examNotification', {
+                                    contact: phone,
+                                    jobType: 'examNotification',
+                                    message: {
+                                        fallbackText: whatsappMsg
+                                    }
+                                });
+                            }
+                        }
+                    }
+
+                    // Teachers Whatsapp
+                    const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
+                    let teacherMsg = `🔔 *Exam Results Published (Teachers)* 🔔\n\nExam: ${examInfo.name}\nClass: ${className}\n`;
+                    if (examInfo.start_date) teacherMsg += `Starts: ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
+                    teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
+
+                    for (const t of teacherContacts) {
+                        if (t.phone && !processedPhones.has(t.phone)) {
+                            processedPhones.add(t.phone);
                             await whatsappQueue.add('examNotification', {
-                                contact: phone,
+                                contact: t.phone,
                                 jobType: 'examNotification',
-                                message: {
-                                    fallbackText: whatsappMsg
-                                }
+                                message: { fallbackText: teacherMsg }
                             });
                         }
                     }
-                }
-
-                // Teachers Whatsapp
-                const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
-                let teacherMsg = `🔔 *Exam Results Published (Teachers)* 🔔\n\nExam: ${examInfo.name}\nClass: ${className}\n`;
-                if (examInfo.start_date) teacherMsg += `Starts: ${new Date(examInfo.start_date).toLocaleDateString('en-IN')}\n`;
-                teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
-
-                for (const t of teacherContacts) {
-                    if (t.phone && !processedPhones.has(t.phone)) {
-                        processedPhones.add(t.phone);
-                        await whatsappQueue.add('examNotification', {
-                            contact: t.phone,
-                            jobType: 'examNotification',
-                            message: { fallbackText: teacherMsg }
-                        });
-                    }
-                }
                 }
             } catch (notifyErr) {
                 console.error('Failed to send result publish notification:', notifyErr);
@@ -970,6 +986,12 @@ const PublishExam = async (req, res) => {
         }
         const exam = examRows[0];
 
+        if (req.user && req.user.role_id === 2 && exam.exam_type !== 'OTHER') {
+            await conn.rollback();
+            conn.release();
+            return res.status(403).json({ error: 'Teachers can only publish custom/other exams' });
+        }
+
         if (exam.status === 'Published') {
             conn.release();
             return res.status(400).json({ error: 'Exam is already published' });
@@ -1092,93 +1114,93 @@ const PublishExam = async (req, res) => {
 
         // WhatsApp queue
         if (await isWhatsAppEnabled()) {
-        let usersQuery = '';
-        const usersParams = [];
-        if (sectionIds.length > 0) {
-            const placeholders = sectionIds.map(() => '?').join(',');
-            usersQuery = `
+            let usersQuery = '';
+            const usersParams = [];
+            if (sectionIds.length > 0) {
+                const placeholders = sectionIds.map(() => '?').join(',');
+                usersQuery = `
                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                 FROM users u
                 JOIN students s ON s.user_id = u.id
                 JOIN student_academic_records sar ON sar.student_id = s.id
                 WHERE sar.class_id IN (${placeholders}) AND sar.academic_year_id = ?
             `;
-            usersParams.push(...sectionIds, academicYearId);
-        } else if (gradeId) {
-            usersQuery = `
+                usersParams.push(...sectionIds, academicYearId);
+            } else if (gradeId) {
+                usersQuery = `
                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                 FROM users u
                 JOIN students s ON s.user_id = u.id
                 JOIN student_academic_records sar ON sar.student_id = s.id
                 WHERE sar.grade_id = ? AND sar.academic_year_id = ?
             `;
-            usersParams.push(gradeId, academicYearId);
-        } else {
-            usersQuery = `
+                usersParams.push(gradeId, academicYearId);
+            } else {
+                usersQuery = `
                 SELECT u.phone as student_phone, s.parent_contact, s.mother_contect
                 FROM users u
                 JOIN students s ON s.user_id = u.id
             `;
-        }
+            }
 
-        const [contacts] = await db.execute(usersQuery, usersParams);
+            const [contacts] = await db.execute(usersQuery, usersParams);
 
-        let msg = '';
-        msg += `🔔 *Exam Schedule Published!* 🔔\n\n`;
-        msg += `✨ *${exam.name}* ✨\n\n`;
-        msg += `*${exam.exam_type}*\n\n`;
-        if (exam.custom_exam_name) {
-            msg += `*${exam.custom_exam_name}*\n\n`;
-        }
-        if (className !== 'All Classes') {
-            msg += `📚 *Class:* ${className}\n`;
-        }
-        if (exam.start_date) {
-            msg += `📅 *Starts:* ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
-        }
-        if (exam.end_date) {
-            msg += `📅 *Ends:* ${new Date(exam.end_date).toLocaleDateString('en-IN')}\n`;
-        }
-        msg += `\nPlease check the application for the detailed routine.\n`;
-        msg += `\nBest regards,\n`;
-        msg += `TIMES INTERNATIONAL SCHOOL`;
+            let msg = '';
+            msg += `🔔 *Exam Schedule Published!* 🔔\n\n`;
+            msg += `✨ *${exam.name}* ✨\n\n`;
+            msg += `*${exam.exam_type}*\n\n`;
+            if (exam.custom_exam_name) {
+                msg += `*${exam.custom_exam_name}*\n\n`;
+            }
+            if (className !== 'All Classes') {
+                msg += `📚 *Class:* ${className}\n`;
+            }
+            if (exam.start_date) {
+                msg += `📅 *Starts:* ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+            }
+            if (exam.end_date) {
+                msg += `📅 *Ends:* ${new Date(exam.end_date).toLocaleDateString('en-IN')}\n`;
+            }
+            msg += `\nPlease check the application for the detailed routine.\n`;
+            msg += `\nBest regards,\n`;
+            msg += `TIMES INTERNATIONAL SCHOOL`;
 
 
-        const processedPhones = new Set();
+            const processedPhones = new Set();
 
-        for (const c of contacts) {
-            const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
+            for (const c of contacts) {
+                const phonesToNotify = [c.parent_contact, c.student_phone].filter(Boolean);
 
-            for (const phone of phonesToNotify) {
-                if (!processedPhones.has(phone)) {
-                    processedPhones.add(phone);
+                for (const phone of phonesToNotify) {
+                    if (!processedPhones.has(phone)) {
+                        processedPhones.add(phone);
+                        await whatsappQueue.add('examNotification', {
+                            contact: phone,
+                            jobType: 'examNotification',
+                            message: {
+                                fallbackText: msg
+                            }
+                        });
+                    }
+                }
+            }
+
+            // Teachers Whatsapp
+            const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
+            let teacherMsg = `🔔 *Exam Published (Teachers)* 🔔\n\nExam: ${exam.name}\nClass: ${className}\n`;
+            if (exam.start_date) teacherMsg += `Starts: ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
+            teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
+
+            for (const t of teacherContacts) {
+                if (t.phone && !processedPhones.has(t.phone)) {
+                    processedPhones.add(t.phone);
                     await whatsappQueue.add('examNotification', {
-                        contact: phone,
+                        contact: t.phone,
                         jobType: 'examNotification',
-                        message: {
-                            fallbackText: msg
-                        }
+                        message: { fallbackText: teacherMsg }
                     });
                 }
             }
-        }
-
-        // Teachers Whatsapp
-        const [teacherContacts] = await db.execute(`SELECT u.phone FROM users u JOIN teachers t ON t.user_id = u.id WHERE u.phone IS NOT NULL`);
-        let teacherMsg = `🔔 *Exam Published (Teachers)* 🔔\n\nExam: ${exam.name}\nClass: ${className}\n`;
-        if (exam.start_date) teacherMsg += `Starts: ${new Date(exam.start_date).toLocaleDateString('en-IN')}\n`;
-        teacherMsg += `\nBest regards,\nTIMES INTERNATIONAL SCHOOL`;
-
-        for (const t of teacherContacts) {
-            if (t.phone && !processedPhones.has(t.phone)) {
-                processedPhones.add(t.phone);
-                await whatsappQueue.add('examNotification', {
-                    contact: t.phone,
-                    jobType: 'examNotification',
-                    message: { fallbackText: teacherMsg }
-                });
-            }
-        }
         }
 
         return res.json({ success: true, message: 'Exam published successfully' });

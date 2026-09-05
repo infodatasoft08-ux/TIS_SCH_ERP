@@ -65,6 +65,9 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
             {exams.map((exam) => {
               const isOver = exam.status === 'Over';
               const isPublished = exam.status === 'Published';
+              const isOtherExam = exam.exam_type === 'OTHER';
+              const canPublishExam = !isTeacher || isOtherExam;
+              const canPublishResults = !isTeacher || isOtherExam;
               const academicSubjectsCount = exam.subjects?.filter(s => {
                 const n = s.subject_name?.toLowerCase().trim();
                 return !(n === 'lunch' || n === 'break' || n === 'lunch/break' || n === 'lunch break');
@@ -121,7 +124,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                               {/* <DropdownMenuItem onClick={() => onEditExam(exam)}>
                                 <Edit className="mr-2 h-4 w-4" /> Edit Exam Details
                               </DropdownMenuItem> */}
-                              {!isTeacher && (
+                              {canPublishExam && (
                                 <DropdownMenuItem onClick={() => onTogglePublish(exam)}>
                                   {isPublished ? <Lock className="mr-2 h-4 w-4" /> : <Globe className="mr-2 h-4 w-4" />}
                                   {isPublished ? 'Unpublish Exam' : 'Publish Exam'}
@@ -144,7 +147,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                           )}
                           {isOver && (
                             <>
-                              {!isTeacher && (
+                              {canPublishResults && (
                                 <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
                                   {exam.is_results_published ? <Lock className="mr-2 h-4 w-4" /> : <CheckCircle className="mr-2 h-4 w-4" />}
                                   {exam.is_results_published ? 'Unpublish Results' : 'Publish Results'}
@@ -186,6 +189,9 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
           const isOver = exam.status === 'Over';
           const isPublished = exam.status === 'Published';
           const isDraft = exam.status === 'Draft';
+          const isOtherExam = exam.exam_type === 'OTHER';
+          const canPublishExam = !isTeacher || isOtherExam;
+          const canPublishResults = !isTeacher || isOtherExam;
 
           return (
             <Card key={exam.id} className="group hover:shadow-xl transition-all duration-300 flex flex-col h-full border-t-4 border-t-transparent bg-gradient-to-br from-white to-gray-50 dark:from-gray-900 dark:to-gray-950 border-x-gray-100 dark:border-x-gray-800 border-b-gray-100 dark:border-b-gray-800 relative overflow-hidden">
@@ -251,7 +257,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     </Button>
                   )}
 
-                  {!isOver && !isTeacher && (
+                  {!isOver && canPublishExam && (
                     <Button
                       variant="outline"
                       size="sm"
@@ -286,7 +292,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
 
                   {isOver && (
                     <>
-                      {!isTeacher && (
+                      {canPublishResults && (
                         <Button
                           size="sm"
                           className={`w-full text-xs justify-start ${exam.is_results_published ? 'bg-orange-600 hover:bg-orange-700' : 'bg-green-600 hover:bg-green-700'}`}

@@ -682,8 +682,11 @@ export default function ExamDataTable() {
         const examMap = new Map();
         selectedStudents.forEach(student => {
             student.exams.forEach(ex => {
-                if (!examMap.has(ex.id)) {
-                    examMap.set(ex.id, ex);
+                const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
+                if (!isTeacher || isPub) {
+                    if (!examMap.has(ex.id)) {
+                        examMap.set(ex.id, ex);
+                    }
                 }
             });
         });
@@ -994,15 +997,13 @@ export default function ExamDataTable() {
                                         </div>
                                     </div>
 
-                                    {!isTeacher && (
-                                        <Button
-                                            onClick={openAddDialog}
-                                            className="h-8 md:h-10 w-full lg:w-auto bg-primary hover:bg-primary/90 text-white shadow-md rounded-md px-6"
-                                        >
-                                            <PlusCircle className="mr-2 h-5 w-5" />
-                                            Create Exam
-                                        </Button>
-                                    )}
+                                    <Button
+                                        onClick={openAddDialog}
+                                        className="h-8 md:h-10 w-full lg:w-auto bg-primary hover:bg-primary/90 text-white shadow-md rounded-md px-6"
+                                    >
+                                        <PlusCircle className="mr-2 h-5 w-5" />
+                                        Create Exam
+                                    </Button>
                                 </div>
                                 <ExamList
                                     exams={exams}
@@ -1295,33 +1296,41 @@ export default function ExamDataTable() {
                                                                     <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                         <div className="space-y-1">
                                                                             <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Single Exam Marksheets</p>
-                                                                            {student.exams.map(ex => (
-                                                                                <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                    <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                            onClick={() => handleMarksheetAction(student, ex, 'download')}
-                                                                                            title="Download PDF"
-                                                                                            disabled={isGenerating}
-                                                                                        >
-                                                                                            <Download className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                            onClick={() => handleMarksheetAction(student, ex, 'print')}
-                                                                                            title="Print directly"
-                                                                                            disabled={isGenerating}
-                                                                                        >
-                                                                                            <Printer className="h-4 w-4" />
-                                                                                        </Button>
+                                                                            {student.exams.map(ex => {
+                                                                                const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
+                                                                                const canAccess = !isTeacher || isPub;
+                                                                                return (
+                                                                                    <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                        <span className={`text-sm font-medium pl-1 ${canAccess ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{ex.name}</span>
+                                                                                        {canAccess ? (
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                                    onClick={() => handleMarksheetAction(student, ex, 'download')}
+                                                                                                    title="Download PDF"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Download className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                                    onClick={() => handleMarksheetAction(student, ex, 'print')}
+                                                                                                    title="Print directly"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Printer className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">Result Pending</span>
+                                                                                        )}
                                                                                     </div>
-                                                                                </div>
-                                                                            ))}
+                                                                                );
+                                                                            })}
 
                                                                             <p className="text-xs font-semibold px-2 py-1.5 border-b border-t mt-2 mb-1.5 text-muted-foreground uppercase tracking-wider">Combined Marksheets</p>
 
@@ -1383,33 +1392,41 @@ export default function ExamDataTable() {
                                                                             <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                                 <div className="space-y-1">
                                                                                     <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
-                                                                                    {student.exams.map(ex => (
-                                                                                        <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                            <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                                <Button
-                                                                                                    variant="ghost"
-                                                                                                    size="icon"
-                                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'download')}
-                                                                                                    title="Download Admit Card"
-                                                                                                    disabled={isGenerating}
-                                                                                                >
-                                                                                                    <Download className="h-4 w-4" />
-                                                                                                </Button>
-                                                                                                <Button
-                                                                                                    variant="ghost"
-                                                                                                    size="icon"
-                                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'print')}
-                                                                                                    title="Print Admit Card"
-                                                                                                    disabled={isGenerating}
-                                                                                                >
-                                                                                                    <Printer className="h-4 w-4" />
-                                                                                                </Button>
+                                                                                    {student.exams.map(ex => {
+                                                                                        const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
+                                                                                        const canAccess = !isTeacher || isPub;
+                                                                                        return (
+                                                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                                <span className={`text-sm font-medium pl-1 ${canAccess ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{ex.name}</span>
+                                                                                                {canAccess ? (
+                                                                                                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                                        <Button
+                                                                                                            variant="ghost"
+                                                                                                            size="icon"
+                                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                                            title="Download Admit Card"
+                                                                                                            disabled={isGenerating}
+                                                                                                        >
+                                                                                                            <Download className="h-4 w-4" />
+                                                                                                        </Button>
+                                                                                                        <Button
+                                                                                                            variant="ghost"
+                                                                                                            size="icon"
+                                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                                            title="Print Admit Card"
+                                                                                                            disabled={isGenerating}
+                                                                                                        >
+                                                                                                            <Printer className="h-4 w-4" />
+                                                                                                        </Button>
+                                                                                                    </div>
+                                                                                                ) : (
+                                                                                                    <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">Result Pending</span>
+                                                                                                )}
                                                                                             </div>
-                                                                                        </div>
-                                                                                    ))}
+                                                                                        );
+                                                                                    })}
                                                                                 </div>
                                                                             </PopoverContent>
                                                                         </Popover>
@@ -1509,33 +1526,41 @@ export default function ExamDataTable() {
                                                             <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                 <div className="space-y-1">
                                                                     <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Exam Action</p>
-                                                                    {student.exams.map(ex => (
-                                                                        <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                            <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                            <div className="flex items-center gap-1">
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                    onClick={() => handleMarksheetAction(student, ex, 'download')}
-                                                                                    title="Download PDF"
-                                                                                    disabled={isGenerating}
-                                                                                >
-                                                                                    <Download className="h-4 w-4" />
-                                                                                </Button>
-                                                                                <Button
-                                                                                    variant="ghost"
-                                                                                    size="icon"
-                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                    onClick={() => handleMarksheetAction(student, ex, 'print')}
-                                                                                    title="Print directly"
-                                                                                    disabled={isGenerating}
-                                                                                >
-                                                                                    <Printer className="h-4 w-4" />
-                                                                                </Button>
+                                                                    {student.exams.map(ex => {
+                                                                        const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
+                                                                        const canAccess = !isTeacher || isPub;
+                                                                        return (
+                                                                            <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                <span className={`text-sm font-medium pl-1 ${canAccess ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{ex.name}</span>
+                                                                                {canAccess ? (
+                                                                                    <div className="flex items-center gap-1">
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                            onClick={() => handleMarksheetAction(student, ex, 'download')}
+                                                                                            title="Download PDF"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Download className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                        <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                            onClick={() => handleMarksheetAction(student, ex, 'print')}
+                                                                                            title="Print directly"
+                                                                                            disabled={isGenerating}
+                                                                                        >
+                                                                                            <Printer className="h-4 w-4" />
+                                                                                        </Button>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">Result Pending</span>
+                                                                                )}
                                                                             </div>
-                                                                        </div>
-                                                                    ))}
+                                                                        );
+                                                                    })}
                                                                 </div>
                                                             </PopoverContent>
                                                         </Popover>
@@ -1552,33 +1577,41 @@ export default function ExamDataTable() {
                                                                     <PopoverContent className="w-64 p-2 shadow-xl rounded-xl border border-gray-100 dark:border-gray-800" side="bottom" align="center">
                                                                         <div className="space-y-1">
                                                                             <p className="text-xs font-semibold px-2 py-1.5 border-b mb-1.5 text-muted-foreground uppercase tracking-wider">Select Admit Card</p>
-                                                                            {student.exams.map(ex => (
-                                                                                <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
-                                                                                    <span className="text-sm font-medium pl-1 text-gray-700 dark:text-gray-300">{ex.name}</span>
-                                                                                    <div className="flex items-center gap-1">
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
-                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'download')}
-                                                                                            title="Download Admit Card"
-                                                                                            disabled={isGenerating}
-                                                                                        >
-                                                                                            <Download className="h-4 w-4" />
-                                                                                        </Button>
-                                                                                        <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
-                                                                                            onClick={() => handleAdmitCardAction(student, ex, 'print')}
-                                                                                            title="Print Admit Card"
-                                                                                            disabled={isGenerating}
-                                                                                        >
-                                                                                            <Printer className="h-4 w-4" />
-                                                                                        </Button>
+                                                                            {student.exams.map(ex => {
+                                                                                const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
+                                                                                const canAccess = !isTeacher || isPub;
+                                                                                return (
+                                                                                    <div key={ex.id} className="flex items-center justify-between group rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-900/20 p-1.5 transition-colors">
+                                                                                        <span className={`text-sm font-medium pl-1 ${canAccess ? 'text-gray-700 dark:text-gray-300' : 'text-gray-400'}`}>{ex.name}</span>
+                                                                                        {canAccess ? (
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-indigo-600 hover:text-indigo-700 hover:bg-indigo-100 dark:hover:bg-indigo-900/40"
+                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'download')}
+                                                                                                    title="Download Admit Card"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Download className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                                <Button
+                                                                                                    variant="ghost"
+                                                                                                    size="icon"
+                                                                                                    className="h-7 w-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-100 dark:hover:bg-emerald-900/40"
+                                                                                                    onClick={() => handleAdmitCardAction(student, ex, 'print')}
+                                                                                                    title="Print Admit Card"
+                                                                                                    disabled={isGenerating}
+                                                                                                >
+                                                                                                    <Printer className="h-4 w-4" />
+                                                                                                </Button>
+                                                                                            </div>
+                                                                                        ) : (
+                                                                                            <span className="text-[10px] text-amber-600 font-semibold bg-amber-50 dark:bg-amber-950/40 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800">Result Pending</span>
+                                                                                        )}
                                                                                     </div>
-                                                                                </div>
-                                                                            ))}
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                     </PopoverContent>
                                                                 </Popover>
