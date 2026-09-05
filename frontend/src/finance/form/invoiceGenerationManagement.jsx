@@ -447,6 +447,7 @@ export default function Invoices() {
     try {
       const res = await API.get(`/fee/get/invoices/${invoiceId}/pdf`, {
         responseType: "blob",
+        timeout: 60000
       });
       // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       // const printWindow = window.open(url, "_blank");
@@ -493,6 +494,7 @@ export default function Invoices() {
     try {
       const res = await API.get(`/fee/payments/${paymentId}/receipt`, {
         responseType: "blob",
+        timeout: 60000
       });
       // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       // const printWindow = window.open(url, "_blank");
@@ -556,6 +558,7 @@ export default function Invoices() {
 
       const res = await API.get(endpoint, {
         responseType: "blob",
+        timeout: 60000
       });
       // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
       // const printWindow = window.open(url, "_blank");
@@ -878,6 +881,7 @@ export default function Invoices() {
     try {
       const res = await API.post(`/fee/get/invoices-bulk/pdf`, { invoiceIds: selectedInvoiceIds }, {
         responseType: "blob",
+        timeout: 120000
       });
 
       if (isMobileApp) {

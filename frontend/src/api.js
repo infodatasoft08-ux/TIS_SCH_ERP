@@ -4,7 +4,7 @@ export const BASE_URL = import.meta.env.VITE_API_BASE || 'http://localhost:5003/
 
 const API = axios.create({
   baseURL: BASE_URL,
-  timeout: 15000 // 15s timeout to prevent hanging requests on network/server stalls
+  timeout: 60000 // 60s timeout to allow longer server rendering operations
 });
 
 // Set auth header if token exists

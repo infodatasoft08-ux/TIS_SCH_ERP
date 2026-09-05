@@ -122,17 +122,17 @@ class PdfService {
   /**
    * Method 2: Render HBS template to PDF via Puppeteer
    */
-  async renderHbsTemplate(templatePath, data, options = {}) {
+  async renderHbsTemplate(templatePath, data, options = {}, existingBrowser = null) {
     const html = await this.compileHbsToHtml(templatePath, data);
-    // console.log(`Rendering HBS to PDF. HTML Size: ${html.length} chars.`);
 
-    const browser = await puppeteer.launch({
+    const browser = existingBrowser || await puppeteer.launch({
       headless: 'new',
-      args: ['--no-sandbox', '--disable-setuid-sandbox']
+      args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
+    let page;
     try {
-      const page = await browser.newPage();
+      page = await browser.newPage();
 
       const width = options.width || 345;
       const height = options.height || 570;
@@ -143,12 +143,6 @@ class PdfService {
         deviceScaleFactor: 2
       });
       await page.setContent(html, { waitUntil: 'networkidle0' });
-
-      // const pdfBuffer = await page.pdf({
-      //   format: 'A4',
-      //   printBackground: true,
-      //   margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-      // });
 
       await page.emulateMediaType('screen');
 
@@ -179,7 +173,12 @@ class PdfService {
 
       return pdfBuffer;
     } finally {
-      await browser.close();
+      if (page) {
+        await page.close().catch(() => {});
+      }
+      if (!existingBrowser) {
+        await browser.close().catch(() => {});
+      }
     }
   }
 

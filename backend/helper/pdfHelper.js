@@ -46,7 +46,7 @@ const formatTime12Hour = (timeStr) => {
 /**
  * Base function to generate PDF from HTML template
  */
-async function generatePDFFromTemplate(templateName, data, options = {}) {
+async function generatePDFFromTemplate(templateName, data, options = {}, existingBrowser = null) {
     const templatePath = path.join(__dirname, `../templates/${templateName}.hbs`);
     const templateHtml = fs.readFileSync(templatePath, 'utf8');
 
@@ -66,29 +66,38 @@ async function generatePDFFromTemplate(templateName, data, options = {}) {
     // Add watermark control to default data
     const html = template({ ...data, logoData, showWatermark: true });
 
-    const browser = await puppeteer.launch({
+    const browser = existingBrowser || await puppeteer.launch({
         headless: 'new',
         args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
-    const page = await browser.newPage();
-    await page.setContent(html, { waitUntil: 'load', timeout: 60000 });
+    let page;
+    try {
+        page = await browser.newPage();
+        await page.setContent(html, { waitUntil: 'load', timeout: 60000 });
 
-    const pdfBuffer = await page.pdf({
-        format: options.format || 'A4',
-        width: options.width || '210mm',
-        height: options.height || '297mm',
-        printBackground: true,
-        margin: options.margin || {
-            top: '10px',
-            right: '10px',
-            bottom: '10px',
-            left: '10px'
+        const pdfBuffer = await page.pdf({
+            format: options.format || 'A4',
+            width: options.width || '210mm',
+            height: options.height || '297mm',
+            printBackground: true,
+            margin: options.margin || {
+                top: '10px',
+                right: '10px',
+                bottom: '10px',
+                left: '10px'
+            }
+        });
+
+        return pdfBuffer;
+    } finally {
+        if (page) {
+            await page.close().catch(() => {});
         }
-    });
-
-    await browser.close();
-    return pdfBuffer;
+        if (!existingBrowser) {
+            await browser.close().catch(() => {});
+        }
+    }
 }
 
 const generateInvoicePDF = async (invoice) => {
@@ -275,25 +284,30 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
 
     const browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
-    const page = await browser.newPage();
-    await page.setContent(finalHtml, { waitUntil: 'load', timeout: 60000 });
+    let page;
+    try {
+        page = await browser.newPage();
+        await page.setContent(finalHtml, { waitUntil: 'load', timeout: 60000 });
 
-    const pdfBuffer = await page.pdf({
-        format: 'A6',
-        printBackground: true,
-        margin: {
-            top: '0px',
-            right: '0px',
-            bottom: '0px',
-            left: '0px'
-        }
-    });
+        const pdfBuffer = await page.pdf({
+            format: 'A6',
+            printBackground: true,
+            margin: {
+                top: '0px',
+                right: '0px',
+                bottom: '0px',
+                left: '0px'
+            }
+        });
 
-    await browser.close();
-    return pdfBuffer;
+        return pdfBuffer;
+    } finally {
+        if (page) await page.close().catch(() => {});
+        await browser.close().catch(() => {});
+    }
 };
 
 const generateTeacherDetailsPDF = async (teacherData) => {
@@ -400,25 +414,30 @@ const generateBulkInvoicesPDF = async (invoices) => {
 
     const browser = await puppeteer.launch({
         headless: 'new',
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+        args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
     });
 
-    const page = await browser.newPage();
-    await page.setContent(combinedTemplateHtml, { waitUntil: 'load', timeout: 60000 });
+    let page;
+    try {
+        page = await browser.newPage();
+        await page.setContent(combinedTemplateHtml, { waitUntil: 'load', timeout: 60000 });
 
-    const pdfBuffer = await page.pdf({
-        format: 'A6',
-        printBackground: true,
-        margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-    });
+        const pdfBuffer = await page.pdf({
+            format: 'A6',
+            printBackground: true,
+            margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
+        });
 
-    await browser.close();
-    return pdfBuffer;
+        return pdfBuffer;
+    } finally {
+        if (page) await page.close().catch(() => {});
+        await browser.close().catch(() => {});
+    }
 };
 
 
 
-const generateAdmitCardPDF = async (admitCardData) => {
+const generateAdmitCardPDF = async (admitCardData, existingBrowser = null) => {
     let school = {};
     try {
         const schoolPath = path.join(__dirname, '../school-info.json');
@@ -578,7 +597,7 @@ const generateAdmitCardPDF = async (admitCardData) => {
     }, {
         format: 'A4',
         margin: { top: '0px', right: '0px', bottom: '0px', left: '0px' }
-    });
+    }, existingBrowser);
 };
 
 // const generateExamRoutinePDF = async (routineData) => {

@@ -402,10 +402,13 @@ export default function ExamDataTable() {
                 student_id: student.id,
                 exam_id: exam.id
             }, {
-                responseType: 'blob'
+                responseType: 'blob',
+                timeout: 60000
             });
 
             toast.dismiss(loadingToast);
+
+            const blob = new Blob([res.data], { type: 'application/pdf' });
 
             // =========================
             // REACT NATIVE EXPO APP
@@ -445,7 +448,6 @@ export default function ExamDataTable() {
             }
 
             if (res.data) {
-                const blob = new Blob([res.data], { type: 'application/pdf' });
                 const blobUrl = window.URL.createObjectURL(blob);
 
                 if (action === 'download') {
@@ -701,7 +703,8 @@ export default function ExamDataTable() {
                 student_ids: selectedStudentIds,
                 exam_id: exam.id
             }, {
-                responseType: 'blob'
+                responseType: 'blob',
+                timeout: 120000
             });
 
             toast.dismiss(loadingToast);
@@ -782,7 +785,8 @@ export default function ExamDataTable() {
                 student_ids: selectedStudentIds,
                 exam_id: exam.id
             }, {
-                responseType: 'blob'
+                responseType: 'blob',
+                timeout: 120000
             });
 
             toast.dismiss(loadingToast);

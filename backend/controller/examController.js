@@ -1,5 +1,6 @@
 const formatMySQLDate = require('../config/deateConverter');
 const db = require('../db');
+const puppeteer = require('puppeteer');
 const pdfService = require('../services/pdfService');
 const storageService = require('../services/storageService');
 const path = require('path');
@@ -2654,6 +2655,7 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
         return res.status(400).json({ error: 'student_ids array and exam_id are required' });
     }
 
+    let browser;
     try {
         const pdfBuffers = [];
 
@@ -2677,6 +2679,11 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
               AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
             ORDER BY egs.exam_date ASC, egs.start_time ASC
         `, [exam_id]);
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
 
         for (let student_id of student_ids) {
             // 1. Fetch student info
@@ -2713,7 +2720,7 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
                 exam_id,
                 exam_name: examGroup.name,
                 routine
-            });
+            }, browser);
 
             pdfBuffers.push(pdfBuffer);
         }
@@ -2735,6 +2742,10 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
     } catch (err) {
         console.error('POST /api/exam/generate-bulk-admit-card error', err);
         return res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        if (browser) {
+            await browser.close().catch(() => {});
+        }
     }
 };
 
@@ -3604,6 +3615,7 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
         return res.status(400).json({ error: 'student_ids array and exam_id are required' });
     }
 
+    let browser;
     try {
         const pdfBuffers = [];
         let logoData = null;
@@ -3614,6 +3626,11 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
                 logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
             }
         } catch (e) { }
+
+        browser = await puppeteer.launch({
+            headless: 'new',
+            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        });
 
         for (let student_id of student_ids) {
             const [rows] = await db.execute(`
@@ -3736,7 +3753,7 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
             const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
                 width: 794,
                 height: 1123
-            });
+            }, browser);
             pdfBuffers.push(pdfBuffer);
         }
 
@@ -3757,6 +3774,10 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
     } catch (err) {
         console.error('POST /api/exam/generate-bulk-marksheet error', err);
         return res.status(500).json({ error: 'Internal server error' });
+    } finally {
+        if (browser) {
+            await browser.close().catch(() => {});
+        }
     }
 }
 
