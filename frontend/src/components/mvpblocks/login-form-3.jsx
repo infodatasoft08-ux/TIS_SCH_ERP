@@ -6,11 +6,12 @@ import {
   Eye,
   EyeOff,
   Loader2,
-  Palette,
   Users,
   Cloud,
   ShieldCheck,
-  Github,
+  Award,
+  Sparkles,
+  CheckCircle2
 } from "lucide-react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -28,9 +29,9 @@ export default function SignInPage() {
 
   useEffect(() => {
     if (user && user.id) {
-      // if user reached the login page via browser back/forward (POP), log them out
-      {
-        // otherwise, redirect logged-in users to dashboard
+      if (user.sub_role === 'scanner') {
+        navigate('/school/kiosk', { replace: true });
+      } else {
         navigate('/school/dashboard', { replace: true });
       }
     }
@@ -74,12 +75,12 @@ export default function SignInPage() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     if (!email || !password) {
-      setError("Please fill both email and password.");
+      toast.error("Please fill both email and password.");
       return;
     }
 
+    setLoading(true);
     try {
       const res = await login(email.trim(), password);
       if (res.ok) {
@@ -90,12 +91,17 @@ export default function SignInPage() {
           localStorage.removeItem("rememberedEmail");
           localStorage.removeItem("rememberedPassword");
         }
-        // Add success animation before navigation
-        await new Promise(resolve => setTimeout(resolve, 500));
-        navigate(from, { replace: true });
+        await new Promise(resolve => setTimeout(resolve, 400));
+
+        let navigateTo = from;
+        if (res.user?.sub_role === 'scanner') {
+          navigateTo = '/school/kiosk';
+        }
+
+        navigate(navigateTo, { replace: true });
         toast.success('Logged In Successfully');
       } else {
-        toast.error(res.message);
+        toast.error(res.message || "Login failed");
       }
     } catch (err) {
       toast.error(err?.response?.data?.message || 'Login failed');
@@ -108,330 +114,273 @@ export default function SignInPage() {
 
   return (
     <GoogleOAuthProvider clientId={clientId}>
-      <div className="relative flex min-h-screen w-full items-center justify-center overflow-hidden bg-gray-50/50 p-4 dark:bg-gray-900/50">
-        <style>{`
-        .login-btn {
-          background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-          position: relative;
-          overflow: hidden;
-          transition: all 0.3s ease;
-        }
-        .login-btn:hover {
-          transform: translateY(-1px);
-          box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
-        }
-        .login-btn::before {
-          content: '';
-          position: absolute;
-          top: 0;
-          left: -100%;
-          width: 100%;
-          height: 100%;
-          background: linear-gradient(
-            90deg,
-            transparent,
-            rgba(255, 255, 255, 0.2),
-            transparent
-          );
-          transition: left 0.5s;
-        }
-        .login-btn:hover::before {
-          left: 100%;
-        }
-        @keyframes fade-in-up {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        .animate-fadeInUp {
-          animation: fade-in-up 0.6s ease-out forwards;
-          opacity: 0;
-        }
-      `}</style>
-        <div className="z-10 w-full max-w-6xl">
-          <div className="bg-white dark:bg-gray-800 overflow-hidden rounded-[32px] shadow-[0_20px_50px_rgba(0,0,0,0.1)] border border-gray-100 dark:border-gray-700">
-            <div className="grid min-h-[700px] lg:grid-cols-2">
-              {/* Left Side - School Branding (Hidden on mobile) */}
-              <div className="hidden lg:flex flex-col brand-side relative m-3 rounded-[24px] bg-gradient-to-br from-blue-600 to-indigo-700 p-12 text-white overflow-hidden">
-                {/* Abstract Background Shapes */}
-                <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 rounded-full bg-white/10 blur-3xl"></div>
-                <div className="absolute bottom-0 left-0 -ml-20 -mb-20 w-80 h-80 rounded-full bg-purple-500/20 blur-3xl"></div>
+      {/* Outer Container - Fits 100dvh on mobile without vertical scroll */}
+      <div className="relative flex h-[100dvh] md:min-h-screen w-full items-center justify-center overflow-hidden bg-gradient-to-br from-slate-900 via-blue-950 to-indigo-950 p-2 sm:p-4 md:p-6 select-none">
 
-                <div className="relative z-10 h-full flex flex-col justify-between">
+        {/* Background Ambient Glow Spheres */}
+        <div className="absolute -top-32 -left-32 w-80 h-80 sm:w-96 sm:h-96 rounded-full bg-blue-500/20 blur-[100px] pointer-events-none"></div>
+        <div className="absolute -bottom-32 -right-32 w-80 h-80 sm:w-96 sm:h-96 rounded-full bg-indigo-500/20 blur-[100px] pointer-events-none"></div>
+
+        {/* Main Card */}
+        <div className="z-10 w-full max-w-md lg:max-w-5xl xl:max-w-6xl max-h-[98dvh] md:max-h-none overflow-y-auto sm:overflow-visible">
+          <div className="bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.5)] border border-white/20 dark:border-gray-800 overflow-hidden">
+            <div className="grid lg:grid-cols-12 min-h-0 lg:min-h-[640px]">
+
+              {/* Left Side - School Branding (Desktop Only) */}
+              <div className="hidden lg:flex lg:col-span-5 xl:col-span-5 flex-col justify-between relative p-8 xl:p-10 text-white bg-gradient-to-br from-blue-600 via-indigo-700 to-blue-900 overflow-hidden">
+                {/* Background Shapes */}
+                <div className="absolute top-0 right-0 -mr-16 -mt-16 w-72 h-72 rounded-full bg-white/10 blur-2xl pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-72 h-72 rounded-full bg-purple-500/20 blur-2xl pointer-events-none"></div>
+
+                <div className="relative z-10 flex flex-col justify-between h-full">
                   <div>
-                    <div className="mb-12 flex items-center gap-3">
-                      <div className="h-32 w-32 rounded-xl flex items-center justify-center">
-                        {/* <Cloud className="text-white h-6 w-6" /> */}
-                        <img src={logo} alt="Logo" className="rounded-xl" />
+                    {/* Floating Badge */}
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-xs font-medium tracking-wide text-blue-100 mb-6">
+                      <Sparkles className="w-3.5 h-3.5 text-amber-300 animate-pulse" />
+                      <span>Enterprise School ERP v2.5</span>
+                    </div>
+
+                    {/* Logo & Title */}
+                    <div className="mb-6 flex items-center gap-3.5">
+                      <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-md p-1 flex items-center justify-center shadow-lg border border-white/30 shrink-0">
+                        <img src={logo} alt="Times International School" className="h-full w-full object-cover rounded-xl" />
                       </div>
-                      <div className="flex flex-col">
-                        <span className="text-2xl font-bold tracking-wide uppercase text-white/90">
-                          TIMES INTERNATIONAL SCHOOL
+                      <div>
+                        <span className="block text-xs font-semibold tracking-wider uppercase text-blue-200">
+                          COMMITTED TO EXCELLENCE
                         </span>
-                        <span className="text-[14px] text-white/90 tracking-wider font-semibold">
-                          Commited to Excellence
+                        <span className="text-lg font-bold text-white leading-tight block">
+                          TIMES INTERNATIONAL SCHOOL
                         </span>
                       </div>
                     </div>
 
-                    <h1 className="mb-6 text-5xl font-bold leading-tight">
-                      <span className="text-blue-200">Education Excellence</span>
+                    <h1 className="mb-3 text-3xl font-extrabold leading-snug">
+                      Empowering <br />
+                      <span className="text-blue-200 underline decoration-blue-400/50 decoration-wavy">Education Excellence</span>
                     </h1>
-                    <p className="mb-12 text-lg text-blue-100/90 leading-relaxed max-w-md">
-                      Dedicated to the quality education for children
+                    <p className="mb-6 text-sm text-blue-100/90 leading-relaxed max-w-sm">
+                      Dedicated to providing world-class quality education and fostering leadership in young minds.
                     </p>
 
-                    <div className="space-y-8">
+                    {/* Feature Items */}
+                    <div className="space-y-3.5">
                       {[
                         {
-                          icon: <Users className="h-5 w-5" />,
+                          icon: <Users className="h-4 w-4 text-blue-200" />,
                           title: "Student Success Tracking",
-                          desc: "Monitor academic progress and attendance in real-time",
+                          desc: "Monitor academic progress & attendance in real-time",
                         },
                         {
-                          icon: <ShieldCheck className="h-5 w-5" />,
+                          icon: <ShieldCheck className="h-4 w-4 text-emerald-300" />,
                           title: "Secure Data Management",
                           desc: "Enterprise-grade security for sensitive student records",
                         },
                         {
-                          icon: <Cloud className="h-5 w-5" />,
+                          icon: <Cloud className="h-4 w-4 text-sky-200" />,
                           title: "Seamless Communication",
                           desc: "Connect teachers, parents, and students instantly",
                         },
                       ].map(({ icon, title, desc }, i) => (
                         <div
                           key={i}
-                          className="feature-item animate-fadeInUp flex items-start gap-4"
-                          style={{ animationDelay: `${0.2 * (i + 1)}s` }}>
-                          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-white/10 backdrop-blur-sm border border-white/10">
+                          className="flex items-center gap-3 p-2.5 rounded-xl bg-white/10 backdrop-blur-sm border border-white/10 hover:bg-white/15 transition-all">
+                          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/15 border border-white/20">
                             {icon}
                           </div>
                           <div>
-                            <div className="font-semibold text-lg text-white">{title}</div>
-                            <div className="text-blue-200/80 text-sm leading-snug mt-1">{desc}</div>
+                            <div className="font-semibold text-xs text-white flex items-center gap-1.5">
+                              {title}
+                              <CheckCircle2 className="w-3 h-3 text-emerald-400 inline" />
+                            </div>
+                            <div className="text-blue-200/80 text-[11px] leading-tight">{desc}</div>
                           </div>
                         </div>
                       ))}
                     </div>
                   </div>
 
-                  <div className="text-sm text-blue-200/60 mt-8">
+                  <div className="text-[11px] text-blue-200/70 mt-6 pt-4 border-t border-white/15">
                     © {new Date().getFullYear()} TIMES INTERNATIONAL SCHOOL. All rights reserved.
                   </div>
                 </div>
               </div>
 
               {/* Right Side - Login Form */}
-              <div className="flex flex-col justify-center p-4 lg:p-16 bg-white dark:bg-gray-800">
-                <div className="mx-auto w-full max-w-md">
-                  <div className="mb-10 text-center lg:text-left">
-                    <div className="flex items-center flex-col gap-3">
-                      <div className="h-32 w-32 rounded-xl lg:h-20 lg:hidden flex items-center justify-center">
-                        {/* <Cloud className="text-white h-6 w-6" /> */}
-                        <img src={logo} alt="Logo" className="rounded-xl" />
-                      </div>
-                      <span className="text-[1px] font-bold tracking-wide uppercase lg:hidden text-black/90 dark:text-white">
-                        TIMES INTERNATIONAL SCHOOL
-                      </span>
-                      <span className="text-[14px] text-right lg:hidden text-muted-foreground tracking-wider font-semibold">
-                        Commited to Excellence
-                      </span>
-                    </div>
-                    <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-3">
-                      Welcome Back!
-                    </h2>
-                    <p className="text-gray-500 dark:text-gray-400">
-                      Sign in to your administrative dashboard
-                    </p>
-                  </div>
+              <div className="lg:col-span-7 xl:col-span-7 flex flex-col justify-between p-3.5 sm:p-6 lg:p-10 xl:p-12 bg-white dark:bg-gray-900">
+                <div className="w-full mx-auto max-w-sm sm:max-w-md flex flex-col justify-between h-full">
 
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="email"
-                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Email address
-                      </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-blue-600 transition-colors">
-                          <Mail className="h-5 w-5" />
+                  {/* Header */}
+                  <div>
+                    <div className="text-center lg:text-left mb-3 sm:mb-6">
+                      <div className="flex justify-center lg:hidden items-center mb-2">
+                        <div className="relative">
+                          <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-md"></div>
+                          <img src={logo} alt="Times International School" className="relative h-14 w-14 sm:h-16 sm:w-16 object-cover rounded-full ring-2 ring-blue-500/40 shadow-md" />
                         </div>
-                        <input
-                          id="email"
-                          type="email"
-                          value={email}
-                          onChange={(e) => setEmail(e.target.value)}
-                          required
-                          disabled={loading}
-                          className="block w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-11 pr-4 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 dark:bg-gray-900 dark:border-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="admin@gmail.com"
-                        />
                       </div>
+
+                      <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white tracking-tight">
+                        Welcome Back!
+                      </h2>
+                      <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-0.5">
+                        Sign in to Times International School portal
+                      </p>
                     </div>
 
-                    <div className="space-y-2">
-                      <label
-                        htmlFor="password"
-                        className="block text-sm font-semibold text-gray-700 dark:text-gray-300">
-                        Password
-                      </label>
-                      <div className="relative group">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-4 text-gray-400 group-focus-within:text-blue-600 transition-colors">
-                          <Lock className="h-5 w-5" />
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-2.5 sm:space-y-4">
+                      {/* Email Input */}
+                      <div>
+                        <label
+                          htmlFor="email"
+                          className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                          Email address
+                        </label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400 group-focus-within:text-blue-600 transition-colors">
+                            <Mail className="h-4 w-4" />
+                          </div>
+                          <input
+                            id="email"
+                            type="email"
+                            value={email}
+                            onChange={(e) => setEmail(e.target.value)}
+                            required
+                            disabled={loading}
+                            className="block w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 sm:py-3 pl-10 pr-3 text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all dark:bg-gray-800/80 dark:border-gray-700 dark:text-white disabled:opacity-50"
+                            placeholder="admin@school.edu"
+                          />
                         </div>
-                        <input
-                          id="password"
-                          type={showPassword ? "text" : "password"}
-                          value={password}
-                          onChange={(e) => setPassword(e.target.value)}
-                          required
-                          disabled={loading}
-                          className="block w-full rounded-xl border border-gray-200 bg-gray-50 py-3.5 pl-11 pr-12 text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all duration-200 dark:bg-gray-900 dark:border-gray-700 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-                          placeholder="••••••••"
-                        />
-                        <button
-                          type="button"
-                          className="absolute inset-y-0 right-0 flex items-center pr-4 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors disabled:opacity-50"
-                          onClick={() => setShowPassword(!showPassword)}
-                          disabled={loading}>
-                          {showPassword ? (
-                            <EyeOff className="h-5 w-5" />
-                          ) : (
-                            <Eye className="h-5 w-5" />
-                          )}
-                        </button>
                       </div>
-                    </div>
 
-                    <div className="flex items-center justify-between pt-2">
-                      <label className={`flex items-center text-sm text-gray-600 dark:text-gray-400 cursor-pointer ${loading ? 'opacity-50 cursor-not-allowed' : ''}`}>
-                        <input
-                          type="checkbox"
-                          checked={rememberMe}
-                          onChange={(e) => setRememberMe(e.target.checked)}
-                          disabled={loading}
-                          className="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500/20 disabled:opacity-50"
-                        />
-                        <span className="ml-2">Remember me</span>
-                      </label>
+                      {/* Password Input */}
+                      <div>
+                        <label
+                          htmlFor="password"
+                          className="block text-xs sm:text-sm font-semibold text-gray-700 dark:text-gray-300 mb-1">
+                          Password
+                        </label>
+                        <div className="relative group">
+                          <div className="absolute inset-y-0 left-0 flex items-center pl-3.5 pointer-events-none text-gray-400 group-focus-within:text-blue-600 transition-colors">
+                            <Lock className="h-4 w-4" />
+                          </div>
+                          <input
+                            id="password"
+                            type={showPassword ? "text" : "password"}
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
+                            disabled={loading}
+                            className="block w-full rounded-xl border border-gray-200 bg-gray-50/80 py-2.5 sm:py-3 pl-10 pr-10 text-xs sm:text-sm text-gray-900 placeholder:text-gray-400 focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 outline-none transition-all dark:bg-gray-800/80 dark:border-gray-700 dark:text-white disabled:opacity-50"
+                            placeholder="••••••••"
+                          />
+                          <button
+                            type="button"
+                            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 transition-colors"
+                            onClick={() => setShowPassword(!showPassword)}
+                            disabled={loading}>
+                            {showPassword ? (
+                              <EyeOff className="h-4 w-4" />
+                            ) : (
+                              <Eye className="h-4 w-4" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Remember & Forgot Password */}
+                      <div className="flex items-center justify-between pt-0.5">
+                        <label className={`flex items-center text-xs text-gray-600 dark:text-gray-400 cursor-pointer ${loading ? 'opacity-50' : ''}`}>
+                          <input
+                            type="checkbox"
+                            checked={rememberMe}
+                            onChange={(e) => setRememberMe(e.target.checked)}
+                            disabled={loading}
+                            className="h-3.5 w-3.5 rounded border-gray-300 text-blue-600 focus:ring-blue-500/20"
+                          />
+                          <span className="ml-1.5 font-medium">Remember me</span>
+                        </label>
+                        <Link
+                          to={forgotPasswordPath}
+                          className={`text-xs font-semibold text-blue-600 hover:text-blue-700 hover:underline transition-all ${loading ? 'pointer-events-none opacity-50' : ''}`}>
+                          Forgot Password?
+                        </Link>
+                      </div>
+
+                      {/* Submit Button */}
+                      <button
+                        type="submit"
+                        className="w-full flex items-center justify-center rounded-xl py-2.5 sm:py-3 text-xs sm:text-sm font-semibold text-white bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 hover:from-blue-700 hover:to-indigo-700 shadow-md shadow-blue-500/25 active:scale-[0.99] transition-all disabled:opacity-70 disabled:cursor-not-allowed mt-2 sm:mt-4"
+                        disabled={loading}>
+                        {loading ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Signing in...
+                          </>
+                        ) : (
+                          "Sign In Dashboard"
+                        )}
+                      </button>
+                    </form>
+
+                    {/* Registration Section */}
+                    <div className="mt-3 sm:mt-4 pt-2.5 sm:pt-3 border-t border-gray-100 dark:border-gray-800 text-center">
+                      <p className="text-[11px] sm:text-xs text-gray-600 dark:text-gray-400 mb-2 font-medium">
+                        New to institution or Existing Candidate? Apply here:
+                      </p>
                       <Link
-                        to={forgotPasswordPath}
-                        className={`text-sm font-medium text-blue-600 hover:text-blue-700 hover:underline transition-all ${loading ? 'pointer-events-none opacity-50' : ''}`}>
-                        Forgot Password?
+                        to="/registration"
+                        className="inline-flex items-center justify-center w-full rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 py-2 text-xs font-semibold text-white shadow-xs transition-all text-center"
+                      >
+                        <Users className="mr-1.5 h-3.5 w-3.5" />
+                        <span>Registered Here</span>
                       </Link>
                     </div>
 
-                    <button
-                      type="submit"
-                      className="login-btn mt-6 flex w-full items-center justify-center rounded-xl py-3.5 text-sm font-semibold text-white shadow-lg shadow-blue-500/30 disabled:opacity-70 disabled:cursor-not-allowed"
-                      disabled={loading}>
-                      {loading ? (
-                        <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                          Signing in...
-                        </>
-                      ) : (
-                        "Sign In Dashboard"
-                      )}
-                    </button>
-
+                    {/* Google OAuth Section */}
                     {!isMobileApp && (
-                      <>
-                        <div className="relative my-8">
+                      <div className="mt-2.5 sm:mt-4">
+                        <div className="relative my-2 sm:my-3">
                           <div className="absolute inset-0 flex items-center">
-                            <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
+                            <div className="w-full border-t border-gray-200 dark:border-gray-800"></div>
                           </div>
-                          <div className="relative flex justify-center text-sm">
-                            <span className="bg-white px-4 text-gray-500 dark:bg-gray-800">Or continue with</span>
+                          <div className="relative flex justify-center text-[11px] sm:text-xs">
+                            <span className="bg-white dark:bg-gray-900 px-3 text-gray-400 font-medium">Or continue with</span>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-1 gap-4">
-                          <div className={`flex items-center justify-center ${loading ? 'pointer-events-none opacity-50' : ''}`}>
+                        <div className="flex justify-center scale-95 sm:scale-100 origin-center">
+                          <div className={`${loading ? 'pointer-events-none opacity-50' : ''}`}>
                             <GoogleLogin
                               onSuccess={handleGoogleSuccess}
                               onError={() => toast.error('Google Login failed to initialize')}
                               text="signin_with"
                               shape="rectangular"
-                              size="large"
+                              size="medium"
                               logo_alignment="center"
-                              className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
                             />
                           </div>
                         </div>
-                      </>
+                      </div>
                     )}
-
-                    {/* <div className="relative my-8">
-                      <div className="absolute inset-0 flex items-center">
-                        <div className="w-full border-t border-gray-200 dark:border-gray-700"></div>
-                      </div>
-                      <div className="relative flex justify-center text-sm">
-                        <span className="bg-white px-4 text-gray-500 dark:bg-gray-800">Or continue with</span>
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-4">
-                      <div className={`flex items-center justify-center ${loading ? 'pointer-events-none opacity-50' : ''}`}>
-                        <GoogleLogin
-                          onSuccess={handleGoogleSuccess}
-                          onError={() => toast.error('Google Login failed to initialize')}
-                          text="signin_with"
-                          shape="rectangular"
-                          size="large"
-                          logo_alignment="center"
-                          className="flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white p-3 text-sm font-medium text-gray-700 hover:bg-gray-50 hover:border-gray-300 transition-all dark:bg-gray-700 dark:text-white dark:border-gray-600 dark:hover:bg-gray-600"
-                        />
-                      </div>
-                    </div> */}
-                  </form>
-
-                  <div className="mt-4 pt-4 border-t border-gray-100 dark:border-gray-700 text-center">
-                    <p className="text-xs md:text-md text-gray-600 dark:text-gray-400 mb-3 font-medium">
-                      New to the institution Or Existing Candidate ? Apply here
-                    </p>
-                    <Link
-                      to="/registration"
-                      className="inline-flex items-center justify-center w-1/2 rounded-xl border-2 border-blue-600 bg-blue-50/50 py-3 text-xs md:text-md font-semibold text-blue-600 hover:bg-blue-600 hover:text-white transition-all duration-300 dark:bg-gray-800 dark:border-blue-500 dark:text-blue-400 dark:hover:bg-blue-500 dark:hover:text-white"
-                    >
-                      <Users className="mr-2 h-4 w-4" />
-                      Registered Here
-                    </Link>
                   </div>
 
-                  <div className="mt-6 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Need support?{" "}
-                    <Link to="/contact" className={`font-semibold text-blue-600 hover:text-blue-700 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
-                      Contact Administration
-                    </Link>
-
-                    {" | "}
-
-                    <a
-                      href="/privacy-policy.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      Privacy Policy
-                    </a>
-
-                    <div className="mt-1 text-center text-xs text-muted-foreground w-full">
-                      {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> */}
-                      © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary text-[12px] tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
+                  {/* Footer Links */}
+                  <div className="mt-3 sm:mt-4 text-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
+                    <div className="flex items-center justify-center gap-2 font-medium mb-0.5">
+                      <Link to="/contact" className={`hover:text-blue-600 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
+                        Contact Administration
+                      </Link>
+                    </div>
+                    <div className="text-[10px] sm:text-[11px] text-gray-400">
+                      © {new Date().getFullYear()} Times International School | Developed by <b className='text-gray-700 dark:text-gray-300'> MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>
                     </div>
                   </div>
 
-                  {/* <div className="mt-8 text-center text-sm text-gray-500 dark:text-gray-400">
-                    Need support??{" "}
-                    <Link to="/contact" className={`font-semibold text-blue-600 hover:text-blue-700 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
-                      Contact Administration
-                    </Link>
-                  </div> */}
-                  {/* <div className="mt-1 text-center text-xs text-muted-foreground w-full">
-                    {/* Designed & Developed by <span className="font-semibold text-primary tracking-wider">INFODATASOFT</span> 
-                    © {new Date().getFullYear()} School Management System | Developed by <b className='text-primary tracking-wider'>MITHILESH INFODATASOFT CAREER RESEARCH ORGNISATION Pvt. Ltd.</b>
-                  </div> */}
                 </div>
               </div>
+
             </div>
           </div>
         </div>

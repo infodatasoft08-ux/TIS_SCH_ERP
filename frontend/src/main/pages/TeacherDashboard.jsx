@@ -45,10 +45,10 @@ export default function TeacherDashboard() {
       setTeacher(teacherObj);
 
       // Parse supervised class carefully from classRes or studentRes fallback
-      const supClass = classRes.data?.class || 
-                       (classRes.data?.classes && classRes.data.classes[0]) || 
-                       studentRes.data?.class || 
-                       (examTrendsRes.data?.class_name ? { name: examTrendsRes.data.class_name } : null);
+      const supClass = classRes.data?.class ||
+        (classRes.data?.classes && classRes.data.classes[0]) ||
+        studentRes.data?.class ||
+        (examTrendsRes.data?.class_name ? { name: examTrendsRes.data.class_name } : null);
 
       setClassInfo(supClass);
       setStudents(studentRes.data?.students || []);
@@ -111,7 +111,7 @@ export default function TeacherDashboard() {
   return (
     <div className="p-2 sm:p-4 lg:p-6 space-y-4 sm:space-y-6 animate-in fade-in slide-in-from-bottom-10 duration-1000">
       <GlowingAlertBanner userRole="teacher" />
-      
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
         <div>
@@ -188,7 +188,7 @@ export default function TeacherDashboard() {
         </Card>
 
         {/* My Attendance Analytics */}
-        <Card className="rounded-2xl border-none shadow-sm bg-indigo-50 dark:bg-indigo-900/20 sm:col-span-3 p-3 sm:p-4">
+        {/* <Card className="rounded-2xl border-none shadow-sm bg-indigo-50 dark:bg-indigo-900/20 sm:col-span-3 p-3 sm:p-4">
           <CardHeader className="p-0 pb-3">
             <CardTitle className="text-xs font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider flex items-center gap-2">
               <UserCheck className="w-4 h-4" />
@@ -219,7 +219,7 @@ export default function TeacherDashboard() {
               </div>
             </div>
           </CardContent>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Teacher Routine Section */}
