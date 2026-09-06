@@ -142,7 +142,7 @@ export default function SignInPage() {
 
                     {/* Logo & Title */}
                     <div className="mb-6 flex items-center gap-3.5">
-                      <div className="h-16 w-16 rounded-2xl bg-white/20 backdrop-blur-md p-1 flex items-center justify-center shadow-lg border border-white/30 shrink-0">
+                      <div className="h-24 w-24 rounded-2xl bg-white/20 backdrop-blur-md p-1 flex items-center justify-center shadow-lg border border-white/30 shrink-0">
                         <img src={logo} alt="Times International School" className="h-full w-full object-cover rounded-xl" />
                       </div>
                       <div>
@@ -216,7 +216,7 @@ export default function SignInPage() {
                       <div className="flex justify-center lg:hidden items-center mb-2">
                         <div className="relative">
                           <div className="absolute inset-0 rounded-full bg-blue-500/20 blur-md"></div>
-                          <img src={logo} alt="Times International School" className="relative h-14 w-14 sm:h-16 sm:w-16 object-cover rounded-full ring-2 ring-blue-500/40 shadow-md" />
+                          <img src={logo} alt="Times International School" className="relative h-20 w-20 sm:h-16 sm:w-16 object-cover rounded-full ring-2 ring-blue-500/40 shadow-md" />
                         </div>
                       </div>
 
