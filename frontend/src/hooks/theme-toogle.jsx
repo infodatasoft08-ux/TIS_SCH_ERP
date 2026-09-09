@@ -1,11 +1,11 @@
-import { useThemeAnimation } from '@space-man/react-theme-animation'
+import { useSpacemanTheme } from '@space-man/react-theme-animation'
 
 export function ThemeToggle() {
-  const { theme, toggleTheme, ref } = useThemeAnimation()
+  const { theme, resolvedTheme, toggleTheme, ref } = useSpacemanTheme()
 
   return (
     <button ref={ref} onClick={toggleTheme} className="theme-toggle-btn">
-      {theme === 'light' ? '🌙' : '🌞'} {theme}
+      {resolvedTheme === 'light' ? '🌙' : '🌞'} {theme}
     </button>
   )
 }

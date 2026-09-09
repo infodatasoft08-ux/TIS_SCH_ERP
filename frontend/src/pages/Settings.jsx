@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { useThemeAnimation } from '@space-man/react-theme-animation';
+import { useSpacemanTheme } from '@space-man/react-theme-animation';
 import { useLanguage } from '@/context/LanguageContext';
 import { Moon, Sun, Globe, User, ShieldCheck, MenuIcon, School, Camera, Image as ImageIcon, Trash2, Plus, Loader2, Wand2, MessageCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -16,7 +16,7 @@ import { toast } from 'sonner';
 import AppVersionManagerDialog from '@/components/admin/AppVersionManagerDialog';
 
 export default function Settings() {
-    const { theme, toggleTheme, ref } = useThemeAnimation();
+    const { theme, resolvedTheme, toggleTheme, ref } = useSpacemanTheme();
     const { lang, setLang, t } = useLanguage();
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
@@ -481,13 +481,13 @@ export default function Settings() {
                                 <p className="text-sm text-muted-foreground">Toggle between light and dark theme.</p>
                             </div>
                             <div className="flex items-center gap-3">
-                                <Sun className={`h-4 w-4 ${theme === 'light' ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                                <Sun className={`h-4 w-4 ${resolvedTheme === 'light' ? 'text-amber-500' : 'text-muted-foreground'}`} />
                                 <Switch
                                     ref={ref}
-                                    checked={theme === 'dark'}
+                                    checked={resolvedTheme === 'dark'}
                                     onCheckedChange={toggleTheme}
                                 />
-                                <Moon className={`h-4 w-4 ${theme === 'dark' ? 'text-blue-500' : 'text-muted-foreground'}`} />
+                                <Moon className={`h-4 w-4 ${resolvedTheme === 'dark' ? 'text-blue-500' : 'text-muted-foreground'}`} />
                             </div>
                         </div>
                     </CardContent>

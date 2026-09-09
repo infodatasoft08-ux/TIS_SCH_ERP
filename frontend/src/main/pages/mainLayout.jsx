@@ -6,7 +6,7 @@ import { useAuth } from '@/auth/AuthContext';
 import { toast } from "sonner";
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AppSidebar from '@/widgets/sidecnSidebar';
-import { useThemeAnimation } from '@space-man/react-theme-animation';
+import { useSpacemanTheme } from '@space-man/react-theme-animation';
 import { Switch } from '@/components/ui/switch';
 import { Moon, Sun } from 'lucide-react';
 import NotificationBell from '@/components/NotificationBell';
@@ -19,13 +19,15 @@ import MobileBottomNav from '@/widgets/MobileBottomNav';
 import CustomPullToRefresh from '@/widgets/CustomPullToRefresh';
 import AnimatedLayout from '@/AnimatedLayout';
 import { AnimatePresence } from 'framer-motion';
+import LogoutConfirmModal from '@/components/LogoutConfirmModal';
 
 
 export default function MainLayout() {
-  const { theme, toggleTheme, ref } = useThemeAnimation()
+  const { theme, resolvedTheme, toggleTheme, ref } = useSpacemanTheme();
   const { t } = useLanguage();
   const { logout, loading, user } = useAuth();
   const [error, setError] = useState(null);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
   // const from = location.state?.from?.pathname || '/login';
@@ -80,7 +82,7 @@ export default function MainLayout() {
         const res = await API.get('/school-gallery/settings');
         const settings = res.data.settings || {};
 
-        if (theme === 'light') {
+        if (resolvedTheme === 'light') {
           if (settings.header_bg) document.documentElement.style.setProperty('--app-header-bg', settings.header_bg);
           if (settings.sidebar_bg) document.documentElement.style.setProperty('--app-sidebar-bg', settings.sidebar_bg);
           if (settings.main_bg) document.documentElement.style.setProperty('--app-main-bg', settings.main_bg);
@@ -102,7 +104,7 @@ export default function MainLayout() {
     };
 
     fetchBranding();
-  }, [theme]); // Re-apply on theme change
+  }, [resolvedTheme]); // Re-apply on theme change
 
 
   // disable browser back navigation and handle window close/refresh
@@ -200,7 +202,7 @@ export default function MainLayout() {
                 <Moon className="h-4 w-4 text-muted-foreground hidden md:block" />
               </div> */}
 
-                <UserProfileDropdown onLogout={userlogout} />
+                <UserProfileDropdown onLogout={() => setShowLogoutModal(true)} />
               </div>
             </header>
 
@@ -231,6 +233,13 @@ export default function MainLayout() {
           {/* Mobile Bottom Navigation Bar */}
           <MobileBottomNav user={user} />
 
+          {/* Logout Confirmation Modal */}
+          <LogoutConfirmModal
+            open={showLogoutModal}
+            onOpenChange={setShowLogoutModal}
+            onConfirm={userlogout}
+            user={user}
+          />
         </div>
       </ActionProvider>
     </SidebarProvider>

@@ -100,13 +100,22 @@ async function generatePDFFromTemplate(templateName, data, options = {}, existin
     }
 }
 
+const formatNumberIN = (val) => {
+    const num = parseFloat(val) || 0;
+    const hasDecimals = num % 1 !== 0;
+    return new Intl.NumberFormat('en-IN', {
+        maximumFractionDigits: hasDecimals ? 2 : 0,
+        minimumFractionDigits: 0
+    }).format(num);
+};
+
 const generateInvoicePDF = async (invoice) => {
     const date = invoice.created_at ? new Date(invoice.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
 
     // Prepare row items
     const rowItems = [
-        ...(invoice.lines || []).map(l => ({ name: l.fee_name, amount: parseFloat(l.amount).toFixed(1) })),
-        ...(invoice.fines || []).map(f => ({ name: f.fine_type.startsWith('previous_') ? (f.description || f.fine_type) : `Fine: ${f.description || f.fine_type}`, amount: parseFloat(f.amount).toFixed(1) }))
+        ...(invoice.lines || []).map(l => ({ name: l.fee_name, amount: formatNumberIN(l.amount) })),
+        ...(invoice.fines || []).map(f => ({ name: f.fine_type.startsWith('previous_') ? (f.description || f.fine_type) : `Fine: ${f.description || f.fine_type}`, amount: formatNumberIN(f.amount) }))
     ];
 
     // ✅ ADD DISCOUNT ROW
@@ -114,15 +123,15 @@ const generateInvoicePDF = async (invoice) => {
     if (discount > 0) {
         rowItems.push({
             name: `Discount`,
-            amount: -discount // negative value
+            amount: `-${formatNumberIN(discount)}`
         });
     }
 
-    // const amount = (parseFloat(invoice.amount_due) || 0) - (parseFloat(invoice.discount_amount) || 0);
     const amount = (parseFloat(invoice.amount_due) || 0);
+    const rawSubtotal = (invoice.lines || []).reduce((acc, l) => acc + (parseFloat(l.amount) || 0), 0) + 
+                        (invoice.fines || []).reduce((acc, f) => acc + (parseFloat(f.amount) || 0), 0);
 
-    const subtotal = rowItems.reduce((acc, item) => acc + parseFloat(item.amount), 0).toFixed(1);
-    // const subtotal = rowItems.reduce((acc, item) => acc + item.amount, 0);
+    const subtotal = formatNumberIN(rawSubtotal);
     const amountInWords = toWords(Math.round(amount));
 
     const data = {
@@ -131,8 +140,8 @@ const generateInvoicePDF = async (invoice) => {
             date,
             subtotal,
             amount_in_words: amountInWords,
-            amount_due: (parseFloat(invoice.amount_due)).toFixed(1),
-            discount_amount: invoice.discount_amount ? parseFloat(invoice.discount_amount).toFixed(1) : null
+            amount_due: formatNumberIN(invoice.amount_due),
+            discount_amount: invoice.discount_amount ? formatNumberIN(invoice.discount_amount) : null
         },
         rowItems
     };
@@ -156,10 +165,12 @@ const generatePaymentReceiptPDF = async (payment) => {
             ...payment,
             date,
             amount_in_words: amountInWords,
-            fines_amount: fineAmount,
-            total_amount: (parseFloat(payment.amount_due) + parseFloat(payment.discount_amount)).toFixed(2),
-            paid_amount: parseFloat(payment.paid_amount).toFixed(2),
-            balance: bal.toFixed(2),
+            fines_amount: formatNumberIN(fineAmount),
+            total_amount: formatNumberIN(parseFloat(payment.amount_due) + parseFloat(payment.discount_amount || 0)),
+            paid_amount: formatNumberIN(payment.paid_amount),
+            balance: formatNumberIN(bal),
+            amount_due: formatNumberIN(payment.amount_due),
+            discount_amount: payment.discount_amount ? formatNumberIN(payment.discount_amount) : null,
             hasOutstanding: bal > 0
         }
     };
@@ -188,22 +199,23 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
     // For combined, we'll process both templates and wrap them
     const invoiceDate = invoice.created_at ? new Date(invoice.created_at).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
     const invoiceRowItems = [
-        ...(invoice.lines || []).map(l => ({ name: l.fee_name, amount: parseFloat(l.amount).toFixed(2) })),
-        ...(invoice.fines || []).map(f => ({ name: f.fine_type.startsWith('previous_') ? (f.description || f.fine_type) : `Fine: ${f.description || f.fine_type}`, amount: parseFloat(f.amount).toFixed(2) }))
+        ...(invoice.lines || []).map(l => ({ name: l.fee_name, amount: formatNumberIN(l.amount) })),
+        ...(invoice.fines || []).map(f => ({ name: f.fine_type.startsWith('previous_') ? (f.description || f.fine_type) : `Fine: ${f.description || f.fine_type}`, amount: formatNumberIN(f.amount) }))
     ];
 
     const discount = parseFloat(invoice.discount_amount || 0);
     if (discount > 0) {
         invoiceRowItems.push({
             name: `Discount`,
-            amount: -discount
+            amount: `-${formatNumberIN(discount)}`
         });
     }
 
-    // const amount = (parseFloat(invoice.amount_due) || 0) + (parseFloat(invoice.discount_amount) || 0);
     const amount = (parseFloat(invoice.amount_due) || 0);
 
-    const invoiceSubtotal = invoiceRowItems.reduce((acc, item) => acc + parseFloat(item.amount), 0).toFixed(2);
+    const rawInvoiceSubtotal = (invoice.lines || []).reduce((acc, l) => acc + (parseFloat(l.amount) || 0), 0) + 
+                               (invoice.fines || []).reduce((acc, f) => acc + (parseFloat(f.amount) || 0), 0);
+    const invoiceSubtotal = formatNumberIN(rawInvoiceSubtotal);
     const invoiceAmountInWords = toWords(Math.round(amount));
 
     const receiptDate = payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
@@ -257,9 +269,8 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
             date: invoiceDate,
             subtotal: invoiceSubtotal,
             amount_in_words: invoiceAmountInWords,
-            // amount_due: (parseFloat(invoice.amount_due) + parseFloat(invoice.discount_amount)).toFixed(2),
-            amount_due: (parseFloat(invoice.amount_due)).toFixed(2),
-            discount_amount: invoice.discount_amount ? parseFloat(invoice.discount_amount).toFixed(2) : null
+            amount_due: formatNumberIN(invoice.amount_due),
+            discount_amount: invoice.discount_amount ? formatNumberIN(invoice.discount_amount) : null
         },
         rowItems: invoiceRowItems,
         logoData
@@ -271,9 +282,12 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
             ...payment,
             date: receiptDate,
             amount_in_words: receiptAmountInWords,
-            total_amount: (parseFloat(payment.amount_due) + parseFloat(payment.discount_amount)).toFixed(2),
-            paid_amount: parseFloat(payment.paid_amount).toFixed(2),
-            balance: bal.toFixed(2),
+            fines_amount: formatNumberIN(payment.fine_amount || 0),
+            total_amount: formatNumberIN(parseFloat(payment.amount_due) + parseFloat(payment.discount_amount || 0)),
+            paid_amount: formatNumberIN(payment.paid_amount),
+            balance: formatNumberIN(bal),
+            amount_due: formatNumberIN(payment.amount_due),
+            discount_amount: payment.discount_amount ? formatNumberIN(payment.discount_amount) : null,
             hasOutstanding: bal > 0
         },
         logoData

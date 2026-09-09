@@ -198,10 +198,23 @@ export default function AdminDashboard() {
     );
   }
 
+  const formatFeesCollected = (rawVal) => {
+    const num = Number(rawVal) || 0;
+    const hasDecimals = num % 1 !== 0;
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      maximumFractionDigits: hasDecimals ? 2 : 0,
+      minimumFractionDigits: 0
+    }).format(num);
+  };
+
+  const formattedFeeValue = formatFeesCollected(data.summary.feesCollectedYear);
+
   const stats = [
     { label: 'Total Students', value: data.summary.totalStudents, icon: GraduationCap, color: 'text-blue-400', bg: 'bg-blue-400/10', trend: data.summary.trends?.students || '+0%' },
     { label: 'Total Teachers', value: data.summary.totalTeachers, icon: Users, color: 'text-purple-400', bg: 'bg-purple-400/10', trend: data.summary.trends?.teachers || '+0%' },
-    { label: 'Fees Collected', value: `₹${(data.summary.feesCollectedYear || 0).toLocaleString()}`, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-400/10', trend: data.summary.trends?.fees || '+0%' },
+    { label: 'Fees Collected', value: formattedFeeValue, fullTooltip: formattedFeeValue, icon: DollarSign, color: 'text-emerald-400', bg: 'bg-emerald-400/10', trend: data.summary.trends?.fees || '+0%' },
     { label: 'Today\'s Attendance', value: `${data.attendanceData.find(a => a.name === 'present')?.value || 0}`, icon: Activity, color: 'text-amber-400', bg: 'bg-amber-400/10', trend: data.summary.trends?.attendance || '0%' },
   ];
 
@@ -238,20 +251,32 @@ export default function AdminDashboard() {
             ? 'text-emerald-500 bg-emerald-500/10'
             : 'text-gray-400 bg-gray-500/10';
 
+          const valString = String(stat.value);
+          const fontSizeClass = valString.length > 14
+            ? 'text-lg sm:text-xl'
+            : valString.length > 10
+              ? 'text-xl sm:text-2xl'
+              : 'text-2xl sm:text-3xl';
+
           return (
-            <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md relative overflow-hidden group hover:border-blue-500/30 transition-all cursor-pointer" onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}>
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider">{stat.label}</span>
-                <div className={`p-2 rounded-xl ${stat.bg}`}>
+            <div 
+              key={idx} 
+              className="bg-gray-50 dark:bg-gray-900/50 p-4 sm:p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-md relative overflow-hidden group hover:border-blue-500/30 transition-all cursor-pointer" 
+              onClick={() => stat.label === "Total Students" ? navigate("/school/students/list") : stat.label === "Total Teachers" ? navigate("/school/teachers/list") : stat.label === "Fees Collected" ? navigate("/school/finance/transactions/list") : navigate("/school/class/attendance")}
+              title={stat.fullTooltip || valString}
+            >
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs font-semibold text-gray-400 uppercase tracking-wider truncate min-w-0 flex-1">{stat.label}</span>
+                <div className={`p-2 rounded-xl ${stat.bg} shrink-0`}>
                   <stat.icon className={`w-5 h-5 ${stat.color}`} />
                 </div>
               </div>
-              <div className="mt-3 flex items-baseline justify-between">
-                <h3 className="text-2xl sm:text-3xl font-black">{stat.value}</h3>
+              <div className="mt-3 flex items-baseline justify-between gap-2 min-w-0">
+                <h3 className={`font-black tracking-tight truncate min-w-0 flex-1 ${fontSizeClass}`}>{stat.value}</h3>
                 {stat.trend && (
-                  <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 ${trendColorClass}`}>
+                  <span className={`text-xs font-bold px-2 py-0.5 rounded-lg flex items-center gap-1 shrink-0 ${trendColorClass}`}>
                     <TrendIconComponent className="w-3 h-3 shrink-0" />
-                    <span>{stat.trend}</span>
+                    <span className="truncate">{stat.trend}</span>
                   </span>
                 )}
               </div>

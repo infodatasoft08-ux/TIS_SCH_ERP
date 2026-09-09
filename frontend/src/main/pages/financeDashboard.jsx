@@ -101,11 +101,14 @@ export default function FinanceDashboard() {
   }
 
   const formatCurrency = (amount) => {
+    const num = Number(amount) || 0;
+    const hasDecimals = num % 1 !== 0;
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
       currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(amount);
+      maximumFractionDigits: hasDecimals ? 2 : 0,
+      minimumFractionDigits: 0
+    }).format(num);
   };
 
   const formatDate = (dateString) => {
@@ -251,16 +254,16 @@ export default function FinanceDashboard() {
       <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-4 gap-6">
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Outstanding</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats.totalOutstanding)}</p>
-                <div className="flex items-center text-xs text-red-600 mt-1">
-                  <TrendingUp className="h-3 w-3 mr-1" />
-                  Requires attention
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1 pr-1">
+                <p className="text-sm text-gray-500 truncate">Total Outstanding</p>
+                <p className="text-xl sm:text-2xl font-bold truncate" title={formatCurrency(stats.totalOutstanding)}>{formatCurrency(stats.totalOutstanding)}</p>
+                <div className="flex items-center text-xs text-red-600 mt-1 truncate">
+                  <TrendingUp className="h-3 w-3 mr-1 shrink-0" />
+                  <span className="truncate">Requires attention</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-red-100 flex items-center justify-center shrink-0">
                 <DollarSign className="h-6 w-6 text-red-600" />
               </div>
             </div>
@@ -269,16 +272,16 @@ export default function FinanceDashboard() {
 
         <Card>
           <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-500">Total Collected</p>
-                <p className="text-2xl font-bold">{formatCurrency(stats.totalCollected)}</p>
-                <div className="flex items-center text-xs text-green-600 mt-1">
-                  <ArrowUpRight className="h-3 w-3 mr-1" />
-                  This month
+            <div className="flex items-center justify-between gap-3">
+              <div className="min-w-0 flex-1 pr-1">
+                <p className="text-sm text-gray-500 truncate">Total Collected</p>
+                <p className="text-xl sm:text-2xl font-bold truncate" title={formatCurrency(stats.totalCollected)}>{formatCurrency(stats.totalCollected)}</p>
+                <div className="flex items-center text-xs text-green-600 mt-1 truncate">
+                  <ArrowUpRight className="h-3 w-3 mr-1 shrink-0" />
+                  <span className="truncate">This month</span>
                 </div>
               </div>
-              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center">
+              <div className="h-12 w-12 rounded-full bg-green-100 flex items-center justify-center shrink-0">
                 <CreditCard className="h-6 w-6 text-green-600" />
               </div>
             </div>
