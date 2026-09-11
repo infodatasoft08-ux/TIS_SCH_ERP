@@ -1,5 +1,5 @@
 // src/pages/finance/Invoices.js
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import API from "@/api";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -67,7 +67,18 @@ export default function Invoices() {
   const [filteredInvoices, setFilteredInvoices] = useState([]);
   const [loading, setLoading] = useState(false);
   const [loadingStudents, setLoadingStudents] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const getSavedFilters = () => {
+    try {
+      const saved = sessionStorage.getItem("invoice_management_filters");
+      return saved ? JSON.parse(saved) : null;
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const initialFilters = getSavedFilters();
+
+  const [searchQuery, setSearchQuery] = useState(initialFilters?.searchQuery || "");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [students, setStudents] = useState([]);
   const [classes, setClasses] = useState([]);
@@ -120,12 +131,12 @@ export default function Invoices() {
     is_auto_generate: false
   });
 
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(10);
+  const [currentPage, setCurrentPage] = useState(initialFilters?.currentPage || 1);
+  const [pageSize, setPageSize] = useState(initialFilters?.pageSize || 10);
   const [totalInvoices, setTotalInvoices] = useState(0);
   const [totalDue, setTotalDue] = useState(0);
-  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("");
-  const [filterMonth, setFilterMonth] = useState("all");
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialFilters?.searchQuery || "");
+  const [filterMonth, setFilterMonth] = useState(initialFilters?.filterMonth || "all");
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState(false);
@@ -134,9 +145,26 @@ export default function Invoices() {
   const [academicYears, setAcademicYears] = useState([]);
   const [allGrades, setAllGrades] = useState([]);
   const [allClasses, setAllClasses] = useState([]);
-  const [filterAcademicYear, setFilterAcademicYear] = useState("all");
-  const [filterGrade, setFilterGrade] = useState("all");
-  const [filterClass, setFilterClass] = useState("all");
+  const [filterAcademicYear, setFilterAcademicYear] = useState(initialFilters?.filterAcademicYear || "all");
+  const [filterGrade, setFilterGrade] = useState(initialFilters?.filterGrade || "all");
+  const [filterClass, setFilterClass] = useState(initialFilters?.filterClass || "all");
+
+  const isFirstSearchRender = useRef(true);
+
+  useEffect(() => {
+    sessionStorage.setItem(
+      "invoice_management_filters",
+      JSON.stringify({
+        searchQuery,
+        filterAcademicYear,
+        filterGrade,
+        filterClass,
+        filterMonth,
+        currentPage,
+        pageSize
+      })
+    );
+  }, [searchQuery, filterAcademicYear, filterGrade, filterClass, filterMonth, currentPage, pageSize]);
 
   useEffect(() => {
     // loadInvoices();
@@ -145,6 +173,10 @@ export default function Invoices() {
   }, []);
 
   useEffect(() => {
+    if (isFirstSearchRender.current) {
+      isFirstSearchRender.current = false;
+      return;
+    }
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
       setCurrentPage(1);
@@ -1242,10 +1274,14 @@ export default function Invoices() {
               size="sm"
               className="h-9 text-xs font-bold rounded-xl text-gray-600 dark:text-gray-400"
               onClick={() => {
+                setSearchQuery("");
+                setDebouncedSearchQuery("");
                 setFilterAcademicYear("all");
                 setFilterGrade("all");
                 setFilterClass("all");
                 setFilterMonth("all");
+                setCurrentPage(1);
+                sessionStorage.removeItem("invoice_management_filters");
                 loadInvoices();
               }}
             >
@@ -1265,7 +1301,7 @@ export default function Invoices() {
       </Card>
 
       {/* Search and Stats */}
-      < Card >
+      <Card>
         <CardContent className="p-2">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
             <div className="relative w-full md:w-96">

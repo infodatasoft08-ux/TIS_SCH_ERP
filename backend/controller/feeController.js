@@ -474,14 +474,26 @@ const CreateInvoice = async (req, res) => {
       );
 
       const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
-      const baseAmount = Number(pinv.amount_due) - totalFinesAmount;
 
-      let remainingPaid = Number(pinv.amount_paid);
+      // Fetch gross base amount from invoice_lines
+      const [lineRows] = await conn.execute(
+        `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
+        [pinv.id]
+      );
+      let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
+      let grossTotal = totalFinesAmount + grossBaseAmount;
 
-      // We will allocate remainingPaid in this order:
-      // 1. Existing previous_dues/previous_fines (FIFO)
-      // 2. Regular fines
-      // 3. Base fees
+      if (grossTotal < Number(pinv.amount_due)) {
+        grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
+        grossTotal = Number(pinv.amount_due);
+      }
+      if (grossTotal < balance) {
+        grossBaseAmount += (balance - grossTotal);
+        grossTotal = balance;
+      }
+
+      // Total credit (discount + payments) applied against gross total down to net unpaid balance
+      let totalCredit = Math.max(0, grossTotal - balance);
 
       const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
       const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
@@ -489,9 +501,9 @@ const CreateInvoice = async (req, res) => {
       // 1. Process previous carry-forwards
       for (const f of prevFines) {
         const amt = Number(f.amount);
-        const paid = Math.min(remainingPaid, amt);
-        remainingPaid -= paid;
-        const unpaid = amt - paid;
+        const covered = Math.min(totalCredit, amt);
+        totalCredit -= covered;
+        const unpaid = amt - covered;
         if (unpaid > 0) {
           carried_fines.push({
             type: f.fine_type,
@@ -506,9 +518,9 @@ const CreateInvoice = async (req, res) => {
       let unpaidRegFines = 0;
       for (const f of regFines) {
         const amt = Number(f.amount);
-        const paid = Math.min(remainingPaid, amt);
-        remainingPaid -= paid;
-        unpaidRegFines += (amt - paid);
+        const covered = Math.min(totalCredit, amt);
+        totalCredit -= covered;
+        unpaidRegFines += (amt - covered);
       }
 
       if (unpaidRegFines > 0) {
@@ -527,7 +539,10 @@ const CreateInvoice = async (req, res) => {
       }
 
       // 3. Process base fees
-      const unpaidBase = baseAmount - remainingPaid;
+      const coveredBase = Math.min(totalCredit, grossBaseAmount);
+      totalCredit -= coveredBase;
+      const unpaidBase = grossBaseAmount - coveredBase;
+
       if (unpaidBase > 0) {
         const pinvDate = new Date(pinv.period_start);
         const pinvEndDate = new Date(pinv.period_end);
@@ -765,9 +780,26 @@ const CreateBulkInvoices = async (req, res) => {
         );
 
         const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
-        const baseAmount = Number(pinv.amount_due) - totalFinesAmount;
 
-        let remainingPaid = Number(pinv.amount_paid);
+        // Fetch gross base amount from invoice_lines
+        const [lineRows] = await conn.execute(
+          `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
+          [pinv.id]
+        );
+        let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
+        let grossTotal = totalFinesAmount + grossBaseAmount;
+
+        if (grossTotal < Number(pinv.amount_due)) {
+          grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
+          grossTotal = Number(pinv.amount_due);
+        }
+        if (grossTotal < balance) {
+          grossBaseAmount += (balance - grossTotal);
+          grossTotal = balance;
+        }
+
+        // Total credit (discount + payments) applied against gross total down to net unpaid balance
+        let totalCredit = Math.max(0, grossTotal - balance);
 
         const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
         const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
@@ -775,9 +807,9 @@ const CreateBulkInvoices = async (req, res) => {
         // 1. Process previous carry-forwards
         for (const f of prevFines) {
           const amt = Number(f.amount);
-          const paid = Math.min(remainingPaid, amt);
-          remainingPaid -= paid;
-          const unpaid = amt - paid;
+          const covered = Math.min(totalCredit, amt);
+          totalCredit -= covered;
+          const unpaid = amt - covered;
           if (unpaid > 0) {
             carried_fines.push({
               type: f.fine_type,
@@ -792,9 +824,9 @@ const CreateBulkInvoices = async (req, res) => {
         let unpaidRegFines = 0;
         for (const f of regFines) {
           const amt = Number(f.amount);
-          const paid = Math.min(remainingPaid, amt);
-          remainingPaid -= paid;
-          unpaidRegFines += (amt - paid);
+          const covered = Math.min(totalCredit, amt);
+          totalCredit -= covered;
+          unpaidRegFines += (amt - covered);
         }
 
         if (unpaidRegFines > 0) {
@@ -813,7 +845,10 @@ const CreateBulkInvoices = async (req, res) => {
         }
 
         // 3. Process base fees
-        const unpaidBase = baseAmount - remainingPaid;
+        const coveredBase = Math.min(totalCredit, grossBaseAmount);
+        totalCredit -= coveredBase;
+        const unpaidBase = grossBaseAmount - coveredBase;
+
         if (unpaidBase > 0) {
           const pinvDate = new Date(pinv.period_start);
           const pinvEndDate = new Date(pinv.period_end);

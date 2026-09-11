@@ -768,7 +768,7 @@ export default function InvoiceDetails() {
                     invoice.fines.map((fine) => (
                       <TableRow key={fine.id}>
                         <TableCell>
-                          <div className="font-medium">{fine.fine_type}</div>
+                          <div className="font-medium capitalize">{fine.fine_type ? fine.fine_type.replace(/_/g, ' ') : ''}</div>
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">{fine.description}</Badge>
@@ -944,7 +944,7 @@ export default function InvoiceDetails() {
                 invoice.fines.map((fine) => (
                   <Card key={fine.id} className="p-4 flex flex-col gap-3">
                     <div className="flex justify-between items-start">
-                      <div className="font-medium">{fine.fine_type}</div>
+                      <div className="font-medium capitalize">{fine.fine_type ? fine.fine_type.replace(/_/g, ' ') : ''}</div>
                       <div className="font-bold text-red-600 dark:text-red-400">{formatCurrency(fine.amount)}</div>
                     </div>
                     <div>
