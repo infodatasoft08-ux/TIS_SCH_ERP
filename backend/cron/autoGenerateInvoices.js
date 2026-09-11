@@ -57,112 +57,118 @@ const runAutoGenerateInvoices = async () => {
 
         const [prevInvoices] = await conn.execute(
           `SELECT id, amount_due, amount_paid, period_start, period_end FROM student_invoices 
-           WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')`,
+           WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')
+           ORDER BY period_end DESC, id DESC`,
           [oldInv.student_id]
         );
 
         let carried_fines = [];
         let total_carried_amount = 0;
 
-        for (const pinv of prevInvoices) {
+        if (prevInvoices.length > 0) {
+          // Mark all previous active invoices as carried_forward
+          for (const pinv of prevInvoices) {
+            await conn.execute(
+              `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
+              [pinv.id]
+            );
+          }
+
+          // Carry forward ONLY from the latest previous invoice, which contains cumulative dues
+          const pinv = prevInvoices[0];
           const balance = Number(pinv.amount_due) - Number(pinv.amount_paid);
-          if (balance <= 0) continue;
 
-          // Mark the invoice as carried forward
-          await conn.execute(
-            `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
-            [pinv.id]
-          );
+          if (balance > 0) {
+            // Fetch all non-reversed fines for this invoice
+            const [fines] = await conn.execute(
+              `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
+              [pinv.id]
+            );
 
-          // Fetch all non-reversed fines for this invoice
-          const [fines] = await conn.execute(
-            `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
-            [pinv.id]
-          );
+            const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
 
-          const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
+            // Fetch gross base amount from invoice_lines
+            const [lineRows] = await conn.execute(
+              `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
+              [pinv.id]
+            );
+            let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
+            let grossTotal = totalFinesAmount + grossBaseAmount;
 
-          // Fetch gross base amount from invoice_lines
-          const [lineRows] = await conn.execute(
-            `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
-            [pinv.id]
-          );
-          let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
-          let grossTotal = totalFinesAmount + grossBaseAmount;
-
-          if (grossTotal < Number(pinv.amount_due)) {
-            grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
-            grossTotal = Number(pinv.amount_due);
-          }
-          if (grossTotal < balance) {
-            grossBaseAmount += (balance - grossTotal);
-            grossTotal = balance;
-          }
-
-          // Total credit (discount + payments) applied against gross total down to net unpaid balance
-          let totalCredit = Math.max(0, grossTotal - balance);
-
-          const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
-          const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
-
-          // 1. Process previous carry-forwards
-          for (const f of prevFines) {
-            const amt = Number(f.amount);
-            const covered = Math.min(totalCredit, amt);
-            totalCredit -= covered;
-            const unpaid = amt - covered;
-            if (unpaid > 0) {
-              carried_fines.push({
-                type: f.fine_type,
-                description: f.description,
-                amount: unpaid
-              });
-              total_carried_amount += unpaid;
+            if (grossTotal < Number(pinv.amount_due)) {
+              grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
+              grossTotal = Number(pinv.amount_due);
             }
-          }
+            if (grossTotal < balance) {
+              grossBaseAmount += (balance - grossTotal);
+              grossTotal = balance;
+            }
 
-          // 2. Process regular fines
-          let unpaidRegFines = 0;
-          for (const f of regFines) {
-            const amt = Number(f.amount);
-            const covered = Math.min(totalCredit, amt);
-            totalCredit -= covered;
-            unpaidRegFines += (amt - covered);
-          }
+            // Total credit (discount + payments) applied against gross total down to net unpaid balance
+            let totalCredit = Math.max(0, grossTotal - balance);
 
-          if (unpaidRegFines > 0) {
-            const pinvDate = new Date(pinv.period_start);
-            const pinvEndDate = new Date(pinv.period_end);
-            const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
-            const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
-            const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+            const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
+            const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
 
-            carried_fines.push({
-              type: 'previous_fines',
-              description: `Previous Fine Dues (${periodStr})`,
-              amount: unpaidRegFines
-            });
-            total_carried_amount += unpaidRegFines;
-          }
+            // 1. Process previous carry-forwards
+            for (const f of prevFines) {
+              const amt = Number(f.amount);
+              const covered = Math.min(totalCredit, amt);
+              totalCredit -= covered;
+              const unpaid = amt - covered;
+              if (unpaid > 0) {
+                carried_fines.push({
+                  type: f.fine_type,
+                  description: f.description,
+                  amount: unpaid
+                });
+                total_carried_amount += unpaid;
+              }
+            }
 
-          // 3. Process base fees
-          const coveredBase = Math.min(totalCredit, grossBaseAmount);
-          totalCredit -= coveredBase;
-          const unpaidBase = grossBaseAmount - coveredBase;
+            // 2. Process regular fines
+            let unpaidRegFines = 0;
+            for (const f of regFines) {
+              const amt = Number(f.amount);
+              const covered = Math.min(totalCredit, amt);
+              totalCredit -= covered;
+              unpaidRegFines += (amt - covered);
+            }
 
-          if (unpaidBase > 0) {
-            const pinvDate = new Date(pinv.period_start);
-            const pinvEndDate = new Date(pinv.period_end);
-            const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-            const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-            const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+            if (unpaidRegFines > 0) {
+              const pinvDate = new Date(pinv.period_start);
+              const pinvEndDate = new Date(pinv.period_end);
+              const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
+              const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
+              const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
 
-            carried_fines.push({
-              type: 'previous_dues',
-              description: `Payment Dues (${periodStr})`,
-              amount: unpaidBase
-            });
-            total_carried_amount += unpaidBase;
+              carried_fines.push({
+                type: 'previous_fines',
+                description: `Previous Fine Dues (${periodStr})`,
+                amount: unpaidRegFines
+              });
+              total_carried_amount += unpaidRegFines;
+            }
+
+            // 3. Process base fees
+            const coveredBase = Math.min(totalCredit, grossBaseAmount);
+            totalCredit -= coveredBase;
+            const unpaidBase = grossBaseAmount - coveredBase;
+
+            if (unpaidBase > 0) {
+              const pinvDate = new Date(pinv.period_start);
+              const pinvEndDate = new Date(pinv.period_end);
+              const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+              const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+              const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+
+              carried_fines.push({
+                type: 'previous_dues',
+                description: `Payment Dues (${periodStr})`,
+                amount: unpaidBase
+              });
+              total_carried_amount += unpaidBase;
+            }
           }
         }
 

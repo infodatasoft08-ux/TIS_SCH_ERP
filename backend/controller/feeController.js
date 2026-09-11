@@ -426,136 +426,118 @@ const CreateInvoice = async (req, res) => {
 
     const [prevInvoices] = await conn.execute(
       `SELECT id, amount_due, amount_paid, period_start, period_end FROM student_invoices 
-       WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')`,
+       WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')
+       ORDER BY period_end DESC, id DESC`,
       [student_id]
     );
-
-    // let prev_payment_dues = 0;
-    // let prev_fine_dues = 0;
-    // let prev_months = [];
 
     let carried_fines = [];
     let total_carried_amount = 0;
 
-    // for (const pinv of prevInvoices) {
-    //   const bal = Math.max(0, Number(pinv.amount_due) - Number(pinv.amount_paid));
-    //   if (bal > 0) {
-    //     const [fRows] = await conn.execute(`SELECT amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0 AND fine_type NOT LIKE 'previous_%'`, [pinv.id]);
-    //     const totalFines = fRows.reduce((acc, f) => acc + Number(f.amount), 0);
+    if (prevInvoices.length > 0) {
+      // Mark all previous active invoices as carried_forward
+      for (const pinv of prevInvoices) {
+        await conn.execute(
+          `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
+          [pinv.id]
+        );
+      }
 
-    //     const unpaidFines = Math.min(bal, totalFines);
-    //     const unpaidFees = bal - unpaidFines;
-
-    //     prev_fine_dues += unpaidFines;
-    //     prev_payment_dues += unpaidFees;
-
-    //     const pinvDate = new Date(pinv.period_start);
-    //     const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
-    //     if (!prev_months.includes(monthName)) {
-    //        prev_months.push(monthName);
-    //     }
-    //   }
-    // }
-
-    for (const pinv of prevInvoices) {
+      // Carry forward ONLY from the latest previous invoice, which contains cumulative dues
+      const pinv = prevInvoices[0];
       const balance = Number(pinv.amount_due) - Number(pinv.amount_paid);
-      if (balance <= 0) continue;
 
-      // Mark the invoice as carried forward
-      await conn.execute(
-        `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
-        [pinv.id]
-      );
+      if (balance > 0) {
+        // Fetch all non-reversed fines for this invoice
+        const [fines] = await conn.execute(
+          `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
+          [pinv.id]
+        );
 
-      // Fetch all non-reversed fines for this invoice
-      const [fines] = await conn.execute(
-        `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
-        [pinv.id]
-      );
+        const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
 
-      const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
+        // Fetch gross base amount from invoice_lines
+        const [lineRows] = await conn.execute(
+          `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
+          [pinv.id]
+        );
+        let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
+        let grossTotal = totalFinesAmount + grossBaseAmount;
 
-      // Fetch gross base amount from invoice_lines
-      const [lineRows] = await conn.execute(
-        `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
-        [pinv.id]
-      );
-      let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
-      let grossTotal = totalFinesAmount + grossBaseAmount;
-
-      if (grossTotal < Number(pinv.amount_due)) {
-        grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
-        grossTotal = Number(pinv.amount_due);
-      }
-      if (grossTotal < balance) {
-        grossBaseAmount += (balance - grossTotal);
-        grossTotal = balance;
-      }
-
-      // Total credit (discount + payments) applied against gross total down to net unpaid balance
-      let totalCredit = Math.max(0, grossTotal - balance);
-
-      const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
-      const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
-
-      // 1. Process previous carry-forwards
-      for (const f of prevFines) {
-        const amt = Number(f.amount);
-        const covered = Math.min(totalCredit, amt);
-        totalCredit -= covered;
-        const unpaid = amt - covered;
-        if (unpaid > 0) {
-          carried_fines.push({
-            type: f.fine_type,
-            description: f.description,
-            amount: unpaid
-          });
-          total_carried_amount += unpaid;
+        if (grossTotal < Number(pinv.amount_due)) {
+          grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
+          grossTotal = Number(pinv.amount_due);
         }
-      }
+        if (grossTotal < balance) {
+          grossBaseAmount += (balance - grossTotal);
+          grossTotal = balance;
+        }
 
-      // 2. Process regular fines of this invoice
-      let unpaidRegFines = 0;
-      for (const f of regFines) {
-        const amt = Number(f.amount);
-        const covered = Math.min(totalCredit, amt);
-        totalCredit -= covered;
-        unpaidRegFines += (amt - covered);
-      }
+        // Total credit (discount + payments) applied against gross total down to net unpaid balance
+        let totalCredit = Math.max(0, grossTotal - balance);
 
-      if (unpaidRegFines > 0) {
-        const pinvDate = new Date(pinv.period_start);
-        const pinvEndDate = new Date(pinv.period_end);
-        const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
-        const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
-        const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+        const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
+        const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
 
-        carried_fines.push({
-          type: 'previous_fines',
-          description: `Previous Fine Dues (${periodStr})`,
-          amount: unpaidRegFines
-        });
-        total_carried_amount += unpaidRegFines;
-      }
+        // 1. Process previous carry-forwards
+        for (const f of prevFines) {
+          const amt = Number(f.amount);
+          const covered = Math.min(totalCredit, amt);
+          totalCredit -= covered;
+          const unpaid = amt - covered;
+          if (unpaid > 0) {
+            carried_fines.push({
+              type: f.fine_type,
+              description: f.description,
+              amount: unpaid
+            });
+            total_carried_amount += unpaid;
+          }
+        }
 
-      // 3. Process base fees
-      const coveredBase = Math.min(totalCredit, grossBaseAmount);
-      totalCredit -= coveredBase;
-      const unpaidBase = grossBaseAmount - coveredBase;
+        // 2. Process regular fines of this invoice
+        let unpaidRegFines = 0;
+        for (const f of regFines) {
+          const amt = Number(f.amount);
+          const covered = Math.min(totalCredit, amt);
+          totalCredit -= covered;
+          unpaidRegFines += (amt - covered);
+        }
 
-      if (unpaidBase > 0) {
-        const pinvDate = new Date(pinv.period_start);
-        const pinvEndDate = new Date(pinv.period_end);
-        const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-        const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-        const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+        if (unpaidRegFines > 0) {
+          const pinvDate = new Date(pinv.period_start);
+          const pinvEndDate = new Date(pinv.period_end);
+          const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
+          const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
+          const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
 
-        carried_fines.push({
-          type: 'previous_dues',
-          description: `Payment Dues (${periodStr})`,
-          amount: unpaidBase
-        });
-        total_carried_amount += unpaidBase;
+          carried_fines.push({
+            type: 'previous_fines',
+            description: `Previous Fine Dues (${periodStr})`,
+            amount: unpaidRegFines
+          });
+          total_carried_amount += unpaidRegFines;
+        }
+
+        // 3. Process base fees
+        const coveredBase = Math.min(totalCredit, grossBaseAmount);
+        totalCredit -= coveredBase;
+        const unpaidBase = grossBaseAmount - coveredBase;
+
+        if (unpaidBase > 0) {
+          const pinvDate = new Date(pinv.period_start);
+          const pinvEndDate = new Date(pinv.period_end);
+          const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+          const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+          const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+
+          carried_fines.push({
+            type: 'previous_dues',
+            description: `Payment Dues (${periodStr})`,
+            amount: unpaidBase
+          });
+          total_carried_amount += unpaidBase;
+        }
       }
     }
 
@@ -756,112 +738,118 @@ const CreateBulkInvoices = async (req, res) => {
       // Carry forward logic for this student
       const [prevInvoices] = await conn.execute(
         `SELECT id, amount_due, amount_paid, period_start, period_end FROM student_invoices 
-         WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')`,
+         WHERE student_id = ? AND status IN ('pending', 'partially_paid', 'overdue')
+         ORDER BY period_end DESC, id DESC`,
         [s.id]
       );
 
       let carried_fines = [];
       let total_carried_amount = 0;
 
-      for (const pinv of prevInvoices) {
+      if (prevInvoices.length > 0) {
+        // Mark all previous active invoices as carried_forward
+        for (const pinv of prevInvoices) {
+          await conn.execute(
+            `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
+            [pinv.id]
+          );
+        }
+
+        // Carry forward ONLY from the latest previous invoice, which contains cumulative dues
+        const pinv = prevInvoices[0];
         const balance = Number(pinv.amount_due) - Number(pinv.amount_paid);
-        if (balance <= 0) continue;
 
-        // Mark the invoice as carried forward
-        await conn.execute(
-          `UPDATE student_invoices SET status = 'carried_forward' WHERE id = ?`,
-          [pinv.id]
-        );
+        if (balance > 0) {
+          // Fetch all non-reversed fines for this invoice
+          const [fines] = await conn.execute(
+            `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
+            [pinv.id]
+          );
 
-        // Fetch all non-reversed fines for this invoice
-        const [fines] = await conn.execute(
-          `SELECT fine_type, description, amount FROM invoice_fines WHERE invoice_id = ? AND is_reversed = 0`,
-          [pinv.id]
-        );
+          const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
 
-        const totalFinesAmount = fines.reduce((acc, f) => acc + Number(f.amount), 0);
+          // Fetch gross base amount from invoice_lines
+          const [lineRows] = await conn.execute(
+            `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
+            [pinv.id]
+          );
+          let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
+          let grossTotal = totalFinesAmount + grossBaseAmount;
 
-        // Fetch gross base amount from invoice_lines
-        const [lineRows] = await conn.execute(
-          `SELECT SUM(amount) AS total_base FROM invoice_lines WHERE invoice_id = ?`,
-          [pinv.id]
-        );
-        let grossBaseAmount = Number(lineRows[0]?.total_base || 0);
-        let grossTotal = totalFinesAmount + grossBaseAmount;
-
-        if (grossTotal < Number(pinv.amount_due)) {
-          grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
-          grossTotal = Number(pinv.amount_due);
-        }
-        if (grossTotal < balance) {
-          grossBaseAmount += (balance - grossTotal);
-          grossTotal = balance;
-        }
-
-        // Total credit (discount + payments) applied against gross total down to net unpaid balance
-        let totalCredit = Math.max(0, grossTotal - balance);
-
-        const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
-        const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
-
-        // 1. Process previous carry-forwards
-        for (const f of prevFines) {
-          const amt = Number(f.amount);
-          const covered = Math.min(totalCredit, amt);
-          totalCredit -= covered;
-          const unpaid = amt - covered;
-          if (unpaid > 0) {
-            carried_fines.push({
-              type: f.fine_type,
-              description: f.description,
-              amount: unpaid
-            });
-            total_carried_amount += unpaid;
+          if (grossTotal < Number(pinv.amount_due)) {
+            grossBaseAmount = Number(pinv.amount_due) - totalFinesAmount;
+            grossTotal = Number(pinv.amount_due);
           }
-        }
+          if (grossTotal < balance) {
+            grossBaseAmount += (balance - grossTotal);
+            grossTotal = balance;
+          }
 
-        // 2. Process regular fines
-        let unpaidRegFines = 0;
-        for (const f of regFines) {
-          const amt = Number(f.amount);
-          const covered = Math.min(totalCredit, amt);
-          totalCredit -= covered;
-          unpaidRegFines += (amt - covered);
-        }
+          // Total credit (discount + payments) applied against gross total down to net unpaid balance
+          let totalCredit = Math.max(0, grossTotal - balance);
 
-        if (unpaidRegFines > 0) {
-          const pinvDate = new Date(pinv.period_start);
-          const pinvEndDate = new Date(pinv.period_end);
-          const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
-          const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
-          const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+          const prevFines = fines.filter(f => f.fine_type.startsWith('previous_'));
+          const regFines = fines.filter(f => !f.fine_type.startsWith('previous_'));
 
-          carried_fines.push({
-            type: 'previous_fines',
-            description: `Previous Fine Dues (${periodStr})`,
-            amount: unpaidRegFines
-          });
-          total_carried_amount += unpaidRegFines;
-        }
+          // 1. Process previous carry-forwards
+          for (const f of prevFines) {
+            const amt = Number(f.amount);
+            const covered = Math.min(totalCredit, amt);
+            totalCredit -= covered;
+            const unpaid = amt - covered;
+            if (unpaid > 0) {
+              carried_fines.push({
+                type: f.fine_type,
+                description: f.description,
+                amount: unpaid
+              });
+              total_carried_amount += unpaid;
+            }
+          }
 
-        // 3. Process base fees
-        const coveredBase = Math.min(totalCredit, grossBaseAmount);
-        totalCredit -= coveredBase;
-        const unpaidBase = grossBaseAmount - coveredBase;
+          // 2. Process regular fines
+          let unpaidRegFines = 0;
+          for (const f of regFines) {
+            const amt = Number(f.amount);
+            const covered = Math.min(totalCredit, amt);
+            totalCredit -= covered;
+            unpaidRegFines += (amt - covered);
+          }
 
-        if (unpaidBase > 0) {
-          const pinvDate = new Date(pinv.period_start);
-          const pinvEndDate = new Date(pinv.period_end);
-          const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-          const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
-          const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+          if (unpaidRegFines > 0) {
+            const pinvDate = new Date(pinv.period_start);
+            const pinvEndDate = new Date(pinv.period_end);
+            const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' });
+            const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' });
+            const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
 
-          carried_fines.push({
-            type: 'previous_dues',
-            description: `Payment Dues (${periodStr})`,
-            amount: unpaidBase
-          });
-          total_carried_amount += unpaidBase;
+            carried_fines.push({
+              type: 'previous_fines',
+              description: `Previous Fine Dues (${periodStr})`,
+              amount: unpaidRegFines
+            });
+            total_carried_amount += unpaidRegFines;
+          }
+
+          // 3. Process base fees
+          const coveredBase = Math.min(totalCredit, grossBaseAmount);
+          totalCredit -= coveredBase;
+          const unpaidBase = grossBaseAmount - coveredBase;
+
+          if (unpaidBase > 0) {
+            const pinvDate = new Date(pinv.period_start);
+            const pinvEndDate = new Date(pinv.period_end);
+            const monthName = pinvDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+            const monthNameEnd = pinvEndDate.toLocaleString('en-IN', { month: 'long' }).toLowerCase();
+            const periodStr = monthName === monthNameEnd ? monthName : `${monthName}-${monthNameEnd}`;
+
+            carried_fines.push({
+              type: 'previous_dues',
+              description: `Payment Dues (${periodStr})`,
+              amount: unpaidBase
+            });
+            total_carried_amount += unpaidBase;
+          }
         }
       }
 
@@ -1591,28 +1579,34 @@ const DownloadPaymentReceiptPDF = async (req, res) => {
 
 async function restoreCarriedForwardInvoicesForStudents(conn, studentIds) {
   if (!Array.isArray(studentIds) || studentIds.length === 0) return;
-  const placeholders = studentIds.map(() => '?').join(',');
+  const uniqueStudentIds = [...new Set(studentIds.filter(Boolean))];
 
-  // Fetch all carried_forward invoices for these students
-  const [cfInvoices] = await conn.execute(
-    `SELECT id, student_id, amount_due, amount_paid, period_start, period_end 
-     FROM student_invoices 
-     WHERE student_id IN (${placeholders}) AND status = 'carried_forward'`,
-    [...studentIds]
-  );
+  for (const sId of uniqueStudentIds) {
+    // Fetch all carried_forward invoices for this student, sorted latest first
+    const [cfInvoices] = await conn.execute(
+      `SELECT id, student_id, amount_due, amount_paid, period_start, period_end 
+       FROM student_invoices 
+       WHERE student_id = ? AND status = 'carried_forward'
+       ORDER BY period_end DESC, id DESC`,
+      [sId]
+    );
 
-  for (const inv of cfInvoices) {
-    // Check if there is still ANY remaining active invoice created AFTER this one that is carrying its dues forward
+    if (cfInvoices.length === 0) continue;
+
+    // The most recent carried forward invoice
+    const latestCf = cfInvoices[0];
+
+    // Check if there is ALREADY an active invoice newer than latestCf
     const [newerInvoices] = await conn.execute(
       `SELECT id FROM student_invoices 
        WHERE student_id = ? AND id > ? AND status IN ('pending', 'partially_paid', 'overdue') LIMIT 1`,
-      [inv.student_id, inv.id]
+      [sId, latestCf.id]
     );
 
-    // If no newer active invoice exists carrying its dues forward, restore this invoice status
+    // If no active invoice exists newer than latestCf, restore ONLY latestCf status
     if (newerInvoices.length === 0) {
-      const paid = Number(inv.amount_paid || 0);
-      const due = Number(inv.amount_due || 0);
+      const paid = Number(latestCf.amount_paid || 0);
+      const due = Number(latestCf.amount_due || 0);
       let newStatus = 'pending';
       if (paid >= due && due > 0) {
         newStatus = 'paid';
@@ -1620,7 +1614,7 @@ async function restoreCarriedForwardInvoicesForStudents(conn, studentIds) {
         newStatus = 'partially_paid';
       } else {
         const today = new Date().toISOString().slice(0, 10);
-        const endStr = new Date(inv.period_end).toISOString().slice(0, 10);
+        const endStr = new Date(latestCf.period_end).toISOString().slice(0, 10);
         if (endStr < today) {
           newStatus = 'overdue';
         } else {
@@ -1630,7 +1624,7 @@ async function restoreCarriedForwardInvoicesForStudents(conn, studentIds) {
 
       await conn.execute(
         `UPDATE student_invoices SET status = ? WHERE id = ?`,
-        [newStatus, inv.id]
+        [newStatus, latestCf.id]
       );
     }
   }
@@ -2534,7 +2528,7 @@ const BulkDeleteInvoices = async (req, res) => {
 
     // Check if any invoice has payments
     const [rows] = await conn.execute(
-      `SELECT id, amount_paid FROM student_invoices WHERE id IN (${placeholders}) FOR UPDATE`,
+      `SELECT id, student_id, amount_paid FROM student_invoices WHERE id IN (${placeholders}) FOR UPDATE`,
       [...invoiceIds]
     );
 
@@ -2543,13 +2537,16 @@ const BulkDeleteInvoices = async (req, res) => {
       return res.status(404).json({ error: 'No invoices found' });
     }
 
-    // Optional: block if any have payments (currently commented out in single delete, keeping it consistent)
-    // const withPayments = rows.filter(r => Number(r.amount_paid || 0) > 0);
-    // if (withPayments.length > 0) { ... }
+    const studentIds = [...new Set(rows.map(r => r.student_id).filter(Boolean))];
 
     await conn.execute(`DELETE FROM invoice_lines WHERE invoice_id IN (${placeholders})`, [...invoiceIds]);
     await conn.execute(`DELETE FROM invoice_fines WHERE invoice_id IN (${placeholders})`, [...invoiceIds]);
+    await conn.execute(`DELETE FROM invoice_discounts WHERE invoice_id IN (${placeholders})`, [...invoiceIds]);
     await conn.execute(`DELETE FROM student_invoices WHERE id IN (${placeholders})`, [...invoiceIds]);
+
+    if (studentIds.length > 0) {
+      await restoreCarriedForwardInvoicesForStudents(conn, studentIds);
+    }
 
     await conn.commit();
     res.json({ success: true, deleted_count: rows.length });

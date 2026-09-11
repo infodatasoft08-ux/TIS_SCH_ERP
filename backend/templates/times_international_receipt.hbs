@@ -325,13 +325,13 @@
                 <div class="summary-row">
                     <span>Total amount for the month {{payment.period}}:</span>
                     <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.total_amount}}</span>
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.total_amount}}</span>
                 </div>
                 {{#if payment.discount_amount}}
                 <div class="summary-row">
                     <span>Discount amount:</span>
                     <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.discount_amount}}</span>
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.discount_amount}}</span>
                 </div>
                 {{/if}}
 
@@ -345,7 +345,7 @@
                     {{/if}}
 
                     <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
-                        {{payment.fine_amount}}
+                        ₹ {{payment.fine_amount}}
                     </span>
                 </div>
                 {{/unless}}
@@ -354,8 +354,15 @@
                 <div class="summary-row">
                     <span>Total Amount to be paid:</span>
                     <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.amount_due}}</span>
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.amount_due}}</span>
                 </div>
+                {{#if payment.has_previous_paid}}
+                <div class="summary-row">
+                    <span>Previously Paid:</span>
+                    <span
+                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.previous_paid}}</span>
+                </div>
+                {{/if}}
                 {{#if payment.reference}}
                 <div class="summary-row">
                     <span>Reference:</span>
@@ -373,7 +380,7 @@
                 </div>
                 <div class="summary-row">
                     <span>Balance amount:</span>
-                    <span style="font-weight: bold; text-transform: uppercase;">{{payment.balance}}</span>
+                    <span style="font-weight: bold; text-transform: uppercase;">₹ {{payment.balance}}</span>
                 </div>
             </div>
 

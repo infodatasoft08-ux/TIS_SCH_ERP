@@ -157,7 +157,11 @@ const generatePaymentReceiptPDF = async (payment) => {
     const fineAmount = parseFloat(payment.fine_amount || 0);
     const amountInWords = toWords(Math.round(payment.paid_amount));
 
-    let bal = parseFloat(payment.amount_due) - parseFloat(payment.amount_paid);
+    const totalDue = parseFloat(payment.amount_due || 0);
+    const cumulativePaid = parseFloat(payment.amount_paid || 0);
+    const currentPaid = parseFloat(payment.paid_amount || 0);
+    const previousPaid = Math.max(0, cumulativePaid - currentPaid);
+    let bal = totalDue - cumulativePaid;
     if (bal < 0) bal = 0;
 
     const data = {
@@ -166,8 +170,10 @@ const generatePaymentReceiptPDF = async (payment) => {
             date,
             amount_in_words: amountInWords,
             fines_amount: formatNumberIN(fineAmount),
-            total_amount: formatNumberIN(parseFloat(payment.amount_due) + parseFloat(payment.discount_amount || 0)),
-            paid_amount: formatNumberIN(payment.paid_amount),
+            total_amount: formatNumberIN(totalDue + parseFloat(payment.discount_amount || 0)),
+            previous_paid: formatNumberIN(previousPaid),
+            has_previous_paid: previousPaid > 0,
+            paid_amount: formatNumberIN(currentPaid),
             balance: formatNumberIN(bal),
             amount_due: formatNumberIN(payment.amount_due),
             discount_amount: payment.discount_amount ? formatNumberIN(payment.discount_amount) : null,
@@ -220,8 +226,13 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
 
     const receiptDate = payment.payment_date ? new Date(payment.payment_date).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB');
     const receiptAmountInWords = toWords(Math.round(payment.paid_amount));
-    let bal = parseFloat(payment.amount_due) - parseFloat(payment.amount_paid);
-    if (bal < 0) bal = 0;
+    
+    const combTotalDue = parseFloat(payment.amount_due || 0);
+    const combCumulativePaid = parseFloat(payment.amount_paid || 0);
+    const combCurrentPaid = parseFloat(payment.paid_amount || 0);
+    const combPreviousPaid = Math.max(0, combCumulativePaid - combCurrentPaid);
+    let combBal = combTotalDue - combCumulativePaid;
+    if (combBal < 0) combBal = 0;
 
     // Load templates
     const invoiceTemplatePath = path.join(__dirname, '../templates/times_international_invoice.hbs');
@@ -283,12 +294,14 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
             date: receiptDate,
             amount_in_words: receiptAmountInWords,
             fines_amount: formatNumberIN(payment.fine_amount || 0),
-            total_amount: formatNumberIN(parseFloat(payment.amount_due) + parseFloat(payment.discount_amount || 0)),
-            paid_amount: formatNumberIN(payment.paid_amount),
-            balance: formatNumberIN(bal),
+            total_amount: formatNumberIN(combTotalDue + parseFloat(payment.discount_amount || 0)),
+            previous_paid: formatNumberIN(combPreviousPaid),
+            has_previous_paid: combPreviousPaid > 0,
+            paid_amount: formatNumberIN(combCurrentPaid),
+            balance: formatNumberIN(combBal),
             amount_due: formatNumberIN(payment.amount_due),
             discount_amount: payment.discount_amount ? formatNumberIN(payment.discount_amount) : null,
-            hasOutstanding: bal > 0
+            hasOutstanding: combBal > 0
         },
         logoData
     });
