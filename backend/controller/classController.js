@@ -175,8 +175,17 @@ const GetClass = async (req, res) => {
       params.push(gradeId);
     }
 
-    // embed validated numeric limit/offset directly
-    sql += ` ORDER BY c.id ASC LIMIT ${limit} OFFSET ${offset}`;
+    // embed validated numeric limit/offset directly with educational order sorting
+    sql += ` ORDER BY 
+      CASE 
+        WHEN LOWER(c.name) LIKE '%play%' THEN 1
+        WHEN LOWER(c.name) LIKE '%pg%' OR LOWER(c.name) LIKE '%pre%nur%' THEN 2
+        WHEN LOWER(c.name) LIKE '%nur%' THEN 3
+        WHEN LOWER(c.name) LIKE '%l.k.g%' OR LOWER(c.name) LIKE '%lkg%' OR LOWER(c.name) LIKE '%lower%kg%' OR LOWER(c.name) LIKE '%kg-i%' THEN 4
+        WHEN LOWER(c.name) LIKE '%u.k.g%' OR LOWER(c.name) LIKE '%ukg%' OR LOWER(c.name) LIKE '%upper%kg%' OR LOWER(c.name) LIKE '%kg-ii%' OR LOWER(c.name) LIKE '%prep%' THEN 5
+        WHEN LOWER(c.name) REGEXP '[0-9]' THEN 100 + CAST(NULLIF(REGEXP_REPLACE(c.name, '[^0-9]', ''), '') AS UNSIGNED)
+        ELSE 999
+      END ASC, c.name ASC LIMIT ${limit} OFFSET ${offset}`;
 
     const [rows] = await db.execute(sql, params);
     // await conn.commit();

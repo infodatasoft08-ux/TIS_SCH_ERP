@@ -16,6 +16,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ChevronDown, FilePen, Trash2, Library, GraduationCap, BookOpen } from "lucide-react";
 import DataTable from "@/widgets/DataTable";
 import { toast } from "sonner";
+import { sortClasses } from "@/lib/utils";
 import AddSubjectDialog from "./AddSubject";
 import AddGradesDialog from "./AddGrades";
 import AddClassDialog from "./addNewClass";
@@ -115,7 +116,7 @@ export default function AcademicFormsAdmin() {
       const newGrades = response.data.grades || [];
 
       // Always replace for the current page
-      setGrades(newGrades);
+      setGrades(sortClasses(newGrades));
 
       setGradeHasMore(newGrades.length === newLimit);
       setGradeOffset(newOffset);
@@ -141,7 +142,7 @@ export default function AcademicFormsAdmin() {
       const newClasses = response.data.classes || [];
 
       // Always replace for the current page
-      setClasses(newClasses);
+      setClasses(sortClasses(newClasses));
 
       setClassHasMore(newClasses.length === newLimit);
       setClassOffset(newOffset);
@@ -201,7 +202,7 @@ export default function AcademicFormsAdmin() {
   async function loadClassDropDown() {
     try {
       const response = await API.get("/admin/get/grades");
-      setClassDropDown(response.data.grades || []);
+      setClassDropDown(sortClasses(response.data.grades || []));
     } catch (err) {
       setMessage({ type: "error", text: "Failed to load classes" });
     }

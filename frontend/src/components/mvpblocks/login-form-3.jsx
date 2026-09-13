@@ -370,8 +370,17 @@ export default function SignInPage() {
                   <div className="mt-3 sm:mt-4 text-center text-[11px] sm:text-xs text-gray-500 dark:text-gray-400 pt-2 border-t border-gray-100 dark:border-gray-800">
                     <div className="flex items-center justify-center gap-2 font-medium mb-0.5">
                       <Link to="/contact" className={`hover:text-blue-600 transition-colors ${loading ? 'pointer-events-none opacity-50' : ''}`}>
-                        Contact Administration
+                        Contact & Support
                       </Link>
+                      <span>•</span>
+                      <a
+                        href="/privacy-policy.html"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="hover:text-blue-600 transition-colors"
+                      >
+                        Privacy Policy
+                      </a>
                     </div>
                     <div className="text-[10px] sm:text-[11px] text-gray-400">
                       © {new Date().getFullYear()} Times International School | Developed by <b className='text-gray-700 dark:text-gray-300'> MITHILESH INFODATASOFT CAREER RESEARCH ORGANISATION Pvt. Ltd.</b>

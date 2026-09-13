@@ -8,7 +8,11 @@ import React, { useEffect, useState } from 'react';
 // Admin page to view roles and assign menus to a role.
 // Tailwind CSS styles assumed. Mount at an admin route and protect with your auth middleware.
 
+import { useAuth } from '@/auth/AuthContext';
+import { ShieldAlert } from 'lucide-react';
+
 export default function RoleMenuAdmin() {
+  const { user } = useAuth();
   const [roles, setRoles] = useState([]);
   const [menusTree, setMenusTree] = useState([]);
   const [selectedRoleId, setSelectedRoleId] = useState(null);
@@ -17,6 +21,14 @@ export default function RoleMenuAdmin() {
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState(null);
+
+  const isDeveloper = Boolean(
+    user?.sub_role === 'developer' || 
+    user?.role_name?.toLowerCase().includes('developer') || 
+    user?.email?.toLowerCase().includes('developer') || 
+    user?.is_developer ||
+    user?.developer
+  );
 
   useEffect(() => {
     fetchInitialData();
@@ -127,6 +139,18 @@ export default function RoleMenuAdmin() {
             {node.children.map(child => renderMenuNode(child, depth + 1))}
           </div>
         )}
+      </div>
+    );
+  }
+
+  if (!isDeveloper) {
+    return (
+      <div className="p-12 text-center flex flex-col items-center justify-center space-y-4 min-h-[60vh]">
+        <ShieldAlert className="w-16 h-16 text-rose-500 mx-auto" />
+        <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100">Access Restricted</h2>
+        <p className="text-slate-500 max-w-md mx-auto">
+          Role Menu Assignment & Permission Configuration is restricted exclusively to Developer accounts. Super Admin or other roles are not authorized.
+        </p>
       </div>
     );
   }

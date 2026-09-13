@@ -867,7 +867,7 @@ const GetAttendanceSummery = async (req, res) => {
        LEFT JOIN lessons l ON l.id = a.lesson_id
        WHERE a.class_id = ? 
          AND a.attendance_date BETWEEN ? AND ?
-       ORDER BY a.attendance_date DESC, u.name ASC
+       ORDER BY a.attendance_date DESC, (sar.roll_no IS NULL OR sar.roll_no = ''), CAST(sar.roll_no AS UNSIGNED) ASC, sar.roll_no ASC, u.name ASC
        LIMIT ${parseInt(limit)} OFFSET ${parseInt(offset)}`,
       [classId, from, to]
     );

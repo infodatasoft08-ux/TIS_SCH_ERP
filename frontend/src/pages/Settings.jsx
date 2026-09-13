@@ -5,7 +5,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useSpacemanTheme } from '@space-man/react-theme-animation';
 import { useLanguage } from '@/context/LanguageContext';
-import { Moon, Sun, Globe, User, ShieldCheck, MenuIcon, School, Camera, Image as ImageIcon, Trash2, Plus, Loader2, Wand2, MessageCircle } from 'lucide-react';
+import { Moon, Sun, Globe, User, ShieldCheck, MenuIcon, School, Camera, Image as ImageIcon, Trash2, Plus, Loader2, Wand2, MessageCircle, Database, HardDriveDownload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/auth/AuthContext';
@@ -20,6 +20,14 @@ export default function Settings() {
     const { lang, setLang, t } = useLanguage();
     const navigate = useNavigate();
     const { user, loading: authLoading } = useAuth();
+
+    const isDeveloper = Boolean(
+        user?.sub_role === 'developer' || 
+        user?.role_name?.toLowerCase().includes('developer') || 
+        user?.email?.toLowerCase().includes('developer') || 
+        user?.is_developer ||
+        user?.developer
+    );
 
     const [logo, setLogo] = useState(null);
     const [gallery, setGallery] = useState([]);
@@ -174,8 +182,8 @@ export default function Settings() {
             </div>
 
             <div className="grid gap-6">
-                {/* Role Menu Assign Section */}
-                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN || user.role_id === ROLES.DEVELOPER) && (
+                {/* Role Menu Assign Section (Developer Only) */}
+                {isDeveloper && (
                     <Card className="overflow-hidden border-muted/60 shadow-md">
                         <CardHeader className="bg-muted/30">
                             <div className="flex items-center gap-2">
@@ -227,7 +235,7 @@ export default function Settings() {
                 )}
 
                 {/* School Branding Section (Admin Only) */}
-                {(user.role_id === ROLES.ADMIN || user.role_id === ROLES.SUPERADMIN || user.role_id === ROLES.DEVELOPER) && (
+                {(user?.role_id === ROLES.ADMIN || user?.role_id === ROLES.SUPERADMIN || user?.role_id === ROLES.DEVELOPER) && (
                     <div className="space-y-6">
                         {/* School Name and Basic Info */}
                         <Card className="overflow-hidden border-muted/60 shadow-md">
@@ -523,7 +531,7 @@ export default function Settings() {
                 </Card>
 
                 {/* Communication Section (Admin Only) */}
-                {user.role_id === ROLES.ADMIN && (
+                {(user?.role_id === ROLES.ADMIN || user?.role_id === ROLES.SUPERADMIN || user?.role_id === ROLES.DEVELOPER) && (
                     <Card className="overflow-hidden border-muted/60 shadow-md">
                         <CardHeader className="bg-muted/30">
                             <div className="flex items-center gap-2">
@@ -554,6 +562,45 @@ export default function Settings() {
                                     Save Setting
                                 </Button>
                             </div>
+                        </CardContent>
+                    </Card>
+                )}
+
+                {/* Developer Only: Complete Production Data Export */}
+                {isDeveloper && (
+                    <Card className="overflow-hidden border-blue-200 dark:border-blue-900/60 shadow-md bg-gradient-to-r from-blue-50/50 to-indigo-50/30 dark:from-blue-950/20 dark:to-slate-900">
+                        <CardHeader className="bg-blue-100/40 dark:bg-blue-950/40 border-b border-blue-100 dark:border-blue-900/50">
+                            <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                    <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+                                    <CardTitle className="text-lg text-blue-950 dark:text-blue-200">
+                                        Production Data Export & Portability Engine
+                                    </CardTitle>
+                                </div>
+                                <span className="text-[10px] font-bold tracking-wider uppercase bg-blue-600 text-white px-2.5 py-1 rounded-full shadow-sm">
+                                    Developer Only
+                                </span>
+                            </div>
+                            <CardDescription className="text-blue-800/80 dark:text-blue-300/70">
+                                Export complete production data across all database tables into human-readable Excel workbooks (.xlsx) or CSV archives (.zip).
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">
+                                    Full Database Portability & Backups
+                                </p>
+                                <p className="text-xs text-slate-500 dark:text-slate-400">
+                                    Includes foreign key resolution, fee balances, exam sub-subject breakdowns, and detailed audit history.
+                                </p>
+                            </div>
+                            <Button
+                                onClick={() => navigate('/school/export-data')}
+                                className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md hover:shadow-lg shadow-blue-500/20 transition-all flex-shrink-0"
+                            >
+                                <HardDriveDownload className="h-4 w-4" />
+                                Open Data Export Center
+                            </Button>
                         </CardContent>
                     </Card>
                 )}

@@ -269,6 +269,29 @@ export default function TakeAttendance() {
     return { present, absent, late, excused, total };
   }, [isTodayAttendanceTaken, todayAttendanceData, students, attendanceStatus]);
 
+  // Helper to compare students by roll number in ascending (increasing) numeric order
+  const compareByRollNo = (a, b) => {
+    const rollA = a.roll_no;
+    const rollB = b.roll_no;
+
+    const numA = parseInt(String(rollA ?? "").replace(/\D/g, ""), 10);
+    const numB = parseInt(String(rollB ?? "").replace(/\D/g, ""), 10);
+
+    const hasNumA = !isNaN(numA);
+    const hasNumB = !isNaN(numB);
+
+    if (hasNumA && hasNumB) {
+      if (numA !== numB) return numA - numB;
+      return String(rollA ?? "").localeCompare(String(rollB ?? ""), undefined, { numeric: true, sensitivity: "base" });
+    }
+    if (hasNumA) return -1;
+    if (hasNumB) return 1;
+
+    const nameA = a.student_name || "";
+    const nameB = b.student_name || "";
+    return nameA.localeCompare(nameB);
+  };
+
   // Filtered Students list (for marking mode) by search query & status filter
   const filteredStudents = useMemo(() => {
     let list = students;
@@ -286,7 +309,7 @@ export default function TakeAttendance() {
           (s.student_email && s.student_email.toLowerCase().includes(q))
       );
     }
-    return list;
+    return [...list].sort(compareByRollNo);
   }, [students, attendanceStatus, statusFilter, searchQuery]);
 
   // Filtered Submitted Attendance Records (for update mode) by search query & status filter
@@ -306,7 +329,7 @@ export default function TakeAttendance() {
           (r.student_email && r.student_email.toLowerCase().includes(q))
       );
     }
-    return list;
+    return [...list].sort(compareByRollNo);
   }, [todayAttendanceData, statusFilter, searchQuery]);
 
   const getStatusColor = (status) => {

@@ -13,7 +13,17 @@ const GetGrades = async (req, res) => {
 
   try {
     const sql = `
-      SELECT * FROM grades WHERE name LIKE ? ORDER BY id ASC LIMIT ${limit} OFFSET ${offset}
+      SELECT * FROM grades WHERE name LIKE ? 
+      ORDER BY 
+        CASE 
+          WHEN LOWER(name) LIKE '%play%' THEN 1
+          WHEN LOWER(name) LIKE '%pg%' OR LOWER(name) LIKE '%pre%nur%' THEN 2
+          WHEN LOWER(name) LIKE '%nur%' THEN 3
+          WHEN LOWER(name) LIKE '%l.k.g%' OR LOWER(name) LIKE '%lkg%' OR LOWER(name) LIKE '%lower%kg%' OR LOWER(name) LIKE '%kg-i%' THEN 4
+          WHEN LOWER(name) LIKE '%u.k.g%' OR LOWER(name) LIKE '%ukg%' OR LOWER(name) LIKE '%upper%kg%' OR LOWER(name) LIKE '%kg-ii%' OR LOWER(name) LIKE '%prep%' THEN 5
+          WHEN LOWER(name) REGEXP '[0-9]' THEN 100 + CAST(NULLIF(REGEXP_REPLACE(name, '[^0-9]', ''), '') AS UNSIGNED)
+          ELSE 999
+        END ASC, name ASC LIMIT ${limit} OFFSET ${offset}
     `;
 
     const [rows] = await db.execute(sql, [q]);

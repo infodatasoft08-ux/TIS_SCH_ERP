@@ -8,6 +8,7 @@ import { Users, GraduationCap, DollarSign, Activity, Calendar as CalendarIcon, T
 import AnnouncementDashboard from '@/components/announcements/AnnouncementDashboard';
 import UpcomingActivities from '@/components/announcements/UpcomingActivities';
 import API from '@/api';
+import { sortClasses } from '@/lib/utils';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useNavigate } from 'react-router-dom';
@@ -84,8 +85,8 @@ export default function AdminDashboard() {
           API.get('/admin/get/classes'),
           API.get('/admin/get/academic-years')
         ]);
-        setGrades(gradesRes.data.grades || []);
-        setClasses(classesRes.data.classes || []);
+        setGrades(sortClasses(gradesRes.data.grades || []));
+        setClasses(sortClasses(classesRes.data.classes || []));
         const years = academicYearsRes.data.academic_years || [];
         setAcademicYears(years);
 
@@ -112,7 +113,11 @@ export default function AdminDashboard() {
           attendanceClassId: attendanceClassId === "all" ? "" : attendanceClassId
         });
         const response = await API.get(`/analytics/dashboard?${params.toString()}`);
-        setData(response.data);
+        const resData = response.data || {};
+        if (resData.classData) {
+          resData.classData = sortClasses(resData.classData);
+        }
+        setData(resData);
       } catch (error) {
         console.error('Error fetching dashboard data:', error);
       } finally {

@@ -924,7 +924,7 @@ const GetStudentsOfMySupervisedClass = async (req, res) => {
        JOIN classes c ON c.id = sar.class_id
        JOIN grades g ON g.id = sar.grade_id
        WHERE sar.class_id = ?
-       ORDER BY sar.roll_no ASC`,
+        ORDER BY (sar.roll_no IS NULL OR sar.roll_no = ''), CAST(sar.roll_no AS UNSIGNED) ASC, sar.roll_no ASC, u.name ASC`,
       queryParams
     );
 

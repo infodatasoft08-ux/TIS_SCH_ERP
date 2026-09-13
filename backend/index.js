@@ -44,6 +44,7 @@ const homeworkRouter = require('./routes/homework_routes');
 const registrationRouter = require('./routes/registrationRoute');
 const documentRouter = require('./routes/documentRoute');
 const appVersionRoute = require('./routes/appVersionRoute');
+const exportRoute = require('./routes/exportRoute');
 const path = require('path');
 const compression = require('compression');
 app.use(compression());
@@ -103,6 +104,7 @@ app.use('/api/homework', homeworkRouter);
 app.use('/api/registration', registrationRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/app-version', appVersionRoute);
+app.use('/api/admin/export', exportRoute);
 
 // Global Express Error Handling Middleware
 app.use((err, req, res, next) => {

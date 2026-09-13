@@ -60,6 +60,7 @@ const RegistrationPage = lazyWithRetry(() => import('./pages/RegistrationPage'))
 const RegisteredRequests = lazyWithRetry(() => import('./admin/pages/RegisteredRequests'));
 const TemplateUploadPage = lazyWithRetry(() => import('./idcard/pages/TemplateUploadPage'));
 const GenerateDocumentsPage = lazyWithRetry(() => import('./idcard/pages/GenerateDocumentsPage'));
+const ExportDataPage = lazyWithRetry(() => import('./pages/school/ExportDataPage'));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -208,6 +209,7 @@ export default function App() {
                   <Route path="homework/manage" element={<HomeworkPage />} />
                   <Route path="homework/student" element={<StudentHomeworkPage />} />
                   <Route path="bulk-import" element={<BulkImport />} />
+                  <Route path="export-data" element={<ExportDataPage />} />
                   {/* Setting Route */}
                   <Route path="setting" element={<RoleMenuAdmin />} />
                   <Route path="settings" element={<Settings />} />
