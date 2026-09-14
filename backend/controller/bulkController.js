@@ -4,6 +4,7 @@ const XLSX = require('xlsx');
 const { generateNextId } = require("../utils/idGenerator");
 const formatMySQLDate = require("../config/deateConverter");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { isValidEmail } = require("../utils/emailValidator");
 
 const SALT_ROUNDS = 10;
 
@@ -52,6 +53,9 @@ const BulkAddStudents = async (req, res) => {
 
                 if (!name || !email || !cleanedPassword || !grade || !className || !academic_year) {
                     throw new Error(`Missing required fields: name, email, password/phone, grade, class, academic_year`);
+                }
+                if (!isValidEmail(email)) {
+                    throw new Error(`Invalid email address format: "${email}"`);
                 }
 
                 // Map Names to IDs
@@ -149,6 +153,9 @@ const BulkAddTeachers = async (req, res) => {
                 if (!name || !email || !cleanedPassword) {
                     throw new Error(`Missing required fields: name, email, password/phone`);
                 }
+                if (!isValidEmail(email)) {
+                    throw new Error(`Invalid email address format: "${email}"`);
+                }
 
                 const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);
 
@@ -224,6 +231,9 @@ const BulkAddStaff = async (req, res) => {
 
                 if (!name || !email || !cleanedPassword || !sub_role) {
                     throw new Error(`Missing required fields: name, email, password/phone, sub_role`);
+                }
+                if (!isValidEmail(email)) {
+                    throw new Error(`Invalid email address format: "${email}"`);
                 }
 
                 const password_hash = await bcrypt.hash(cleanedPassword, SALT_ROUNDS);

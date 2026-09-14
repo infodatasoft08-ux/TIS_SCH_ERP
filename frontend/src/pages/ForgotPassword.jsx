@@ -131,6 +131,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from "sonner";
 import API from "@/api";
+import { isValidEmail } from '@/utils/emailValidator';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -159,6 +160,11 @@ export default function ForgotPasswordPage() {
     setError(null);
     if (!email) {
       setError("Please enter your email address.");
+      return;
+    }
+    if (!isValidEmail(email)) {
+      setError("Please enter a valid email address.");
+      toast.error("Please enter a valid email address.");
       return;
     }
     setIsSubmitting(true);

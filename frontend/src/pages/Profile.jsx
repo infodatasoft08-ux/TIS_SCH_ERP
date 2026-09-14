@@ -12,6 +12,7 @@ import ImageCropUpload from '@/components/ImageCropUpload';
 import API from '@/api';
 import { Textarea } from '@/components/ui/textarea';
 import SchoolLogo from "../assets/Times_Internation_School_logo.png";
+import { isValidEmail } from '@/utils/emailValidator';
 
 export default function Profile() {
     const { user, setUser, logout } = useAuth();
@@ -44,6 +45,10 @@ export default function Profile() {
 
     const handleUpdateProfile = async (e) => {
         e.preventDefault();
+        if (formData.email && !isValidEmail(formData.email)) {
+            toast.error("Please enter a valid email address.");
+            return;
+        }
         try {
             setLoading(true);
             const data = new FormData();

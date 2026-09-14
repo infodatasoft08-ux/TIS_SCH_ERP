@@ -12,6 +12,8 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 
+import { isValidEmail } from '@/utils/emailValidator';
+
 export default function AdmissionPopup({ isOpen, onClose }) {
     const [loading, setLoading] = useState(false);
     const [formData, setFormData] = useState({
@@ -30,6 +32,10 @@ export default function AdmissionPopup({ isOpen, onClose }) {
 
     const handleSubmit = async (e) => {
         if (e) e.preventDefault();
+        if (formData.email && !isValidEmail(formData.email)) {
+            toast.error('Please enter a valid email address.');
+            return;
+        }
         setLoading(true);
 
         try {

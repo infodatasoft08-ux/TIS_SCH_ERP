@@ -1,6 +1,7 @@
 const db = require("../db");
 const bcrypt = require('bcryptjs');
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { isValidEmail } = require("../utils/emailValidator");
 require('dotenv').config();
 const SALT_ROUNDS = 10;
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -13,6 +14,9 @@ const AddParents = async (req, res) => {
 
   if (!isNonEmptyString(name) || !isNonEmptyString(email) || !cleanedPassword || !role_id) {
     return res.status(400).json({ error: 'name, email, password and role_id are required' });
+  }
+  if (!isValidEmail(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
   }
   if (cleanedPassword.length < 6) return res.status(400).json({ error: 'Password must be at least 6 characters' });
 

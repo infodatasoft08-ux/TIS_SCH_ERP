@@ -3,6 +3,7 @@ import { ArrowLeft, MapPin, Phone, Mail, Send, Loader2 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import API from '../api';
 import { toast } from 'sonner';
+import { isValidEmail } from '@/utils/emailValidator';
 
 export default function Contact() {
   const navigate = useNavigate();
@@ -22,6 +23,10 @@ export default function Contact() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if (formData.email && !isValidEmail(formData.email)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
     setLoading(true);
 
     try {

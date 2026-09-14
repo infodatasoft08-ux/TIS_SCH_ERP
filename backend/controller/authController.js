@@ -4,6 +4,7 @@ const bcrypt = require('bcryptjs');
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { isValidEmail } = require("../utils/emailValidator");
 const axios = require('axios');
 require('dotenv').config();
 
@@ -499,6 +500,12 @@ const AddStaffUser = async (req, res) => {
         .status(400)
         .json({ error: "name, email, gender, password, phone, role_id, department, and adhar_no are required" });
     }
+
+    if (!isValidEmail(email)) {
+      if (avatar_url) await deleteFromCloudinary(avatar_url);
+      return res.status(400).json({ error: "Please enter a valid email address" });
+    }
+
     if (cleanedPassword.length < 6) {
       if (avatar_url) await deleteFromCloudinary(avatar_url);
       return res

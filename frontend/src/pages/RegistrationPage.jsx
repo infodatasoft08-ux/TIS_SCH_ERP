@@ -21,6 +21,7 @@ import {
 } from "@/components/ui/select";
 import { ComboboxFormField } from '@/widgets/comboboxFormField';
 import logo from "@/assets/Times_Internation_School_logo.png";
+import { isValidEmail } from '@/utils/emailValidator';
 
 export default function RegistrationPage() {
   const navigate = useNavigate();
@@ -120,6 +121,10 @@ export default function RegistrationPage() {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
+    if (!isValidEmail(studentForm.email)) {
+      toast.error('Please enter a valid email address (e.g. user@example.com).');
+      return;
+    }
     if (!isValid10DigitPhone(cleanedPhone)) {
       toast.error('Phone number must be a valid 10-digit mobile number.');
       return;
@@ -179,6 +184,10 @@ export default function RegistrationPage() {
       toast.error('Please fill in Name, Email, and Phone fields.');
       return;
     }
+    if (!isValidEmail(teacherForm.email)) {
+      toast.error('Please enter a valid email address (e.g. user@example.com).');
+      return;
+    }
     if (!isValid10DigitPhone(cleanedPhone)) {
       toast.error('Phone number must be a valid 10-digit mobile number.');
       return;
@@ -205,6 +214,10 @@ export default function RegistrationPage() {
     const cleanedPhone = cleanPhoneNumber(staffForm.phone);
     if (!staffForm.name || !staffForm.email || !cleanedPhone) {
       toast.error('Please fill in Name, Email, and Phone fields.');
+      return;
+    }
+    if (!isValidEmail(staffForm.email)) {
+      toast.error('Please enter a valid email address (e.g. user@example.com).');
       return;
     }
     if (!isValid10DigitPhone(cleanedPhone)) {

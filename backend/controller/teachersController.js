@@ -5,6 +5,7 @@ const formatMySQLDate = require("../config/deateConverter");
 const { deleteFromCloudinary } = require("../helper/cloudinaryHelper");
 const { generateNextId } = require("../utils/idGenerator");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
+const { isValidEmail } = require("../utils/emailValidator");
 require('dotenv').config();
 
 const SALT_ROUNDS = 10;
@@ -48,6 +49,12 @@ const AddTeacher = async (req, res) => {
       .status(400)
       .json({ error: "name, email, gender, password, phone and role_id are required" });
   }
+
+  if (!isValidEmail(email)) {
+    if (avatar_url) await deleteFromCloudinary(avatar_url);
+    return res.status(400).json({ error: "Please enter a valid email address" });
+  }
+
   if (cleanedPassword.length < 6) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
     return res
@@ -287,6 +294,10 @@ const UpdateTeacher = async (req, res) => {
     adhar_no === undefined
   ) {
     return res.status(400).json({ error: 'At least one field is required to update' });
+  }
+
+  if (email !== undefined && email !== null && email !== '' && !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
   }
 
   const conn = await db.getConnection();

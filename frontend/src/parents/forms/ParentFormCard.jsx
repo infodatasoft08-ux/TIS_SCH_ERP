@@ -11,10 +11,11 @@ import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageCropUpload from "@/widgets/ImageCropUpload";
+import { isValidEmail } from "@/utils/emailValidator";
 
 const parentSchema = z.object({
   name: z.string().min(1, "Parent name is required"),
-  email: z.string().email("Valid email is required"),
+  email: z.string().email("Valid email is required").refine(isValidEmail, "Please enter a valid email address (e.g. user@example.com)"),
   gender: z.string().min(1, "Gender is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
   phone: z.string().min(10, "Valid phone number is required"),

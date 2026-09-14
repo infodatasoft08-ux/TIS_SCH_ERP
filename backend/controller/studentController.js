@@ -6,6 +6,7 @@ const { generateNextId } = require("../utils/idGenerator");
 const { generateAdmissionFormPDF } = require("../helper/pdfHelper");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 const { getActiveAcademicYear } = require("../utils/academicYearHelper");
+const { isValidEmail } = require("../utils/emailValidator");
 require('dotenv').config();
 const SALT_ROUNDS = 10;
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
@@ -41,6 +42,10 @@ const AddStudent = async (req, res) => {
   if (!isNonEmptyString(name) || !isNonEmptyString(email) || !cleanedPassword || !role_id || !cleanedPhone || !isNonEmptyString(gender)) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
     return res.status(400).json({ error: 'name, email, password, phone, and role_id are required' });
+  }
+  if (!isValidEmail(email)) {
+    if (avatar_url) await deleteFromCloudinary(avatar_url);
+    return res.status(400).json({ error: 'Please enter a valid email address' });
   }
   if (cleanedPassword.length < 6) {
     if (avatar_url) await deleteFromCloudinary(avatar_url);
@@ -488,6 +493,10 @@ const UpdateStudent = async (req, res) => {
     mothers_name === undefined && fathers_name === undefined && address === undefined
   ) {
     return res.status(400).json({ error: 'At least one field is required to update' });
+  }
+
+  if (email !== undefined && email !== null && email !== '' && !isValidEmail(email)) {
+    return res.status(400).json({ error: 'Please enter a valid email address' });
   }
 
   const conn = await db.getConnection();

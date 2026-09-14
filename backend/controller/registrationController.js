@@ -4,6 +4,7 @@ const { generateNextId } = require("../utils/idGenerator");
 const formatMySQLDate = require("../config/deateConverter");
 const { cleanPhoneNumber } = require("../utils/phoneSanitizer");
 const { getActiveAcademicYear } = require("../utils/academicYearHelper");
+const { isValidEmail } = require("../utils/emailValidator");
 
 const SALT_ROUNDS = 10;
 
@@ -18,6 +19,9 @@ const registerStudent = async (req, res) => {
 
     if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
       return res.status(400).json({ error: "Name, email, and valid contact number are required." });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
     // Verify system has an active academic year configured
@@ -69,6 +73,9 @@ const registerTeacher = async (req, res) => {
     if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
       return res.status(400).json({ error: "Name, email, and valid contact number are required." });
     }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
+    }
 
     // Duplicate checks
     const [existingUsers] = await db.query("SELECT id FROM users WHERE email = ? OR (adhar_no = ? AND adhar_no IS NOT NULL AND adhar_no != '')", [email.trim(), adhar_no?.trim() || '']);
@@ -108,6 +115,9 @@ const registerStaff = async (req, res) => {
 
     if (!name || !email || (!cleanedPassword && !cleanedPhone)) {
       return res.status(400).json({ error: "Name, email, and valid contact number are required." });
+    }
+    if (!isValidEmail(email)) {
+      return res.status(400).json({ error: "Please enter a valid email address." });
     }
 
     // Duplicate checks

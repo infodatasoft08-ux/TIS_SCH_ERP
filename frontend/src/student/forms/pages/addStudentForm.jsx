@@ -19,12 +19,13 @@ import { Stepper } from "@/components/ui/stepper";
 import { Textarea } from "@/components/ui/textarea";
 import { ComboboxFormField } from "@/widgets/comboboxFormField";
 import { Eye, EyeOff, Printer } from "lucide-react";
+import { isValidEmail } from "@/utils/emailValidator";
 
 // Create a dynamic schema based on edit mode
 const createStudentSchema = (isEditMode) =>
   z.object({
     name: z.string().min(1, "Student name required"),
-    email: z.string().email("Valid email required"),
+    email: z.string().email("Valid email required").refine(isValidEmail, "Please enter a valid email address (e.g. user@example.com)"),
     gender: z.string().min(1, "Gender is required"),
     // Password only required for new students
     password: isEditMode

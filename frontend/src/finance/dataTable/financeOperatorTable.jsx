@@ -12,12 +12,12 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ImageCropUpload from "@/widgets/ImageCropUpload";
 import { convertToYYYYMMDD } from "@/helper/dateconversion";
-// import toast from "react-hot-toast";
 import { toast } from "sonner";
+import { isValidEmail } from "@/utils/emailValidator";
 
 const AccountantSchema = z.object({
   name: z.string().min(1, "Name required"),
-  email: z.string().email("Valid email required"),
+  email: z.string().email("Valid email required").refine(isValidEmail, "Please enter a valid email address (e.g. user@example.com)"),
   gender: z.string().min(1, "Gender is required"),
   phone: z.string().min(1, "Phone is required"),
   role_id: z.number().min(1, "Role is required"),
