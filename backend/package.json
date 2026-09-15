@@ -26,6 +26,7 @@
     "dotenv": "^17.2.3",
     "exceljs": "^4.4.0",
     "express": "^5.1.0",
+    "express-basic-auth": "^1.2.1",
     "handlebars": "^4.7.9",
     "hbs": "^4.2.1",
     "ioredis": "^5.10.1",
