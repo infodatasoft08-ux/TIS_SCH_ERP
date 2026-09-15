@@ -20,6 +20,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ComboboxFormField } from "@/widgets/comboboxFormField";
 import { Eye, EyeOff, Printer } from "lucide-react";
 import { isValidEmail } from "@/utils/emailValidator";
+import { printPdfBlob } from "@/utils/fileHelper";
 
 // Create a dynamic schema based on edit mode
 const createStudentSchema = (isEditMode) =>
@@ -368,15 +369,7 @@ export default function AddStudentDialog({
       const res = await API.get(`/students/download/admission-form/${studentId}`, {
         responseType: "blob",
       });
-      const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      const printWindow = window.open(url, "_blank");
-      if (printWindow) {
-        printWindow.onload = () => {
-          printWindow.print();
-        };
-      } else {
-        toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      }
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print admission form", err);
       toast.error("Failed to generate admission form");

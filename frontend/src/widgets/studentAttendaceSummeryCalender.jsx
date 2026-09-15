@@ -479,7 +479,7 @@ export default function StudentAttendanceSummary() {
             searchPlaceholder="Search attendance records..."
             enableColumnVisibility={true}
             enablePagination={true}
-            pageSize={10}
+            pageSize={20}
             onSearchChange={setSearchQuery}
             searchValue={searchQuery}
             emptyMessage="No attendance records found for the selected criteria."

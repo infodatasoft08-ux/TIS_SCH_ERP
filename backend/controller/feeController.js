@@ -1529,7 +1529,7 @@ const DownloadPaymentReceiptPDF = async (req, res) => {
   try {
     const [rows] = await pool.execute(`
       SELECT sp.*, si.student_id, si.period_start, si.period_end, si.months_count,
-             u.name AS student_name, st.fathers_name, c.name AS class_name, g.name AS grade_name,
+             u.name AS student_name, st.fathers_name, st.admission_no, c.name AS class_name, g.name AS grade_name,
              si.amount_due, si.amount_paid, si.discount_amount, fine.amount AS fine_amount, fine.fine_type AS fine_type, fine.description AS fine_description
       FROM student_payments sp
       JOIN student_invoices si ON si.id = sp.invoice_id
@@ -2266,7 +2266,7 @@ const DownloadInvoicePDF = async (req, res) => {
   try {
     // Fetch full invoice data (same as GetInvoiceById)
     const [rows] = await pool.execute(
-      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name
+      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name, st.admission_no
              FROM student_invoices si
              JOIN users u ON u.id = si.student_id
              JOIN students st ON st.user_id = u.id
@@ -2342,7 +2342,7 @@ const DownloadCombinedPDF = async (req, res) => {
   try {
     // 1. Fetch Invoice Data
     const [[invoice]] = await pool.execute(
-      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name
+      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name, st.admission_no
        FROM student_invoices si
        JOIN users u ON u.id = si.student_id
        JOIN students st ON st.user_id = u.id
@@ -2377,7 +2377,7 @@ const DownloadCombinedPDF = async (req, res) => {
     let payment = null;
     if (paymentId) {
       const [[p]] = await pool.execute(`
-        SELECT sp.*, u.name AS student_name, st.fathers_name, c.name AS class_name, g.name AS grade_name, si.amount_due, si.amount_paid, si.discount_amount, fine.amount AS fine_amount,
+        SELECT sp.*, u.name AS student_name, st.fathers_name, st.admission_no, c.name AS class_name, g.name AS grade_name, si.amount_due, si.amount_paid, si.discount_amount, fine.amount AS fine_amount,
         fine.fine_type AS fine_type, fine.description AS fine_description, si.period_start, si.period_end
         FROM student_payments sp
         JOIN student_invoices si ON si.id = sp.invoice_id
@@ -2391,7 +2391,7 @@ const DownloadCombinedPDF = async (req, res) => {
     } else {
       // Get latest payment for this invoice
       const [[p]] = await pool.execute(`
-        SELECT sp.*, u.name AS student_name, st.fathers_name, c.name AS class_name, g.name AS grade_name, si.amount_due, si.amount_paid, fine.amount AS fine_amount,
+        SELECT sp.*, u.name AS student_name, st.fathers_name, st.admission_no, c.name AS class_name, g.name AS grade_name, si.amount_due, si.amount_paid, fine.amount AS fine_amount,
         si.discount_amount, fine.fine_type AS fine_type, fine.description AS fine_description, si.period_start, si.period_end
         FROM student_payments sp
         JOIN student_invoices si ON si.id = sp.invoice_id

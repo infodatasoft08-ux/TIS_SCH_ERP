@@ -42,6 +42,7 @@ import {
   Download,
   CreditCard,
   AlertCircle,
+  AlertTriangle,
   IndianRupeeIcon,
   ReceiptIndianRupee,
   ChevronsUpDown,
@@ -58,6 +59,8 @@ import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { DatePicker } from "@/components/ui/date-picker";
+import { printPdfBlob } from '@/utils/fileHelper';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2, Printer } from "lucide-react";
@@ -137,6 +140,7 @@ export default function Invoices() {
   const [totalDue, setTotalDue] = useState(0);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState(initialFilters?.searchQuery || "");
   const [filterMonth, setFilterMonth] = useState(initialFilters?.filterMonth || "all");
+  const [filterStatus, setFilterStatus] = useState(initialFilters?.filterStatus || "all");
   const [selectedInvoiceIds, setSelectedInvoiceIds] = useState([]);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [bulkPrinting, setBulkPrinting] = useState(false);
@@ -160,11 +164,12 @@ export default function Invoices() {
         filterGrade,
         filterClass,
         filterMonth,
+        filterStatus,
         currentPage,
         pageSize
       })
     );
-  }, [searchQuery, filterAcademicYear, filterGrade, filterClass, filterMonth, currentPage, pageSize]);
+  }, [searchQuery, filterAcademicYear, filterGrade, filterClass, filterMonth, filterStatus, currentPage, pageSize]);
 
   useEffect(() => {
     // loadInvoices();
@@ -186,7 +191,7 @@ export default function Invoices() {
 
   useEffect(() => {
     loadInvoices();
-  }, [currentPage, pageSize, filterAcademicYear, filterGrade, filterClass, filterMonth, debouncedSearchQuery]);
+  }, [currentPage, pageSize, filterAcademicYear, filterGrade, filterClass, filterMonth, filterStatus, debouncedSearchQuery]);
 
   async function loadAcademicYears() {
     try {
@@ -332,6 +337,7 @@ export default function Invoices() {
       if (filterGrade !== "all") params.grade_id = filterGrade;
       if (filterClass !== "all") params.class_id = filterClass;
       if (filterMonth !== "all") params.month = filterMonth;
+      if (filterStatus !== "all") params.status = filterStatus;
       if (debouncedSearchQuery) params.search = debouncedSearchQuery;
 
       const res = await API.get(`/fee/list/invoices`, { params });
@@ -476,45 +482,17 @@ export default function Invoices() {
 
   const handlePrintDemand = async (invoiceId) => {
     setPrintingId(invoiceId);
+    const toastId = toast.loading("Generating invoice PDF for printing...");
     try {
       const res = await API.get(`/fee/get/invoices/${invoiceId}/pdf`, {
         responseType: "blob",
         timeout: 60000
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print demand", err);
-      toast.error("Failed to generate demand PDF");
+      toast.error("Failed to generate demand PDF", { id: toastId });
     } finally {
       setPrintingId(null);
     }
@@ -523,45 +501,17 @@ export default function Invoices() {
   const handlePrintReceipt = async (paymentId) => {
     if (!paymentId) return;
     setPrintingId(`receipt-${paymentId}`);
+    const toastId = toast.loading("Generating receipt PDF for printing...");
     try {
       const res = await API.get(`/fee/payments/${paymentId}/receipt`, {
         responseType: "blob",
         timeout: 60000
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print receipt", err);
-      toast.error("Failed to generate receipt PDF");
+      toast.error("Failed to generate receipt PDF", { id: toastId });
     } finally {
       setPrintingId(null);
     }
@@ -582,8 +532,9 @@ export default function Invoices() {
     }));
   };
 
-  const handlePrintCombined = async (invoiceId, pId = null) => {
+  const handlePrintCombined = async (invoiceId, pId = null, existingToastId = null) => {
     setPrintingInvoice(true);
+    const toastId = existingToastId || toast.loading("Generating print receipt & invoice PDF...");
     try {
       let endpoint = `/fee/get/invoices/${invoiceId}/combined-pdf`;
       if (pId) endpoint += `?payment_id=${pId}`;
@@ -592,40 +543,11 @@ export default function Invoices() {
         responseType: "blob",
         timeout: 60000
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print combined PDF", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Failed to generate PDF", { id: toastId });
     } finally {
       setPrintingInvoice(false);
     }
@@ -656,11 +578,23 @@ export default function Invoices() {
       return;
     }
 
+    const invoiceBalance = selectedInvoice ? Math.max(0, parseFloat(selectedInvoice.amount_due || 0) - parseFloat(selectedInvoice.amount_paid || 0)) : 0;
+    if (dAmt > invoiceBalance) {
+      toast.error(`Discount amount (${formatCurrency(dAmt)}) exceeds invoice balance (${formatCurrency(invoiceBalance)})`);
+      return;
+    }
+    const remainingBalanceAfterDiscount = Math.max(0, invoiceBalance - dAmt);
+    if (pAmt > remainingBalanceAfterDiscount) {
+      toast.error(`Payment amount (${formatCurrency(pAmt)}) exceeds remaining invoice balance (${formatCurrency(remainingBalanceAfterDiscount)})`);
+      return;
+    }
+
     const finalPaymentMethodString = paymentMethodStringArray.length > 0 
       ? paymentMethodStringArray.join(', ') 
       : "None";
 
     setProcessingPayment(true);
+    const toastId = toast.loading("Processing payment...");
     try {
       const response = await API.post(`/fee/add/invoices/${selectedInvoice.id}/pay`, {
         invoice_id: selectedInvoice.id,
@@ -671,14 +605,7 @@ export default function Invoices() {
         discount_reason: paymentData.discount_reason
       });
 
-      toast.success("Processed successfully");
-
       const paymentId = response.data.payment_id;
-
-      handlePrintCombined(selectedInvoice.id, paymentId);
-
-      // Automatically trigger printing
-      // await handlePrintDemand(selectedInvoice.id);
 
       setPaymentDialogOpen(false);
       setPaymentData({
@@ -691,9 +618,12 @@ export default function Invoices() {
       setSelectedMethods(["cash"]);
       setMethodAmounts({ cash: "" });
       loadInvoices();
+
+      toast.loading("Payment recorded! Generating print receipt PDF...", { id: toastId });
+      await handlePrintCombined(selectedInvoice.id, paymentId, toastId);
     } catch (err) {
       console.error("Failed to record payment", err);
-      toast.error(err.response?.data?.error || "Failed to record payment");
+      toast.error(err.response?.data?.error || "Failed to record payment", { id: toastId });
     } finally {
       setProcessingPayment(false);
     }
@@ -774,7 +704,10 @@ export default function Invoices() {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("en-GB");
+    if (!dateString) return "";
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return dateString;
+    return date.toLocaleDateString("en-GB");
   };
 
   const resetForm = () => {
@@ -910,36 +843,17 @@ export default function Invoices() {
       return;
     }
     setBulkPrinting(true);
+    const toastId = toast.loading(`Generating bulk PDF for ${selectedInvoiceIds.length} invoices...`);
     try {
       const res = await API.post(`/fee/get/invoices-bulk/pdf`, { invoiceIds: selectedInvoiceIds }, {
         responseType: "blob",
         timeout: 120000
       });
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print invoices", err);
-      toast.error("Failed to generate bulk PDF");
+      toast.error("Failed to generate bulk PDF", { id: toastId });
     } finally {
       setBulkPrinting(false);
     }
@@ -1194,7 +1108,7 @@ export default function Invoices() {
       {/* Filters (Aligned 2-Column Grid on Mobile) */}
       <Card className="rounded-2xl border shadow-sm bg-white dark:bg-gray-900">
         <CardContent className="p-3 sm:p-5 space-y-3">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2.5 items-end">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5 items-end">
             <div className="space-y-1">
               <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Academic Year</Label>
               <Select value={filterAcademicYear} onValueChange={(val) => { setFilterAcademicYear(val); loadInvoices(); }}>
@@ -1266,6 +1180,23 @@ export default function Invoices() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-1">
+              <Label className="text-[10px] sm:text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider">Status</Label>
+              <Select value={filterStatus} onValueChange={(val) => { setFilterStatus(val); setCurrentPage(1); }}>
+                <SelectTrigger className="h-9 text-xs font-semibold rounded-xl bg-gray-50 dark:bg-gray-800 border-gray-200 dark:border-gray-700">
+                  <SelectValue placeholder="Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="paid">Paid</SelectItem>
+                  <SelectItem value="partially_paid">Partial Paid</SelectItem>
+                  <SelectItem value="pending">Due / Pending</SelectItem>
+                  <SelectItem value="overdue">Overdue</SelectItem>
+                  <SelectItem value="carried_forward">Carried Forward</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-2 pt-2 border-t border-gray-100 dark:border-gray-800">
@@ -1280,6 +1211,7 @@ export default function Invoices() {
                 setFilterGrade("all");
                 setFilterClass("all");
                 setFilterMonth("all");
+                setFilterStatus("all");
                 setCurrentPage(1);
                 sessionStorage.removeItem("invoice_management_filters");
                 loadInvoices();
@@ -1445,13 +1377,14 @@ export default function Invoices() {
                           <div className="font-medium">{invoice.grade_name || invoice.class_name || `Class ${invoice.class_id}`}</div>
                         </TableCell>
                         <TableCell>
-                          <div className="text-sm">
-                            {/* {formatDate(invoice.period_start)} to {formatDate(invoice.period_end)} */}
-                            {invoice.period}
+                          <div className="text-sm font-semibold">
+                            {invoice.period || 'Period'} ({invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'})
                           </div>
-                          <div className="text-xs text-muted-foreground">
-                            {invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'}
-                          </div>
+                          {invoice.period_start && invoice.period_end && (
+                            <div className="text-xs text-muted-foreground font-mono">
+                              {formatDate(invoice.period_start)} to {formatDate(invoice.period_end)}
+                            </div>
+                          )}
                         </TableCell>
                         <TableCell className="text-right font-mono">
                           <span className="font-bold">{formatCurrency(invoice.amount_due)}</span>
@@ -1480,116 +1413,173 @@ export default function Invoices() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <div className="flex items-center gap-2">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => navigate(`/school/finance/invoices/${invoice.id}`)}
-                              disabled={selectedInvoiceIds.length > 0}
-                            >
-                              <Eye className="h-4 w-4" />
-                            </Button>
-                            {invoice.is_auto_generate === 1 && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleDisableAutoGenerate(invoice.id)}
-                                title="Disable Auto-Generate"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <RefreshCw className="h-4 w-4 text-orange-500" />
-                              </Button>
-                            )}
-                            {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  setPaymentDialogOpen(true);
-                                }}
-                                title="Record Payment"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
-                              </Button>
-                            )}
-                            {invoice.status !== 'carried_forward' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  setFineDialogOpen(true);
-                                }}
-                                title="Add Fine"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <IndianRupeeIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
-                              </Button>
-                            )}
-                            {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  setDiscountDialogOpen(true);
-                                }}
-                                title="Add Discount"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <DollarSign className="h-4 w-4 text-orange-500 dark:text-orange-400" />
-                              </Button>
-                            )}
-                            {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedInvoice(invoice);
-                                  setPrevDuesDialogOpen(true);
-                                }}
-                                title="Add Previous Dues"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handlePrintDemand(invoice.id)}
-                              title="Print Demand Bill"
-                              className="text-blue-500"
-                              disabled={printingId === invoice.id || selectedInvoiceIds.length > 0}
-                            >
-                              {printingId === invoice.id ? (
-                                <RefreshCw className="h-4 w-4 animate-spin" />
-                              ) : (
-                                <FileText className="h-4 w-4" />
+                          <TooltipProvider delayDuration={100}>
+                            <div className="flex items-center gap-1">
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="View Invoice Details"
+                                    onClick={() => navigate(`/school/finance/invoices/${invoice.id}`)}
+                                    disabled={selectedInvoiceIds.length > 0}
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>View Invoice Details</TooltipContent>
+                              </Tooltip>
+
+                              {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Record Payment"
+                                      onClick={() => {
+                                        setSelectedInvoice(invoice);
+                                        setPaymentDialogOpen(true);
+                                      }}
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <CreditCard className="h-4 w-4 text-green-600 dark:text-green-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Record Payment</TooltipContent>
+                                </Tooltip>
                               )}
-                            </Button>
+
+                              {invoice.status !== 'carried_forward' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Add Fine"
+                                      onClick={() => {
+                                        setSelectedInvoice(invoice);
+                                        setFineDialogOpen(true);
+                                      }}
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <IndianRupeeIcon className="h-4 w-4 text-red-600 dark:text-red-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Add Fine</TooltipContent>
+                                </Tooltip>
+                              )}
+
+                              {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Add Discount"
+                                      onClick={() => {
+                                        setSelectedInvoice(invoice);
+                                        setDiscountDialogOpen(true);
+                                      }}
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <DollarSign className="h-4 w-4 text-orange-500 dark:text-orange-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Add Discount</TooltipContent>
+                                </Tooltip>
+                              )}
+
+                              {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      title="Add Previous Dues"
+                                      onClick={() => {
+                                        setSelectedInvoice(invoice);
+                                        setPrevDuesDialogOpen(true);
+                                      }}
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <History className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Add Previous Dues</TooltipContent>
+                                </Tooltip>
+                              )}
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handlePrintDemand(invoice.id)}
+                                    title="Print Demand Bill"
+                                    className="text-blue-500"
+                                    disabled={printingId === invoice.id || selectedInvoiceIds.length > 0}
+                                  >
+                                    {printingId === invoice.id ? (
+                                      <RefreshCw className="h-4 w-4 animate-spin" />
+                                    ) : (
+                                      <FileText className="h-4 w-4" />
+                                    )}
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Print Demand Bill</TooltipContent>
+                              </Tooltip>
+
+                              {invoice.is_auto_generate === 1 && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDisableAutoGenerate(invoice.id)}
+                                      title="Disable Auto-Generate"
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <RefreshCw className="h-4 w-4 text-orange-500" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Disable Auto-Generate</TooltipContent>
+                                </Tooltip>
+                              )}
+
                               {invoice.status === 'carried_forward' && (
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleOpenRestoreDialog(invoice.id)}
-                                title="Restore Carried Forward Status"
-                                disabled={selectedInvoiceIds.length > 0}
-                              >
-                                <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
-                              </Button>
-                            )}
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => handleDeleteInvoice(invoice.id)}
-                              disabled={selectedInvoiceIds.length > 0}
-                            >
-                              <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
-                            </Button>
-                          </div>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleOpenRestoreDialog(invoice.id)}
+                                      title="Restore Status"
+                                      disabled={selectedInvoiceIds.length > 0}
+                                    >
+                                      <RotateCcw className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                    </Button>
+                                  </TooltipTrigger>
+                                  <TooltipContent>Restore Carried Forward Status</TooltipContent>
+                                </Tooltip>
+                              )}
+
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    title="Delete Invoice"
+                                    onClick={() => handleDeleteInvoice(invoice.id)}
+                                    disabled={selectedInvoiceIds.length > 0}
+                                  >
+                                    <AlertCircle className="h-4 w-4 text-red-500 dark:text-red-400" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Invoice</TooltipContent>
+                              </Tooltip>
+                            </div>
+                          </TooltipProvider>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -1635,7 +1625,12 @@ export default function Invoices() {
                       <div className="grid grid-cols-2 gap-2 text-sm mt-2 border-t pt-3">
                         <div>
                           <div className="text-muted-foreground">Period</div>
-                          <div className="font-medium">{formatDate(invoice.period_start)} to {formatDate(invoice.period_end)}</div>
+                          <div className="font-semibold text-sm">{invoice.period || 'Period'}</div>
+                          {invoice.period_start && invoice.period_end && (
+                            <div className="text-xs text-muted-foreground font-mono mt-0.5">
+                              {formatDate(invoice.period_start)} to {formatDate(invoice.period_end)}
+                            </div>
+                          )}
                           <div className="text-xs text-muted-foreground mt-0.5">
                             {invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'}
                           </div>
@@ -2005,142 +2000,187 @@ export default function Invoices() {
           <ScrollArea className="max-h-[75vh] pr-2">
           <div className="space-y-4 py-2">
             <form onSubmit={handleRecordPayment} className="space-y-4">
-              {/* Balance summary bar */}
-              <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-0.5">Invoice Balance</p>
-                  <p className="text-xl font-bold font-mono">{formatCurrency(calculateBalance())}</p>
-                </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="text-center">
-                  <p className="text-xs text-muted-foreground mb-0.5">Amount Being Paid</p>
-                  <p className="text-xl font-bold font-mono text-green-600 dark:text-green-400">
-                    {formatCurrency(selectedMethods.reduce((sum, id) => sum + (parseFloat(methodAmounts[id]) || 0), 0))}
-                  </p>
-                </div>
-              </div>
+              {(() => {
+                const totalPaidAmount = selectedMethods.reduce((sum, id) => sum + (parseFloat(methodAmounts[id]) || 0), 0);
+                const rawInvoiceBalance = selectedInvoice ? Math.max(0, parseFloat(selectedInvoice.amount_due || 0) - parseFloat(selectedInvoice.amount_paid || 0)) : 0;
+                const enteredDiscount = parseFloat(paymentData.discount_amount) || 0;
+                const netInvoiceBalance = Math.max(0, rawInvoiceBalance - enteredDiscount);
+                const isPaymentExceeded = totalPaidAmount > netInvoiceBalance;
+                const isDiscountExceeded = enteredDiscount > rawInvoiceBalance;
 
-              <div className="space-y-2">
-                <Label className="font-semibold">Payment Methods</Label>
-                <div className="grid grid-cols-3 gap-2 border p-3 rounded-md">
-                  {availableMethods.map((method) => {
-                    const isSelected = selectedMethods.includes(method.id);
-                    return (
-                      <div
-                        key={method.id}
-                        onClick={() => {
-                          setSelectedMethods(prev => {
-                            if (isSelected) return prev.filter(m => m !== method.id);
-                            return [...prev, method.id];
-                          });
-                          if (isSelected) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
-                        }}
-                        className={`flex flex-col gap-2 p-2 border-2 rounded-md cursor-pointer transition-colors ${
-                          isSelected
-                            ? 'border-primary bg-primary/10'
-                            : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                          <Checkbox
-                            id={`method-${method.id}`}
-                            checked={isSelected}
-                            onCheckedChange={(checked) => {
-                              setSelectedMethods(prev => {
-                                if (checked) return [...prev, method.id];
-                                return prev.filter(m => m !== method.id);
-                              });
-                              if (!checked) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
-                            }}
-                          />
-                          <label
-                            htmlFor={`method-${method.id}`}
-                            className="text-sm font-semibold cursor-pointer select-none whitespace-nowrap"
-                          >
-                            {method.label}
-                          </label>
-                        </div>
-                        {isSelected && (
-                          <Input
-                            type="number"
-                            placeholder="₹ Amount"
-                            className="h-8 text-sm"
-                            value={methodAmounts[method.id] || ""}
-                            onClick={e => e.stopPropagation()}
-                            onChange={(e) => setMethodAmounts(prev => ({ ...prev, [method.id]: e.target.value }))}
-                            min="0"
-                            step="0.01"
-                            autoFocus
-                          />
-                        )}
+                return (
+                  <>
+                    {/* Balance summary bar */}
+                    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Invoice Balance</p>
+                        <p className="text-xl font-bold font-mono">{formatCurrency(calculateBalance())}</p>
                       </div>
-                    );
-                  })}
-                </div>
-              </div>
+                      <div className="h-8 w-px bg-border" />
+                      <div className="text-center">
+                        <p className="text-xs text-muted-foreground mb-0.5">Amount Being Paid</p>
+                        <p className={`text-xl font-bold font-mono transition-colors ${
+                          isPaymentExceeded ? 'text-red-600 dark:text-red-400 font-bold' : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {formatCurrency(totalPaidAmount)}
+                        </p>
+                      </div>
+                    </div>
 
-              <div className="space-y-2">
-                <Label>Discount Amount(Optional)</Label>
-                <Input
-                  type="number"
-                  name="discount_amount"
-                  value={paymentData.discount_amount}
-                  onChange={handlePaymentInputChange}
-                  placeholder="0.00"
-                  min="0"
-                  step="0.01"
-                />
-              </div>
+                    {/* Warning Alerts */}
+                    {isPaymentExceeded && (
+                      <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 animate-in fade-in duration-200">
+                        <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                        <div className="text-xs space-y-0.5">
+                          <p className="font-semibold text-sm text-red-800 dark:text-red-200">
+                            ⚠️ Payment Exceeds Invoice Balance!
+                          </p>
+                          <p>
+                            Total payment amount ({formatCurrency(totalPaidAmount)}) is greater than remaining balance ({formatCurrency(netInvoiceBalance)}) by <strong className="font-bold underline">{formatCurrency(totalPaidAmount - netInvoiceBalance)}</strong>. Please correct the entered amount.
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
-              {/* Discount Reason */}
-              {paymentData.discount_amount && parseFloat(paymentData.discount_amount) > 0 && (
-                <div className="space-y-2">
-                  <Label>Discount Reason</Label>
-                  <Input
-                    name="discount_reason"
-                    value={paymentData.discount_reason}
-                    onChange={handlePaymentInputChange}
-                    placeholder="Why are you discounting?"
-                  />
-                </div>
-              )}
+                    {isDiscountExceeded && (
+                      <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 animate-in fade-in duration-200">
+                        <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                        <div className="text-xs space-y-0.5">
+                          <p className="font-semibold text-sm text-red-800 dark:text-red-200">
+                            ⚠️ Discount Exceeds Invoice Balance!
+                          </p>
+                          <p>
+                            Discount amount ({formatCurrency(enteredDiscount)}) exceeds remaining invoice balance ({formatCurrency(rawInvoiceBalance)}).
+                          </p>
+                        </div>
+                      </div>
+                    )}
 
-              <div className="space-y-2">
-                <Label>Reference Number</Label>
-                <Input
-                  name="reference"
-                  value={paymentData.reference}
-                  onChange={handlePaymentInputChange}
-                  placeholder="Optional reference number"
-                />
-              </div>
+                    <div className="space-y-2">
+                      <Label className="font-semibold">Payment Methods</Label>
+                      <div className="grid grid-cols-3 gap-2 border p-3 rounded-md">
+                        {availableMethods.map((method) => {
+                          const isSelected = selectedMethods.includes(method.id);
+                          return (
+                            <div
+                              key={method.id}
+                              onClick={() => {
+                                setSelectedMethods(prev => {
+                                  if (isSelected) return prev.filter(m => m !== method.id);
+                                  return [...prev, method.id];
+                                });
+                                if (isSelected) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                              }}
+                              className={`flex flex-col gap-2 p-2 border-2 rounded-md cursor-pointer transition-colors ${
+                                isSelected
+                                  ? 'border-primary bg-primary/10'
+                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                              }`}
+                            >
+                              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                <Checkbox
+                                  id={`method-${method.id}`}
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    setSelectedMethods(prev => {
+                                      if (checked) return [...prev, method.id];
+                                      return prev.filter(m => m !== method.id);
+                                    });
+                                    if (!checked) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                                  }}
+                                />
+                                <label
+                                  htmlFor={`method-${method.id}`}
+                                  className="text-sm font-semibold cursor-pointer select-none whitespace-nowrap"
+                                >
+                                  {method.label}
+                                </label>
+                              </div>
+                              {isSelected && (
+                                <Input
+                                  type="number"
+                                  placeholder="₹ Amount"
+                                  className="h-8 text-sm"
+                                  value={methodAmounts[method.id] || ""}
+                                  onClick={e => e.stopPropagation()}
+                                  onChange={(e) => setMethodAmounts(prev => ({ ...prev, [method.id]: e.target.value }))}
+                                  min="0"
+                                  step="0.01"
+                                  autoFocus
+                                />
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
 
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setPaymentDialogOpen(false)}
-                  disabled={processingPayment}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={processingPayment}
-                >
-                  {processingPayment ? (
-                    <>
-                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CreditCard className="h-4 w-4 mr-2" />
-                      Record Payment
-                    </>
-                  )}
-                </Button>
-              </DialogFooter>
+                    <div className="space-y-2">
+                      <Label>Discount Amount(Optional)</Label>
+                      <Input
+                        type="number"
+                        name="discount_amount"
+                        value={paymentData.discount_amount}
+                        onChange={handlePaymentInputChange}
+                        placeholder="0.00"
+                        min="0"
+                        step="0.01"
+                      />
+                    </div>
+
+                    {/* Discount Reason */}
+                    {paymentData.discount_amount && parseFloat(paymentData.discount_amount) > 0 && (
+                      <div className="space-y-2">
+                        <Label>Discount Reason</Label>
+                        <Input
+                          name="discount_reason"
+                          value={paymentData.discount_reason}
+                          onChange={handlePaymentInputChange}
+                          placeholder="Why are you discounting?"
+                        />
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Reference Number</Label>
+                      <Input
+                        name="reference"
+                        value={paymentData.reference}
+                        onChange={handlePaymentInputChange}
+                        placeholder="Optional reference number"
+                      />
+                    </div>
+
+                    <DialogFooter>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setPaymentDialogOpen(false)}
+                        disabled={processingPayment}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={processingPayment || isPaymentExceeded || isDiscountExceeded}
+                        className={isPaymentExceeded || isDiscountExceeded ? "opacity-60 cursor-not-allowed bg-red-600 hover:bg-red-600 text-white" : ""}
+                      >
+                        {processingPayment ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Processing...
+                          </>
+                        ) : (
+                          <>
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Record Payment
+                          </>
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </>
+                );
+              })()}
             </form>
           </div>
           </ScrollArea>

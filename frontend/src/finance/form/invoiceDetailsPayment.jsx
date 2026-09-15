@@ -42,13 +42,15 @@ import {
   School,
   FileText,
   CheckCircle,
-  AlertCircle
+  AlertCircle,
+  AlertTriangle
 } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from '@/auth/AuthContext';
+import { printPdfBlob } from '@/utils/fileHelper';
 
 export default function InvoiceDetails() {
   const { invoiceId } = useParams();
@@ -120,52 +122,24 @@ export default function InvoiceDetails() {
 
   const handlePrintDemand = async () => {
     setProcessingPdf(true);
+    const toastId = toast.loading("Generating invoice PDF for printing...");
     try {
       const res = await API.get(`/fee/get/invoices/${invoiceId}/pdf`, {
         responseType: "blob",
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print demand", err);
-      toast.error("Failed to generate demand PDF");
+      toast.error("Failed to generate demand PDF", { id: toastId });
     } finally {
       setProcessingPdf(false);
     }
   };
 
-
-  const handlePrintCombined = async (pId = null) => {
+  const handlePrintCombined = async (pId = null, existingToastId = null) => {
     setProcessingPdf(true);
+    const toastId = existingToastId || toast.loading("Generating print receipt & invoice PDF...");
     try {
       let endpoint = `/fee/get/invoices/${invoiceId}/combined-pdf`;
       if (pId) endpoint += `?payment_id=${pId}`;
@@ -173,40 +147,11 @@ export default function InvoiceDetails() {
       const res = await API.get(endpoint, {
         responseType: "blob",
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print combined PDF", err);
-      toast.error("Failed to generate PDF");
+      toast.error("Failed to generate PDF", { id: toastId });
     } finally {
       setProcessingPdf(false);
     }
@@ -215,44 +160,16 @@ export default function InvoiceDetails() {
   const handlePrintReceipt = async (paymentId) => {
     if (!paymentId) return;
     setPrintingReceiptId(paymentId);
+    const toastId = toast.loading("Generating receipt PDF for printing...");
     try {
       const res = await API.get(`/fee/payments/${paymentId}/receipt`, {
         responseType: "blob",
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      toast.success("Opening print preview...", { id: toastId });
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print receipt", err);
-      toast.error("Failed to generate receipt PDF");
+      toast.error("Failed to generate receipt PDF", { id: toastId });
     } finally {
       setPrintingReceiptId(null);
     }
@@ -283,11 +200,23 @@ export default function InvoiceDetails() {
       return;
     }
 
+    const invoiceBalance = invoice ? Math.max(0, parseFloat(invoice.amount_due || 0) - parseFloat(invoice.amount_paid || 0)) : 0;
+    if (dAmt > invoiceBalance) {
+      toast.error(`Discount amount (${formatCurrency(dAmt)}) exceeds invoice balance (${formatCurrency(invoiceBalance)})`);
+      return;
+    }
+    const remainingBalanceAfterDiscount = Math.max(0, invoiceBalance - dAmt);
+    if (pAmt > remainingBalanceAfterDiscount) {
+      toast.error(`Payment amount (${formatCurrency(pAmt)}) exceeds remaining invoice balance (${formatCurrency(remainingBalanceAfterDiscount)})`);
+      return;
+    }
+
     const finalPaymentMethodString = paymentMethodStringArray.length > 0 
       ? paymentMethodStringArray.join(', ') 
       : "None";
 
     setProcessingPayment(true);
+    const toastId = toast.loading("Processing payment...");
     try {
       const response = await API.post(`/fee/add/invoices/${invoiceId}/pay`, {
         invoice_id: parseInt(invoiceId),
@@ -298,12 +227,7 @@ export default function InvoiceDetails() {
         discount_reason: paymentData.discount_reason
       });
 
-      toast.success("Processed successfully");
-
       const paymentId = response.data.payment_id;
-
-      // Automatically trigger combined printing
-      await handlePrintCombined(paymentId);
 
       setPaymentDialogOpen(false);
       setPaymentData({
@@ -316,9 +240,12 @@ export default function InvoiceDetails() {
       setSelectedMethods(["cash"]);
       setMethodAmounts({ cash: "" });
       loadInvoiceDetails();
+
+      toast.loading("Payment recorded! Generating print receipt PDF...", { id: toastId });
+      await handlePrintCombined(paymentId, toastId);
     } catch (err) {
       console.error("Failed to record payment", err);
-      toast.error(err.response?.data?.error || "Failed to record payment");
+      toast.error(err.response?.data?.error || "Failed to record payment", { id: toastId });
     } finally {
       setProcessingPayment(false);
     }
@@ -501,140 +428,188 @@ export default function InvoiceDetails() {
                   </DialogDescription>
                 </DialogHeader>
                 <form onSubmit={handleRecordPayment}>
-                  <ScrollArea className="max-h-[75vh] pr-2">
-                  <div className="space-y-4 py-2">
-                    {/* Balance summary bar */}
-                    <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-0.5">Invoice Balance</p>
-                        <p className="text-xl font-bold font-mono">{formatCurrency(calculateBalance())}</p>
-                      </div>
-                      <div className="h-8 w-px bg-border" />
-                      <div className="text-center">
-                        <p className="text-xs text-muted-foreground mb-0.5">Amount Being Paid</p>
-                        <p className="text-xl font-bold font-mono text-green-600 dark:text-green-400">
-                          {formatCurrency(selectedMethods.reduce((sum, id) => sum + (parseFloat(methodAmounts[id]) || 0), 0))}
-                        </p>
-                      </div>
-                    </div>
+                  {(() => {
+                    const totalPaidAmount = selectedMethods.reduce((sum, id) => sum + (parseFloat(methodAmounts[id]) || 0), 0);
+                    const rawInvoiceBalance = invoice ? Math.max(0, parseFloat(invoice.amount_due || 0) - parseFloat(invoice.amount_paid || 0)) : 0;
+                    const enteredDiscount = parseFloat(paymentData.discount_amount) || 0;
+                    const netInvoiceBalance = Math.max(0, rawInvoiceBalance - enteredDiscount);
+                    const isPaymentExceeded = totalPaidAmount > netInvoiceBalance;
+                    const isDiscountExceeded = enteredDiscount > rawInvoiceBalance;
 
-                    <div className="space-y-2">
-                      <Label className="font-semibold">Payment Methods</Label>
-                      <div className="grid grid-cols-3 gap-2 border p-3 rounded-md">
-                        {availableMethods.map((method) => {
-                          const isSelected = selectedMethods.includes(method.id);
-                          return (
-                            <div
-                              key={method.id}
-                              onClick={() => {
-                                setSelectedMethods(prev => {
-                                  if (isSelected) return prev.filter(m => m !== method.id);
-                                  return [...prev, method.id];
-                                });
-                                if (isSelected) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
-                              }}
-                              className={`flex flex-col gap-2 p-2 border-2 rounded-md cursor-pointer transition-colors ${
-                                isSelected
-                                  ? 'border-primary bg-primary/10'
-                                  : 'border-border hover:border-primary/50 hover:bg-muted/50'
-                              }`}
-                            >
-                              <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
-                                <Checkbox
-                                  id={`detail-method-${method.id}`}
-                                  checked={isSelected}
-                                  onCheckedChange={(checked) => {
-                                    setSelectedMethods(prev => {
-                                      if (checked) return [...prev, method.id];
-                                      return prev.filter(m => m !== method.id);
-                                    });
-                                    if (!checked) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
-                                  }}
-                                />
-                                <label
-                                  htmlFor={`detail-method-${method.id}`}
-                                  className="text-sm font-semibold cursor-pointer select-none whitespace-nowrap"
-                                >
-                                  {method.label}
-                                </label>
-                              </div>
-                              {isSelected && (
-                                <Input
-                                  type="number"
-                                  placeholder="₹ Amount"
-                                  className="h-8 text-sm"
-                                  value={methodAmounts[method.id] || ""}
-                                  onClick={e => e.stopPropagation()}
-                                  onChange={(e) => setMethodAmounts(prev => ({ ...prev, [method.id]: e.target.value }))}
-                                  min="0"
-                                  step="0.01"
-                                  autoFocus
-                                />
-                              )}
+                    return (
+                      <>
+                        <ScrollArea className="max-h-[75vh] pr-2">
+                        <div className="space-y-4 py-2">
+                          {/* Balance summary bar */}
+                          <div className="flex items-center justify-between rounded-lg border bg-muted/50 px-4 py-3">
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground mb-0.5">Invoice Balance</p>
+                              <p className="text-xl font-bold font-mono">{formatCurrency(calculateBalance())}</p>
                             </div>
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor="discount_amount" className="text-sm font-medium">Discount Amount (Optional)</label>
-                      <Input
-                        id="discount_amount"
-                        name="discount_amount"
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        value={paymentData.discount_amount}
-                        onChange={handlePaymentInputChange}
-                        min="0"
-                      />
-                      <p className="text-xs text-muted-foreground">
-                        Maximum discount: {formatCurrency(parseFloat(invoice.amount_due) - parseFloat(invoice.amount_paid))}
-                      </p>
-                    </div>
+                            <div className="h-8 w-px bg-border" />
+                            <div className="text-center">
+                              <p className="text-xs text-muted-foreground mb-0.5">Amount Being Paid</p>
+                              <p className={`text-xl font-bold font-mono transition-colors ${
+                                isPaymentExceeded ? 'text-red-600 dark:text-red-400 font-bold' : 'text-green-600 dark:text-green-400'
+                              }`}>
+                                {formatCurrency(totalPaidAmount)}
+                              </p>
+                            </div>
+                          </div>
 
-                    {paymentData.discount_amount && parseFloat(paymentData.discount_amount) > 0 && (
-                      <div className="space-y-2">
-                        <Label>Discount Reason(Optional)</Label>
-                        <Input
-                          name="discount_reason"
-                          type="text"
-                          placeholder="e.g., Sibling discount, sports concession"
-                          value={paymentData.discount_reason}
-                          onChange={handlePaymentInputChange}
-                        />
-                      </div>
-                    )}
-                    <div className="space-y-2">
-                      <label htmlFor="reference" className="text-sm font-medium">Reference Number</label>
-                      <Input
-                        id="reference"
-                        name="reference"
-                        placeholder="e.g., CASH-RECEIPT-001"
-                        value={paymentData.reference}
-                        onChange={handlePaymentInputChange}
-                      />
-                    </div>
-                  </div>
-                  </ScrollArea>
-                  <DialogFooter className="mt-4">
-                    <Button type="button" variant="outline" disabled={processingPayment} onClick={() => setPaymentDialogOpen(false)}>
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={processingPayment}>
-                      {processingPayment ? (
-                        <>
-                          <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                          Processing...
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2" />
-                          Record Payment
-                        </>
-                      )}
-                    </Button>
-                  </DialogFooter>
+                          {/* Warning Alerts */}
+                          {isPaymentExceeded && (
+                            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 animate-in fade-in duration-200">
+                              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                              <div className="text-xs space-y-0.5">
+                                <p className="font-semibold text-sm text-red-800 dark:text-red-200">
+                                  ⚠️ Payment Exceeds Invoice Balance!
+                                </p>
+                                <p>
+                                  Total payment amount ({formatCurrency(totalPaidAmount)}) is greater than remaining balance ({formatCurrency(netInvoiceBalance)}) by <strong className="font-bold underline">{formatCurrency(totalPaidAmount - netInvoiceBalance)}</strong>. Please correct the entered amount.
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          {isDiscountExceeded && (
+                            <div className="flex items-start gap-2.5 p-3 rounded-lg bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800 animate-in fade-in duration-200">
+                              <AlertTriangle className="h-5 w-5 shrink-0 text-red-600 dark:text-red-400 mt-0.5" />
+                              <div className="text-xs space-y-0.5">
+                                <p className="font-semibold text-sm text-red-800 dark:text-red-200">
+                                  ⚠️ Discount Exceeds Invoice Balance!
+                                </p>
+                                <p>
+                                  Discount amount ({formatCurrency(enteredDiscount)}) exceeds remaining invoice balance ({formatCurrency(rawInvoiceBalance)}).
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="space-y-2">
+                            <Label className="font-semibold">Payment Methods</Label>
+                            <div className="grid grid-cols-3 gap-2 border p-3 rounded-md">
+                              {availableMethods.map((method) => {
+                                const isSelected = selectedMethods.includes(method.id);
+                                return (
+                                  <div
+                                    key={method.id}
+                                    onClick={() => {
+                                      setSelectedMethods(prev => {
+                                        if (isSelected) return prev.filter(m => m !== method.id);
+                                        return [...prev, method.id];
+                                      });
+                                      if (isSelected) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                                    }}
+                                    className={`flex flex-col gap-2 p-2 border-2 rounded-md cursor-pointer transition-colors ${
+                                      isSelected
+                                        ? 'border-primary bg-primary/10'
+                                        : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2" onClick={e => e.stopPropagation()}>
+                                      <Checkbox
+                                        id={`detail-method-${method.id}`}
+                                        checked={isSelected}
+                                        onCheckedChange={(checked) => {
+                                          setSelectedMethods(prev => {
+                                            if (checked) return [...prev, method.id];
+                                            return prev.filter(m => m !== method.id);
+                                          });
+                                          if (!checked) setMethodAmounts(prev => ({ ...prev, [method.id]: "" }));
+                                        }}
+                                      />
+                                      <label
+                                        htmlFor={`detail-method-${method.id}`}
+                                        className="text-sm font-semibold cursor-pointer select-none whitespace-nowrap"
+                                      >
+                                        {method.label}
+                                      </label>
+                                    </div>
+                                    {isSelected && (
+                                      <Input
+                                        type="number"
+                                        placeholder="₹ Amount"
+                                        className="h-8 text-sm"
+                                        value={methodAmounts[method.id] || ""}
+                                        onClick={e => e.stopPropagation()}
+                                        onChange={(e) => setMethodAmounts(prev => ({ ...prev, [method.id]: e.target.value }))}
+                                        min="0"
+                                        step="0.01"
+                                        autoFocus
+                                      />
+                                    )}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                          <div className="space-y-2">
+                            <label htmlFor="discount_amount" className="text-sm font-medium">Discount Amount (Optional)</label>
+                            <Input
+                              id="discount_amount"
+                              name="discount_amount"
+                              type="number"
+                              step="0.01"
+                              placeholder="0.00"
+                              value={paymentData.discount_amount}
+                              onChange={handlePaymentInputChange}
+                              min="0"
+                            />
+                            <p className="text-xs text-muted-foreground">
+                              Maximum discount: {formatCurrency(parseFloat(invoice.amount_due) - parseFloat(invoice.amount_paid))}
+                            </p>
+                          </div>
+
+                          {paymentData.discount_amount && parseFloat(paymentData.discount_amount) > 0 && (
+                            <div className="space-y-2">
+                              <Label>Discount Reason(Optional)</Label>
+                              <Input
+                                name="discount_reason"
+                                type="text"
+                                placeholder="e.g., Sibling discount, sports concession"
+                                value={paymentData.discount_reason}
+                                onChange={handlePaymentInputChange}
+                              />
+                            </div>
+                          )}
+                          <div className="space-y-2">
+                            <label htmlFor="reference" className="text-sm font-medium">Reference Number</label>
+                            <Input
+                              id="reference"
+                              name="reference"
+                              placeholder="e.g., CASH-RECEIPT-001"
+                              value={paymentData.reference}
+                              onChange={handlePaymentInputChange}
+                            />
+                          </div>
+                        </div>
+                        </ScrollArea>
+                        <DialogFooter className="mt-4">
+                          <Button type="button" variant="outline" disabled={processingPayment} onClick={() => setPaymentDialogOpen(false)}>
+                            Cancel
+                          </Button>
+                          <Button
+                            type="submit"
+                            disabled={processingPayment || isPaymentExceeded || isDiscountExceeded}
+                            className={isPaymentExceeded || isDiscountExceeded ? "opacity-60 cursor-not-allowed bg-red-600 hover:bg-red-600 text-white" : ""}
+                          >
+                            {processingPayment ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Processing...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle className="h-4 w-4 mr-2" />
+                                Record Payment
+                              </>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </>
+                    );
+                  })()}
                 </form>
               </DialogContent>
             </Dialog>

@@ -186,11 +186,11 @@
                 {{/if}}
             </div>
             <div class="school-info">
-                <h1 class="school-name">TIMES INTERNATIONAL SCHOOL</h1>
-                <div class="tagline">Commited to Excellence</div>
+                <h1 class="school-name">{{#if school.name}}{{school.name}}{{else}}TIMES INTERNATIONAL SCHOOL{{/if}}</h1>
+                {{#if school.tagline}}<div class="tagline">{{school.tagline}}</div>{{/if}}
                 <div class="address-box">
-                    J57H+PG6, Mohammadpur Rd, Sultanganj, Muhammadpur, Patna, Bihar 800006<br>
-                    Mob: 8102657225 | Email: timesschoolpatna3@gmail.com
+                    {{#if school.address}}{{school.address}}<br>{{/if}}
+                    Mob: {{#if school.phone}}{{school.phone}}{{/if}} | Email: {{#if school.email}}{{school.email}}{{/if}}
                 </div>
             </div>
         </div>

@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import API from "@/api";
 import { toast } from "sonner";
+import { printPdfBlob } from "@/utils/fileHelper";
 import { DatePicker } from "@/components/ui/date-picker";
 import { convertToYYYYMMDD } from "@/helper/dateconversion";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -241,12 +242,7 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
                 link.click();
                 link.remove();
             } else if (actionType === 'print') {
-                const printWindow = window.open(url, '_blank');
-                if (printWindow) {
-                    printWindow.onload = () => {
-                        printWindow.print();
-                    };
-                }
+                printPdfBlob(res.data);
             }
         } catch (error) {
             console.error(error);

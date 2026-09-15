@@ -15,6 +15,7 @@ import {
 import { format } from 'date-fns';
 import API from '@/api';
 import { toast } from 'sonner';
+import { printPdfBlob } from '@/utils/fileHelper';
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -109,6 +110,24 @@ const StudentFeeDetails = () => {
             style: 'currency',
             currency: 'INR',
         }).format(amount);
+    };
+
+    const [printingInvoice, setPrintingInvoice] = useState(false);
+
+    const handlePrintInvoice = async (invoiceId) => {
+        if (!invoiceId) return;
+        setPrintingInvoice(true);
+        try {
+            const res = await API.get(`/fee/get/invoices/${invoiceId}/combined-pdf`, {
+                responseType: "blob",
+            });
+            printPdfBlob(res.data);
+        } catch (err) {
+            console.error("Failed to print invoice", err);
+            toast.error("Failed to generate invoice PDF");
+        } finally {
+            setPrintingInvoice(false);
+        }
     };
 
     const handleViewInvoice = async (invoice) => {
@@ -571,8 +590,12 @@ const StudentFeeDetails = () => {
                         <Button variant="outline" className="flex-1 h-10 rounded-md text-sm font-black hover:bg-muted/40 transition-all border-2 border-primary/10" onClick={() => setIsInvoiceDetailsOpen(false)}>
                             Dismiss
                         </Button>
-                        <Button className="flex-1 h-10 rounded-md text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all">
-                            Print Invoice
+                        <Button 
+                            className="flex-1 h-10 rounded-md text-sm font-black shadow-xl shadow-primary/20 hover:scale-[1.02] active:scale-95 transition-all"
+                            onClick={() => handlePrintInvoice(selectedInvoice?.id)}
+                            disabled={printingInvoice}
+                        >
+                            {printingInvoice ? "Generating..." : "Print Invoice"}
                         </Button>
                     </div>
                 </DialogContent>

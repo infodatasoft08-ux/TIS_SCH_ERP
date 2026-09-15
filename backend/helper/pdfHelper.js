@@ -43,6 +43,18 @@ const formatTime12Hour = (timeStr) => {
     }
 };
 
+const getSchoolInfo = () => {
+    try {
+        const schoolPath = path.join(__dirname, '../school-info.json');
+        if (fs.existsSync(schoolPath)) {
+            return JSON.parse(fs.readFileSync(schoolPath, 'utf8'));
+        }
+    } catch (e) {
+        console.error("Error reading school-info.json:", e);
+    }
+    return {};
+};
+
 /**
  * Base function to generate PDF from HTML template
  */
@@ -62,9 +74,10 @@ async function generatePDFFromTemplate(templateName, data, options = {}, existin
         console.error("Logo conversion error:", e);
     }
 
+    const school = getSchoolInfo();
     const template = handlebars.compile(templateHtml);
     // Add watermark control to default data
-    const html = template({ ...data, logoData, showWatermark: true });
+    const html = template({ ...data, logoData, school, showWatermark: true });
 
     const browser = existingBrowser || await puppeteer.launch({
         headless: 'new',
@@ -273,6 +286,8 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
         }
     } catch (e) { }
 
+    const school = getSchoolInfo();
+
     const invoiceCompiled = handlebars.compile(invoiceTemplateSource);
     const invoiceHtml = invoiceCompiled({
         invoice: {
@@ -284,7 +299,8 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
             discount_amount: invoice.discount_amount ? formatNumberIN(invoice.discount_amount) : null
         },
         rowItems: invoiceRowItems,
-        logoData
+        logoData,
+        school
     });
 
     const receiptCompiled = handlebars.compile(receiptTemplateSource);
@@ -303,7 +319,8 @@ const generateCombinedInvoiceReceiptPDF = async (invoice, payment) => {
             discount_amount: payment.discount_amount ? formatNumberIN(payment.discount_amount) : null,
             hasOutstanding: combBal > 0
         },
-        logoData
+        logoData,
+        school
     });
 
     const combinedTemplate = handlebars.compile(combinedTemplateHtml);

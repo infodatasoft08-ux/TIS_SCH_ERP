@@ -19,6 +19,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, ChevronLeft, ChevronRight, Printer, Download, Users, FileType, CheckCircle2 } from 'lucide-react';
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { printPdfBlob } from "@/utils/fileHelper";
 
 const columnHelper = createColumnHelper();
 
@@ -235,14 +236,7 @@ export default function GenerateDocumentsPage() {
         window.URL.revokeObjectURL(blobUrl);
         toast.success("Document downloaded successfully");
       } else if (action === 'print') {
-        const printWindow = window.open(blobUrl, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
+        printPdfBlob(pdfBlob);
       }
     }
   };
