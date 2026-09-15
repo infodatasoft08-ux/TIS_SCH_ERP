@@ -1,7 +1,17 @@
+// Add at top of index.js to prevent unhandledRejection crashes (flushed for test)
+process.on('unhandledRejection', (reason) => {
+  console.error('🚨 [Unhandled Rejection]:', reason);
+});
+process.on('uncaughtException', (error) => {
+  console.error('🚨 [Uncaught Exception]:', error);
+});
+
+
 const express = require('express');
 const app = express();
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const basicAuth = require('express-basic-auth');
 require('dotenv').config();
 require('../backend/db');
 
@@ -78,8 +88,11 @@ createBullBoard({
   serverAdapter: serverAdapter,
 });
 
-app.use('/admin/queues', serverAdapter.getRouter());
+// Apply Central License Check Middleware
+const licenseCheckMiddleware = require('./middleware/licenseCheck');
+app.use(licenseCheckMiddleware);
 
+app.use('/api/admin/export', exportRoute);
 app.use('/api/auth', authRoutes);
 app.use('/api/students', studentsRoutes);
 app.use('/api/staffUser', staffRouter);
@@ -104,7 +117,17 @@ app.use('/api/homework', homeworkRouter);
 app.use('/api/registration', registrationRouter);
 app.use('/api/documents', documentRouter);
 app.use('/api/app-version', appVersionRoute);
-app.use('/api/admin/export', exportRoute);
+
+app.use(
+  '/admin/queues',
+  basicAuth({
+    users: {
+      [process.env.BULL_BOARD_USER || 'admin']: process.env.BULL_BOARD_PASS || 'SuperSecretPass123'
+    },
+    challenge: true, // Browser prompt me popup show karega username/password ke liye
+  }),
+  serverAdapter.getRouter()
+);
 
 // Global Express Error Handling Middleware
 app.use((err, req, res, next) => {

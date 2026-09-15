@@ -99,6 +99,8 @@ API.interceptors.response.use(
       if (!PUBLIC_PATHS.includes(currentPath)) {
         window.location.href = '/login';
       }
+    } else if (error.response?.status === 403 && (error.response?.data?.error === 'LICENSE_EXPIRED_READ_ONLY' || error.response?.data?.error === 'LICENSE_EXPIRED')) {
+      error.customMessage = error.response.data.message || 'Your school license has expired. You are currently in Read-Only Mode.';
     } else if ([502, 503, 504].includes(error.response?.status)) {
       error.customMessage = 'Server gateway is temporarily busy. Please retry in a few moments.';
     }
