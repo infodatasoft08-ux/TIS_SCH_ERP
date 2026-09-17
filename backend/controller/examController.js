@@ -13,6 +13,18 @@ const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v)
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
+const calculateGrade = (pct) => {
+    const val = Number(pct) || 0;
+    if (val >= 91) return 'A+';
+    if (val >= 81) return 'A';
+    if (val >= 71) return 'B+';
+    if (val >= 61) return 'B';
+    if (val >= 51) return 'C+';
+    if (val >= 41) return 'C';
+    if (val >= 33) return 'D';
+    return 'F';
+};
+
 // Add Exam Group (Multiple subjects)
 const AddExamGroup = async (req, res) => {
     let { name, exam_type, custom_exam_name, class_id, class_ids, grade_id, academic_year_id, note, start_date, end_date, subjects, from_class_to_class } = req.body;
@@ -2391,6 +2403,7 @@ const GenerateMarksheetPDF = async (req, res) => {
 
         totalObtained = Math.round(totalObtained);
         const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+        const grandGrade = calculateGrade(percentage);
         const currentDate = new Date().toLocaleDateString();
         const finalResult = hasFailed ? 'Fail' : 'Pass';
         const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
@@ -3193,6 +3206,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
 
         totalObtained = Math.round(totalObtained);
         const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+        const grandGrade = calculateGrade(percentage);
         const currentDate = new Date().toLocaleDateString();
 
 
@@ -3451,6 +3465,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             showFinalResult,
             exam1ColSpan, exam2ColSpan, examColSpan,
             totalMax, totalObtained, percentage,
+            grandGrade,
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
             logoData, headerImageData, luckiestFontBase64, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
