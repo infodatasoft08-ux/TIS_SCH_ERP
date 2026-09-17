@@ -687,7 +687,7 @@ export default function ExamDataTable() {
         const selectedStudents = filteredSummaries.filter(s => selectedStudentIds.includes(s.id));
         const examMap = new Map();
         selectedStudents.forEach(student => {
-            student.exams.forEach(ex => {
+            (student.exams || []).forEach(ex => {
                 const isPub = ex.is_results_published === 1 || ex.is_results_published === true || String(ex.is_results_published) === 'true';
                 if (!isTeacher || isPub) {
                     if (!examMap.has(ex.id)) {

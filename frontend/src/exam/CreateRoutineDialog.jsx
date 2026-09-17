@@ -227,11 +227,11 @@ export default function CreateRoutineDialog({ open, onOpenChange, exam, onSucces
         if (!exam || !exam.id) return;
         setIsGenerating(true);
         try {
-            const response = await API.post('/exam/generate-exam-routine', {
+            const res = await API.post('/exam/generate-exam-routine', {
                 exam_id: exam.id
             }, { responseType: 'blob' });
 
-            const blob = new Blob([response.data], { type: 'application/pdf' });
+            const blob = new Blob([res.data], { type: 'application/pdf' });
             const url = window.URL.createObjectURL(blob);
 
             if (actionType === 'download') {
