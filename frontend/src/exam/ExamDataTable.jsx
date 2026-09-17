@@ -219,6 +219,10 @@ export default function ExamDataTable() {
     }
 
     async function toggleResultsPublish(exam) {
+        if (!exam.is_results_published && exam.status === 'Draft') {
+            toast.warning("Please publish the exam schedule before publishing results");
+            return;
+        }
         const newState = !exam.is_results_published;
         try {
             await API.put(`/exam/update/exams/${exam.id}`, { is_results_published: newState });

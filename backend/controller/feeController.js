@@ -1139,10 +1139,20 @@ const UpdateInvoiceWithFine = async (req, res) => {
 
 const AddInvoiceFine = async (req, res) => {
   const invoiceId = Number(req.params.id);
-  const { fine_type, amount, description } = req.body;
+  const { fine_type, fine_name, amount, description } = req.body;
 
-  if (!fine_type || !amount || amount <= 0) {
+  if (!fine_type || !amount || Number(amount) <= 0) {
     return res.status(400).json({ error: 'Fine type and amount required' });
+  }
+
+  let finalFineType = fine_type;
+  let finalDescription = description;
+
+  if (fine_name && fine_name.trim()) {
+    finalFineType = fine_name.trim();
+    finalDescription = description && description.trim()
+      ? `${fine_name.trim()}: ${description.trim()}`
+      : fine_name.trim();
   }
 
   const conn = await pool.getConnection();
@@ -1172,7 +1182,7 @@ const AddInvoiceFine = async (req, res) => {
     await conn.execute(
       `INSERT INTO invoice_fines (invoice_id, fine_type, description, amount)
        VALUES (?, ?, ?, ?)`,
-      [invoiceId, fine_type, description, amount]
+      [invoiceId, finalFineType, finalDescription || finalFineType, amount]
     );
 
     await conn.execute(
@@ -2447,7 +2457,7 @@ const DownloadCombinedPDF = async (req, res) => {
 
 const AddPreviousDues = async (req, res) => {
   const invoiceId = Number(req.params.id);
-  const { previous_month, payment_dues, fine_dues } = req.body;
+  const { due_name, previous_month, payment_dues, fine_dues } = req.body;
 
   const payDues = Number(payment_dues) || 0;
   const fDues = Number(fine_dues) || 0;
@@ -2479,16 +2489,22 @@ const AddPreviousDues = async (req, res) => {
     }
 
     if (payDues > 0) {
+      let desc = due_name && due_name.trim()
+        ? `${due_name.trim()}${previous_month ? ` (${previous_month})` : ''}`
+        : `Previous Payment Dues (${previous_month || 'N/A'})`;
       await conn.execute(
         `INSERT INTO invoice_fines (invoice_id, fine_type, description, amount) VALUES (?, ?, ?, ?)`,
-        [invoiceId, 'previous_dues', `Previous Payment Dues (${previous_month || 'N/A'})`, payDues]
+        [invoiceId, 'previous_dues', desc, payDues]
       );
     }
 
     if (fDues > 0) {
+      let desc = due_name && due_name.trim()
+        ? `${due_name.trim()} Fine${previous_month ? ` (${previous_month})` : ''}`
+        : `Previous Fine Dues (${previous_month || 'N/A'})`;
       await conn.execute(
         `INSERT INTO invoice_fines (invoice_id, fine_type, description, amount) VALUES (?, ?, ?, ?)`,
-        [invoiceId, 'previous_fines', `Previous Fine Dues (${previous_month || 'N/A'})`, fDues]
+        [invoiceId, 'previous_fines', desc, fDues]
       );
     }
 

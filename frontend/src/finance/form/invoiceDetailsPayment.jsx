@@ -727,26 +727,26 @@ export default function InvoiceDetails() {
         </CardHeader>
         <CardContent>
           <>
-            <div className="hidden xl:block rounded-md border">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Fine Type</TableHead>
-                    <TableHead>Description</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Action</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoice.fines && invoice.fines.length > 0 ? (
-                    invoice.fines.map((fine) => (
+            {invoice.fines && invoice.fines.length > 0 && (
+              <div className="hidden xl:block rounded-md border mb-4">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Dues / Fine Type</TableHead>
+                      <TableHead>Description / Reason</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Action</TableHead>
+                      <TableHead className="text-right">Amount</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {invoice.fines.map((fine) => (
                       <TableRow key={fine.id}>
                         <TableCell>
                           <div className="font-medium capitalize">{fine.fine_type ? fine.fine_type.replace(/_/g, ' ') : ''}</div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline">{fine.description}</Badge>
+                          <Badge variant="outline" className="text-xs font-normal">{fine.description || fine.fine_type}</Badge>
                         </TableCell>
                         <TableCell>
                           {Boolean(fine.is_reversed) ? (
@@ -777,19 +777,13 @@ export default function InvoiceDetails() {
                           {formatCurrency(fine.amount)}
                         </TableCell>
                       </TableRow>
-                    ))
-                  ) : (
-                    <TableRow>
-                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                        No fines found for this invoice
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </div>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
 
-            <div className="hidden xl:block rounded-md border mt-2">
+            <div className="hidden xl:block rounded-md border">
               <Table>
                 <TableHeader>
                   <TableRow>

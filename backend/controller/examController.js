@@ -389,6 +389,9 @@ const UpdateExamGroup = async (req, res) => {
         params.push(is_results_published ? 1 : 0);
         if (is_results_published && status === undefined) {
             updates.push('status = ?');
+            params.push('Over');
+        } else if (!is_results_published && status === undefined) {
+            updates.push('status = ?');
             params.push('Published');
         }
     }
@@ -415,13 +418,18 @@ const UpdateExamGroup = async (req, res) => {
 
         if (is_results_published === true || is_results_published === 1 || is_results_published === 'true') {
             const [rows] = await conn.execute(`
-                SELECT eg.is_results_published, eg.name, eg.exam_type, eg.start_date, eg.end_date, eg.class_id, eg.section_ids, eg.grade_id, eg.academic_year_id, c.name as class_name 
+                SELECT eg.status, eg.is_results_published, eg.name, eg.exam_type, eg.start_date, eg.end_date, eg.class_id, eg.section_ids, eg.grade_id, eg.academic_year_id, c.name as class_name 
                 FROM exam_groups eg
                 LEFT JOIN classes c ON c.id = eg.class_id
                 WHERE eg.id = ?
             `, [id]);
             if (rows.length > 0) {
                 const examRecord = rows[0];
+                if (examRecord.status === 'Draft') {
+                    await conn.rollback();
+                    conn.release();
+                    return res.status(400).json({ error: 'Please publish exam schedule before publishing results' });
+                }
                 if (!examRecord.is_results_published) {
 
                     // Verify if all target students have marks
@@ -1564,9 +1572,6 @@ const AddExamGroupMarks = async (req, res) => {
             );
         }
 
-        // Change status to Over
-        await conn.execute(`UPDATE exam_groups SET status = 'Over' WHERE id = ?`, [exam_group_id]);
-
         await conn.commit();
         conn.release();
         return res.json({ success: true });
@@ -2444,12 +2449,17 @@ const GenerateMarksheetPDF = async (req, res) => {
         });
 
         let logoData = null;
+        let headerImageData = null;
         try {
             const logoPath = require('path').join(__dirname, '../assets/Times_Internation_School_logo.png');
+            const headerImgPath = require('path').join(__dirname, '../assets/a7e8d47c-8772-4c64-a6f0-d86e5712a9c8.png');
             const fs = require('fs');
             if (fs.existsSync(logoPath)) {
                 logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
             }
+            // if (fs.existsSync(headerImgPath)) {
+            //     headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
+            // }
         } catch (e) { }
 
         const coScholastic = coScholasticRows.map(s => ({
@@ -2553,7 +2563,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             grandGrade,
             currentDate, finalResult, promotionStatus: null,
             nextGrade, ptmStats,
-            logoData, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark, principalRemark,
             dynamicColumns
         };
@@ -2744,7 +2754,7 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     } finally {
         if (browser) {
-            await browser.close().catch(() => {});
+            await browser.close().catch(() => { });
         }
     }
 };
@@ -3177,11 +3187,16 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             : null;
 
         let logoData = null;
+        let headerImageData = null;
         try {
             const logoPath = require('path').join(__dirname, '../assets/Times_Internation_School_logo.png');
+            const headerImgPath = require('path').join(__dirname, '../assets/a7e8d47c-8772-4c64-a6f0-d86e5712a9c8.png');
             const fs = require('fs');
             if (fs.existsSync(logoPath)) {
                 logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+            }
+            if (fs.existsSync(headerImgPath)) {
+                headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
             }
         } catch (e) { }
 
@@ -3390,7 +3405,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             totalMax, totalObtained, percentage,
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
-            logoData, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
             principalRemark: principalRemark || ''
         };
@@ -3776,7 +3791,7 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
         return res.status(500).json({ error: 'Internal server error' });
     } finally {
         if (browser) {
-            await browser.close().catch(() => {});
+            await browser.close().catch(() => { });
         }
     }
 }

@@ -89,12 +89,14 @@ export default function Invoices() {
   const [selectedInvoice, setSelectedInvoice] = useState(null);
   // Fine form state
   const [fineType, setFineType] = useState("");
+  const [customFineName, setCustomFineName] = useState("");
   const [fineAmount, setFineAmount] = useState("");
   const [fineDescription, setFineDescription] = useState("");
   const [discountDialogOpen, setDiscountDialogOpen] = useState(false);
   const [discountAmount, setDiscountAmount] = useState("");
   const [discountReason, setDiscountReason] = useState("");
   const [prevDuesDialogOpen, setPrevDuesDialogOpen] = useState(false);
+  const [prevDueName, setPrevDueName] = useState("");
   const [prevMonth, setPrevMonth] = useState("");
   const [prevPaymentDues, setPrevPaymentDues] = useState("");
   const [prevFineDues, setPrevFineDues] = useState("");
@@ -219,6 +221,7 @@ export default function Invoices() {
   useEffect(() => {
     if (!fineDialogOpen) {
       setFineType("");
+      setCustomFineName("");
       setFineAmount("");
       setFineDescription("");
       if (!discountDialogOpen) setSelectedInvoice(null);
@@ -235,6 +238,7 @@ export default function Invoices() {
 
   useEffect(() => {
     if (!prevDuesDialogOpen) {
+      setPrevDueName("");
       setPrevMonth("");
       setPrevPaymentDues("");
       setPrevFineDues("");
@@ -771,6 +775,7 @@ export default function Invoices() {
     setIsSubmitting(true);
     try {
       await API.post(`/fee/add/invoices/${selectedInvoice.id}/add-previous-dues`, {
+        due_name: prevDueName,
         previous_month: prevMonth,
         payment_dues: prevPaymentDues,
         fine_dues: prevFineDues
@@ -1830,7 +1835,7 @@ export default function Invoices() {
           <div className="space-y-4">
             <div>
               <Label className="mb-2">Fine Type</Label>
-              <Select onValueChange={(v) => setFineType(v)}>
+              <Select value={fineType} onValueChange={(v) => setFineType(v)}>
                 <SelectTrigger>
                   <SelectValue placeholder="Select fine type" />
                 </SelectTrigger>
@@ -1843,10 +1848,24 @@ export default function Invoices() {
               </Select>
             </div>
 
+            {fineType === 'other' && (
+              <div>
+                <Label className="mb-2">Fine Name <span className="text-red-500">*</span></Label>
+                <Input
+                  placeholder="e.g., Library Fine, Damage Fine, Uniform Fine"
+                  value={customFineName}
+                  onChange={(e) => setCustomFineName(e.target.value)}
+                />
+              </div>
+            )}
+
             <div>
               <Label className="mb-2">Amount</Label>
               <Input
                 type="number"
+                placeholder="0.00"
+                min="0.01"
+                step="0.01"
                 value={fineAmount}
                 onChange={(e) => setFineAmount(e.target.value)}
               />
@@ -1864,24 +1883,43 @@ export default function Invoices() {
 
           <DialogFooter>
             <Button
+              disabled={isSubmitting}
               onClick={async () => {
-                await API.post(
-                  `/fee/add/invoices/${selectedInvoice.id}/add-fine`,
-                  {
-                    fine_type: fineType,
-                    amount: fineAmount,
-                    description: fineDescription
-                  }
-                );
-                toast.success("Fine added");
-                setFineDialogOpen(false);
-                loadInvoices();
-                setFineType("");
-                setFineAmount("");
-                setFineDescription("");
+                if (!fineType) {
+                  toast.error("Please select a fine type");
+                  return;
+                }
+                if (fineType === 'other' && !customFineName.trim()) {
+                  toast.error("Please enter fine name");
+                  return;
+                }
+                if (!fineAmount || parseFloat(fineAmount) <= 0) {
+                  toast.error("Please enter a valid fine amount");
+                  return;
+                }
+                setIsSubmitting(true);
+                try {
+                  await API.post(
+                    `/fee/add/invoices/${selectedInvoice.id}/add-fine`,
+                    {
+                      fine_type: fineType,
+                      fine_name: customFineName.trim(),
+                      amount: fineAmount,
+                      description: fineDescription
+                    }
+                  );
+                  toast.success("Fine added successfully");
+                  setFineDialogOpen(false);
+                  loadInvoices();
+                } catch (err) {
+                  console.error(err);
+                  toast.error(err.response?.data?.error || "Failed to add fine");
+                } finally {
+                  setIsSubmitting(false);
+                }
               }}
             >
-              Add Fine
+              {isSubmitting ? "Adding..." : "Add Fine"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -1939,6 +1977,15 @@ export default function Invoices() {
           </DialogHeader>
 
           <form onSubmit={handleAddPreviousDues} className="space-y-4">
+            <div>
+              <Label className="mb-2">Dues Name / Reason (Optional)</Label>
+              <Input
+                placeholder="e.g., Previous Tuition Dues, Transport Dues, Old Balance"
+                value={prevDueName}
+                onChange={(e) => setPrevDueName(e.target.value)}
+              />
+            </div>
+
             <div>
               <Label className="mb-2">Previous Month</Label>
               <Select value={prevMonth} onValueChange={setPrevMonth}>

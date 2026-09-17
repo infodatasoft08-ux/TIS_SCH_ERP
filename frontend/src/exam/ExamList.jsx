@@ -145,7 +145,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                               </DropdownMenuItem> */}
                             </>
                           )}
-                          {isOver && (
+                          {(isPublished || isOver) && (
                             <>
                               {canPublishResults && (
                                 <DropdownMenuItem onClick={() => onToggleResultsPublish(exam)}>
@@ -290,7 +290,7 @@ export default function ExamList({ exams, onAddMarks, onAddExam, onEditExam, onC
                     </Button>
                   )}
 
-                  {isOver && (
+                  {(isPublished || isOver) && (
                     <>
                       {canPublishResults && (
                         <Button

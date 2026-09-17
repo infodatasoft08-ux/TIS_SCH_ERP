@@ -98,7 +98,7 @@ class PdfService {
     try {
       const page = await browser.newPage();
       // Load PDF directly in puppeteer
-      await page.goto(`file://${fullPath}`, { waitUntil: 'networkidle0' });
+      await page.goto(`file://${fullPath}`, { waitUntil: 'domcontentloaded' });
 
       // Get dimensions
       const dimensions = await page.evaluate(() => {
@@ -142,7 +142,12 @@ class PdfService {
         height: height,
         deviceScaleFactor: 2
       });
-      await page.setContent(html, { waitUntil: 'networkidle0' });
+      try {
+        await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
+      } catch (e) {
+        console.warn('Puppeteer setContent warning:', e.message);
+        await page.setContent(html, { waitUntil: 'load', timeout: 15000 });
+      }
 
       await page.emulateMediaType('screen');
 
