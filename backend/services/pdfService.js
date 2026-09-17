@@ -9,13 +9,24 @@ handlebars.registerHelper('eq', function (a, b) {
   return a === b;
 });
 
+handlebars.registerHelper('or', function (...args) {
+  args.pop(); // Remove options object
+  return args.some(Boolean);
+});
+
+handlebars.registerHelper('and', function (...args) {
+  args.pop(); // Remove options object
+  return args.every(Boolean);
+});
+
 handlebars.registerHelper('gradeColor', function (grade) {
-    if (!grade) return '#cbd5e1';
-    if (grade.includes('A')) return '#65a30d';
-    if (grade.includes('B')) return '#eab308';
-    if (grade.includes('C')) return '#f97316';
-    if (grade.includes('D') || grade.includes('E') || grade.includes('F')) return '#ef4444';
-    return '#3b82f6';
+  if (!grade) return '#cbd5e1';
+  const gStr = String(grade).toUpperCase();
+  if (gStr.includes('A')) return '#65a30d';
+  if (gStr.includes('B')) return '#eab308';
+  if (gStr.includes('C')) return '#f97316';
+  if (gStr.includes('D') || gStr.includes('E') || gStr.includes('F')) return '#ef4444';
+  return '#3b82f6';
 });
 
 class PdfService {
@@ -143,11 +154,16 @@ class PdfService {
         deviceScaleFactor: 2
       });
       try {
-        await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 15000 });
+        await page.setContent(html, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 15000 });
       } catch (e) {
         console.warn('Puppeteer setContent warning:', e.message);
         await page.setContent(html, { waitUntil: 'load', timeout: 15000 });
       }
+
+      // Ensure all custom and web fonts are fully loaded before rendering PDF
+      try {
+        await page.evaluateHandle('document.fonts.ready');
+      } catch (e) { }
 
       await page.emulateMediaType('screen');
 
@@ -179,10 +195,10 @@ class PdfService {
       return pdfBuffer;
     } finally {
       if (page) {
-        await page.close().catch(() => {});
+        await page.close().catch(() => { });
       }
       if (!existingBrowser) {
-        await browser.close().catch(() => {});
+        await browser.close().catch(() => { });
       }
     }
   }
@@ -260,6 +276,31 @@ class PdfService {
       processedData.photo = photoBase64 || FALLBACK_AVATAR;
     } else {
       processedData.photo = FALLBACK_AVATAR;
+    }
+
+    // Auto-populate meta if missing
+    if (!processedData.meta) {
+      processedData.meta = {
+        report_id: `TIS-RC-${processedData.student?.roll_no || processedData.student?.id || '001'}`,
+        generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        generated_by: 'School Examination Cell',
+        erp_name: 'TIS School ERP',
+        erp_version: '2.0',
+        year: new Date().getFullYear()
+      };
+    }
+
+    // Auto-generate real, scannable QR Code containing full student examination details
+    try {
+      const QRCode = require('qrcode');
+      const studentInfo = `TIMES INTERNATIONAL SCHOOL\nStudent: ${processedData.student?.name || 'N/A'}\nRoll No: ${processedData.student?.roll_no || 'N/A'}\nClass: ${processedData.student?.class || processedData.student?.class_section || processedData.student?.grade_name || 'N/A'}\nExam: ${processedData.reportTitle || processedData.exam1Name || 'Term Exam'}\nTotal: ${processedData.totalObtained || 0}/${processedData.totalMax || 0} (${processedData.percentage || 0}%)\nResult: ${processedData.finalResult || 'PASS'}\nReport No: ${processedData.meta?.report_id || 'VERIFIED'}`;
+      processedData.qr_code = await QRCode.toDataURL(studentInfo, {
+        margin: 1,
+        width: 180,
+        errorCorrectionLevel: 'M'
+      });
+    } catch (err) {
+      console.error('[pdfService] Error generating real QR code:', err.message);
     }
 
     return template(processedData);

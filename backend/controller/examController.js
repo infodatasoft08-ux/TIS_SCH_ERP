@@ -7,6 +7,7 @@ const path = require('path');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
+const QRCode = require('qrcode');
 const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -2421,15 +2422,22 @@ const GenerateMarksheetPDF = async (req, res) => {
         const exam2ColSpan = baseNewFields + 1;
         const examColSpan = exam1ColSpan;
 
+        const hasIaSubSubjects = Boolean(showReading || showWritingComp || showDictation || showRecitation);
+        const iaColSpan = [showReading, showWritingComp, showDictation, showRecitation].filter(Boolean).length;
+        const iaTotalMax = (showReading ? (parseInt(maxReading) || 0) : 0) +
+            (showWritingComp ? (parseInt(maxWritingComp) || 0) : 0) +
+            (showDictation ? (parseInt(maxDictation) || 0) : 0) +
+            (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
+
         const dynamicColumns = [];
         if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
         if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
         if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
         if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
         if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
+        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
         if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
         if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
         if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'I.A./PR', max: maxIaPr });
 
         subjects.forEach(sub => {
@@ -2450,16 +2458,21 @@ const GenerateMarksheetPDF = async (req, res) => {
 
         let logoData = null;
         let headerImageData = null;
+        let luckiestFontBase64 = null;
         try {
             const logoPath = require('path').join(__dirname, '../assets/Times_Internation_School_logo.png');
-            const headerImgPath = require('path').join(__dirname, '../assets/a7e8d47c-8772-4c64-a6f0-d86e5712a9c8.png');
+            const headerImgPath = require('path').join(__dirname, '../assets/times_international_sch_marksheet-header.png');
+            const fontPath = require('path').join(__dirname, '../assets/fonts/LuckiestGuy-Regular.ttf');
             const fs = require('fs');
             if (fs.existsSync(logoPath)) {
                 logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
             }
-            // if (fs.existsSync(headerImgPath)) {
-            //     headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
-            // }
+            if (fs.existsSync(headerImgPath)) {
+                headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
+            }
+            if (fs.existsSync(fontPath)) {
+                luckiestFontBase64 = fs.readFileSync(fontPath).toString('base64');
+            }
         } catch (e) { }
 
         const coScholastic = coScholasticRows.map(s => ({
@@ -2542,7 +2555,26 @@ const GenerateMarksheetPDF = async (req, res) => {
             console.log('No school-info.json found');
         }
 
-        const grandGrade = calculateGrade(Number(percentage));
+        let qr_code = '';
+        try {
+            const qrText = `TIMES INTERNATIONAL SCHOOL\nStudent: ${student.name || 'N/A'}\nRoll No: ${student.roll_no || 'N/A'}\nClass: ${student.class || student.grade_name || 'N/A'}\nExam: ${rows[0].exam_name || 'Term Exam'}\nTotal: ${totalObtained || 0}/${totalMax || 0} (${percentage || 0}%)\nResult: ${finalResult || 'PASS'}\nReport No: TIS-${exam_id}-${student_id}`;
+            qr_code = await QRCode.toDataURL(qrText, {
+                margin: 1,
+                width: 180,
+                errorCorrectionLevel: 'M'
+            });
+        } catch (e) {
+            console.error('QR code error:', e);
+        }
+
+        const meta = {
+            report_id: `TIS-${exam_id}-${student_id}`,
+            generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            generated_by: req.user?.name || 'School Office',
+            erp_name: 'TIS ERP',
+            erp_version: '2.0',
+            year: new Date().getFullYear()
+        };
 
         const templateData = {
             school,
@@ -2557,15 +2589,20 @@ const GenerateMarksheetPDF = async (req, res) => {
             maxTheory, maxLab, maxOral,
             maxWritten, maxReading, maxWritingComp,
             maxDictation, maxRecitation, maxIaPr,
+            hasIaSubSubjects,
+            iaColSpan,
+            iaTotalMax,
             baseNewFields,
             exam1ColSpan, exam2ColSpan, examColSpan,
             totalMax, totalObtained, percentage,
             grandGrade,
             currentDate, finalResult, promotionStatus: null,
             nextGrade, ptmStats,
-            logoData, headerImageData, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark, principalRemark,
-            dynamicColumns
+            dynamicColumns,
+            meta,
+            qr_code
         };
 
         const templatePath = 'uploads/templates/senior_final_exam.hbs';
@@ -3188,15 +3225,20 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
 
         let logoData = null;
         let headerImageData = null;
+        let luckiestFontBase64 = null;
         try {
             const logoPath = require('path').join(__dirname, '../assets/Times_Internation_School_logo.png');
-            const headerImgPath = require('path').join(__dirname, '../assets/a7e8d47c-8772-4c64-a6f0-d86e5712a9c8.png');
+            const headerImgPath = require('path').join(__dirname, '../assets/times_international_sch_marksheet-header.png');
+            const fontPath = require('path').join(__dirname, '../assets/fonts/LuckiestGuy-Regular.ttf');
             const fs = require('fs');
             if (fs.existsSync(logoPath)) {
                 logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
             }
             if (fs.existsSync(headerImgPath)) {
                 headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
+            }
+            if (fs.existsSync(fontPath)) {
+                luckiestFontBase64 = fs.readFileSync(fontPath).toString('base64');
             }
         } catch (e) { }
 
@@ -3355,16 +3397,24 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             console.log('No school-info.json found');
         }
 
+
+        const hasIaSubSubjects = Boolean(showReading || showWritingComp || showDictation || showRecitation);
+        const iaColSpan = [showReading, showWritingComp, showDictation, showRecitation].filter(Boolean).length;
+        const iaTotalMax = (showReading ? (parseInt(maxReading) || 0) : 0) +
+            (showWritingComp ? (parseInt(maxWritingComp) || 0) : 0) +
+            (showDictation ? (parseInt(maxDictation) || 0) : 0) +
+            (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
+
         const dynamicColumns = [];
         if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
         if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
         if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing (Comp.)', max: maxWritingComp });
         if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
         if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'I.A./PR', max: maxIaPr });
         if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
         if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'I.A./PR', max: maxIaPr });
 
         const formattedAcademicSubjects = academicSubjects.map(s => {
             const exam1_dynamicMarks = [];
@@ -3374,10 +3424,10 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             if (showWritingComp) { exam1_dynamicMarks.push({ value: s.exam1_writing_comp || '-' }); exam2_dynamicMarks.push({ value: s.exam2_writing_comp || '-' }); }
             if (showDictation) { exam1_dynamicMarks.push({ value: s.exam1_dictation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_dictation || '-' }); }
             if (showRecitation) { exam1_dynamicMarks.push({ value: s.exam1_recitation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_recitation || '-' }); }
-            if (showIaPr) { exam1_dynamicMarks.push({ value: s.exam1_ia_pr || '-' }); exam2_dynamicMarks.push({ value: s.exam2_ia_pr || '-' }); }
             if (showOral) { exam1_dynamicMarks.push({ value: s.exam1_oral || '-' }); exam2_dynamicMarks.push({ value: s.exam2_oral || '-' }); }
-            if (showLab) { exam1_dynamicMarks.push({ value: s.exam1_lab || '-' }); exam2_dynamicMarks.push({ value: s.exam2_lab || '-' }); }
             if (showTheory) { exam1_dynamicMarks.push({ value: s.exam1_theory || '-' }); exam2_dynamicMarks.push({ value: s.exam2_theory || '-' }); }
+            if (showLab) { exam1_dynamicMarks.push({ value: s.exam1_lab || '-' }); exam2_dynamicMarks.push({ value: s.exam2_lab || '-' }); }
+            if (showIaPr) { exam1_dynamicMarks.push({ value: s.exam1_ia_pr || '-' }); exam2_dynamicMarks.push({ value: s.exam2_ia_pr || '-' }); }
 
             return {
                 ...s,
@@ -3385,6 +3435,27 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
                 exam2_dynamicMarks
             };
         });
+
+        let qr_code = '';
+        try {
+            const qrText = `TIMES INTERNATIONAL SCHOOL\nStudent: ${student.name || 'N/A'}\nRoll No: ${student.roll_no || 'N/A'}\nClass: ${student.class || student.grade_name || 'N/A'}\nExam: ${reportTitle || 'Annual Exam'}\nTotal: ${totalObtained || 0}/${totalMax || 0} (${percentage || 0}%)\nResult: ${finalResult || 'PASS'}\nReport No: TIS-COMB-${student_id}`;
+            qr_code = await QRCode.toDataURL(qrText, {
+                margin: 1,
+                width: 180,
+                errorCorrectionLevel: 'M'
+            });
+        } catch (e) {
+            console.error('QR code error:', e);
+        }
+
+        const meta = {
+            report_id: `TIS-COMB-${student_id}`,
+            generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+            generated_by: req.user?.name || 'School Office',
+            erp_name: 'TIS ERP',
+            erp_version: '2.0',
+            year: new Date().getFullYear()
+        };
 
         const templateData = {
             school,
@@ -3400,14 +3471,19 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             maxTheory, maxLab, maxOral,
             maxWritten, maxReading, maxWritingComp,
             maxDictation, maxRecitation, maxIaPr,
+            hasIaSubSubjects,
+            iaColSpan,
+            iaTotalMax,
             showFinalResult,
             exam1ColSpan, exam2ColSpan, examColSpan,
             totalMax, totalObtained, percentage,
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
-            logoData, headerImageData, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
-            principalRemark: principalRemark || ''
+            principalRemark: principalRemark || '',
+            meta,
+            qr_code
         };
 
         // --- TEMPLATE SELECTION ---

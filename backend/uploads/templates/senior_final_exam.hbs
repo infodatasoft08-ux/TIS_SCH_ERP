@@ -1,775 +1,1276 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Report Card - {{student.name}}</title>
-  
+
   <!-- Embedding CSS exactly where it belongs for Handlebars Puppeteer, avoiding external file loading issues -->
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@500&family=Montserrat:wght@800&family=Poppins:wght@400;600&display=swap');
+    @font-face {
+      font-family: 'Luckiest Guy';
+      src: url('data:font/truetype;charset=utf-8;base64,{{luckiestFontBase64}}') format('truetype');
+      font-weight: normal;
+      font-style: normal;
+    }
 
-:root {
-  --primary-blue: #1565C0;
-  --dark-blue: #0D47A1;
-  --gold: #FFC107;
-  --border-color: #DADADA;
-  --bg-color: #FFFFFF;
-  --section-bg: #F8FAFC;
-  --success: #16A34A;
-  --danger: #DC2626;
-  --text-dark: #1e293b;
-  --text-muted: #64748b;
-}
+    :root {
+      --primary-blue: #1565C0;
+      --dark-blue: #0D47A1;
+      --gold: #FFC107;
+      --border-color: #DADADA;
+      --bg-color: #FFFFFF;
+      --section-bg: #F8FAFC;
+      --success: #16A34A;
+      --danger: #DC2626;
+      --text-dark: #1e293b;
+      --text-muted: #64748b;
+    }
 
-* {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
 
-body {
-  background: var(--bg-color);
-  color: var(--text-dark);
-  font-family: 'Poppins', sans-serif;
-  font-size: 10px; /* Base size for A4 printing */
-  line-height: 1.3;
-  /* A4 Dimensions */
-  width: 210mm;
-  height: 297mm;
-  margin: 0 auto;
-  position: relative;
-  -webkit-print-color-adjust: exact !important;
-  print-color-adjust: exact !important;
-}
+    body {
+      background: var(--bg-color);
+      color: var(--text-dark);
+      font-family: 'Poppins', sans-serif;
+      font-size: 11px;
+      /* Base size for A4 printing */
+      line-height: 1.3;
+      /* A4 Dimensions */
+      width: 210mm;
+      height: 297mm;
+      margin: 0 auto;
+      position: relative;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
 
-/* Page Margins */
-.page-container {
-  padding: 5mm 8mm;
-  width: 100%;
-  height: 100%;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  flex-direction: column;
-}
+    /* Page Margins */
+    .page-container {
+      padding: 2mm 8mm;
+      width: 100%;
+      height: 100%;
+      position: relative;
+      z-index: 2;
+      display: flex;
+      flex-direction: column;
+    }
 
-/* Watermark */
-.watermark-container {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  opacity: 0.05;
-  z-index: 1;
-  pointer-events: none;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-}
-.watermark-container img {
-  width: 140mm;
-  height: auto;
-}
+    /* Watermark */
+    .watermark-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0.16;
+      z-index: 1;
+      pointer-events: none;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
 
-/* Typography */
-.school-name {
-  font-family: 'Montserrat', sans-serif;
-  font-weight: 800;
-  font-size: 24px;
-  color: var(--dark-blue);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    .watermark-container img {
+      width: 140mm;
+      height: 140mm;
+      object-fit: contain;
+    }
 
-.school-details {
-  font-size: 12.5px;
-  color: var(--text-muted);
-}
+    /* Typography */
+    .school-name {
+      font-family: 'Montserrat', sans-serif;
+      font-weight: 800;
+      font-size: 24px;
+      color: var(--dark-blue);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-.section-heading {
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
-  font-size: 12px;
-  color: var(--primary-blue);
-  background: var(--section-bg);
-  padding: 3px 8px;
-  border-radius: 4px;
-  margin-bottom: 6px;
-  border-left: 3px solid var(--primary-blue);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
+    .school-details {
+      font-size: 12.5px;
+      color: var(--text-muted);
+    }
 
-.table-marks {
-  font-family: 'Inter', sans-serif;
-  font-weight: 500;
-}
+    .section-heading {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 12px;
+      color: #0e4da6c9;
+      background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%);
+      padding: 3.5px 10px;
+      border-radius: 4px;
+      margin-bottom: 6px;
+      border-left: 4px solid #0e4da6e7;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
 
-/* Utilities */
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-left { text-align: left; }
-.text-primary { color: var(--primary-blue); }
-.text-dark { color: var(--dark-blue); }
-.text-gold { color: var(--gold); }
-.text-success { color: var(--success); }
-.text-danger { color: var(--danger); }
-.text-muted { color: var(--text-muted); }
-.font-semibold { font-weight: 600; }
-.font-bold { font-weight: 700; }
+    .table-marks {
+      font-family: 'Inter', sans-serif;
+      font-weight: 500;
+    }
 
-.mt-1 { margin-top: 4px; }
-.mt-2 { margin-top: 8px; }
-.mt-3 { margin-top: 12px; }
-.mt-4 { margin-top: 16px; }
-.mb-1 { margin-bottom: 4px; }
-.mb-2 { margin-bottom: 8px; }
-.mb-3 { margin-bottom: 12px; }
-.mb-4 { margin-bottom: 16px; }
+    /* Utilities */
+    .text-center {
+      text-align: center;
+    }
 
-.flex { display: flex; }
-.flex-col { display: flex; flex-direction: column; }
-.items-center { align-items: center; }
-.items-end { align-items: flex-end; }
-.justify-between { justify-content: space-between; }
-.justify-center { justify-content: center; }
-.gap-2 { gap: 8px; }
-.gap-3 { gap: 12px; }
-.gap-4 { gap: 16px; }
+    .text-right {
+      text-align: right;
+    }
 
-.grid { display: grid; }
-.grid-cols-2 { grid-template-columns: repeat(2, 1fr); }
-.grid-cols-3 { grid-template-columns: repeat(3, 1fr); }
-.grid-cols-4 { grid-template-columns: repeat(4, 1fr); }
-.gap-x-4 { column-gap: 16px; }
-.gap-y-2 { row-gap: 8px; }
+    .text-left {
+      text-align: left;
+    }
 
-.w-full { width: 100%; }
-.h-full { height: 100%; }
-.flex-1 { flex: 1; }
+    .text-primary {
+      color: var(--primary-blue);
+    }
 
-/* Cards & Sections */
-.card {
-  background: var(--bg-color);
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  padding: 6px;
-}
+    .text-dark {
+      color: var(--dark-blue);
+    }
 
-.card-highlight {
-  background: linear-gradient(135deg, var(--dark-blue), var(--primary-blue));
-  color: white;
-  border: none;
-}
-.card-highlight .section-heading {
-  color: white;
-  background: rgba(255, 255, 255, 0.1);
-  border-left-color: var(--gold);
-}
-.card-highlight .text-muted {
-  color: rgba(255,255,255,0.8);
-}
-.card-highlight .text-dark {
-  color: white;
-}
+    .text-gold {
+      color: var(--gold);
+    }
 
-/* Tables */
-table {
-  width: 100%;
-  border-collapse: collapse;
-  
-  border: 1px solid var(--border-color);
-  border-radius: 6px;
-  overflow: hidden;
-}
+    .text-success {
+      color: var(--success);
+    }
 
-th, td {
-  padding: 3px 4px;
-  border: 1px solid var(--border-color);
-  font-size: 11px;
-  text-align: center;
-}
+    .text-danger {
+      color: var(--danger);
+    }
 
-th {
-  background: var(--section-bg);
-  font-family: 'Poppins', sans-serif;
-  font-weight: 600;
-  color: var(--dark-blue);
-  text-align: center;
-  vertical-align: middle;
-}
+    .text-muted {
+      color: var(--text-muted);
+    }
+
+    .font-semibold {
+      font-weight: 600;
+    }
+
+    .font-bold {
+      font-weight: 700;
+    }
+
+    .mt-1 {
+      margin-top: 4px;
+    }
+
+    .mt-2 {
+      margin-top: 8px;
+    }
+
+    .mt-3 {
+      margin-top: 12px;
+    }
+
+    .mt-4 {
+      margin-top: 16px;
+    }
+
+    .mb-1 {
+      margin-bottom: 4px;
+    }
+
+    .mb-2 {
+      margin-bottom: 8px;
+    }
+
+    .mb-3 {
+      margin-bottom: 12px;
+    }
+
+    .mb-4 {
+      margin-bottom: 16px;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .flex-col {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .items-end {
+      align-items: flex-end;
+    }
+
+    .justify-between {
+      justify-content: space-between;
+    }
+
+    .justify-center {
+      justify-content: center;
+    }
+
+    .gap-2 {
+      gap: 8px;
+    }
+
+    .gap-3 {
+      gap: 12px;
+    }
+
+    .gap-4 {
+      gap: 16px;
+    }
+
+    .grid {
+      display: grid;
+    }
+
+    .grid-cols-2 {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .grid-cols-3 {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .grid-cols-4 {
+      grid-template-columns: repeat(4, 1fr);
+    }
+
+    .gap-x-4 {
+      column-gap: 16px;
+    }
+
+    .gap-y-2 {
+      row-gap: 8px;
+    }
+
+    .w-full {
+      width: 100%;
+    }
+
+    .h-full {
+      height: 100%;
+    }
+
+    .flex-1 {
+      flex: 1;
+    }
+
+    /* Cards & Sections */
+    .card {
+      background: rgba(240, 246, 255, 0.45);
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      padding: 6px;
+    }
+
+    .card-highlight {
+      background: linear-gradient(135deg, var(--dark-blue), var(--primary-blue));
+      color: white;
+      border: none;
+    }
+
+    .card-highlight .section-heading {
+      color: white;
+      background: rgba(255, 255, 255, 0.1);
+      border-left-color: var(--gold);
+    }
+
+    .card-highlight .text-muted {
+      color: rgba(255, 255, 255, 0.8);
+    }
+
+    .card-highlight .text-dark {
+      color: white;
+    }
+
+    /* Tables */
+    table {
+      width: 100%;
+      border-collapse: collapse;
+
+      border: 1px solid var(--border-color);
+      border-radius: 6px;
+      overflow: hidden;
+    }
+
+    th,
+    td {
+      padding: 3.5px 4px;
+      border: 1px solid var(--border-color);
+      font-size: 14.5px;
+      text-align: center;
+    }
+
+    th {
+      background: #0e4da6be;
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      color: #ffffff;
+      text-align: center;
+      vertical-align: middle;
+      border: 1px solid #1d4fd8ba;
+    }
 
 
-thead tr:nth-child(2) th:last-child {
-  border-right: 1px solid var(--border-color);
-}
+    thead tr:nth-child(2) th:last-child {
+      border-right: 1px solid var(--border-color);
+    }
 
 
-tbody tr:nth-child(even) {
-  background-color: #FAFAFA;
-}
+    tbody tr:nth-child(even) {
+      background-color: rgba(248, 250, 252, 0.4);
+    }
 
-.table-header-group {
-  background: var(--bg-color);
-  border-bottom: 2px solid var(--dark-blue);
-}
-.table-header-group th {
-  border-bottom: 1px solid var(--border-color);
-}
+    .table-header-group {
+      background: transparent;
+      border-bottom: 2px solid #0a397cc3;
+    }
 
-.row-total td {
-  background-color: #f1f5f9;
-  font-weight: 600;
-  color: var(--dark-blue);
-}
+    .table-header-group th {
+      border-bottom: 1px solid rgba(255, 255, 255, 0.25);
+    }
 
-/* Specific elements */
-.student-photo {
-  width: 25mm;
-  height: 32mm;
-  object-fit: cover;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  padding: 2px;
-  background: white;
-}
+    .row-total td {
+      background-color: rgba(241, 245, 249, 0.6);
+      font-weight: 600;
+      color: var(--dark-blue);
+    }
 
-.info-label {
-  font-size: 10.5px;
-  color: var(--text-muted);
-  text-transform: uppercase;
-  margin-bottom: 2px;
-}
-.info-value {
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-dark);
-}
+    /* Specific elements */
+    .student-photo {
+      width: 25mm;
+      height: 32mm;
+      object-fit: cover;
+      border: 1px solid var(--border-color);
+      border-radius: 4px;
+      padding: 2px;
+      background: white;
+    }
 
-.progress-bar-bg {
-  background: var(--border-color);
-  border-radius: 10px;
-  height: 6px;
-  width: 100%;
-  overflow: hidden;
-  margin-top: 4px;
-}
-.progress-bar-fill {
-  background: var(--success);
-  height: 100%;
-  border-radius: 10px;
-}
+    .info-label {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      margin-bottom: 2px;
+    }
 
-.badge {
-  display: inline-block;
-  padding: 2px 6px;
-  border-radius: 10px;
-  font-size: 8px;
-  font-weight: 600;
-  text-transform: uppercase;
-}
-.badge-success { background: #dcfce7; color: var(--success); }
-.badge-danger { background: #fee2e2; color: var(--danger); }
-.badge-primary { background: #e0f2fe; color: var(--primary-blue); }
+    .info-value {
+      font-size: 13.5px;
+      font-weight: 700;
+      color: var(--text-dark);
+    }
 
-.remarks-box {
-  min-height: 40px;
-  font-style: italic;
-  font-size: 9.5px;
-  color: var(--text-dark);
-  border: 1px dashed var(--border-color);
-  padding: 6px;
-  border-radius: 4px;
-  background: var(--section-bg);
-}
+    .progress-bar-bg {
+      background: var(--border-color);
+      border-radius: 10px;
+      height: 6px;
+      width: 100%;
+      overflow: hidden;
+      margin-top: 4px;
+    }
 
-/* Signatures */
-.signature-box {
-  border-top: 1px solid var(--border-color);
-  width: 35mm;
-  text-align: center;
-  padding-top: 2px;
-  margin-top: 5px; /* space for signature */
-  font-size: 8.5px;
-  font-weight: 600;
-  color: var(--text-dark);
-}
-.signature-img {
-  height: 25px;
-  margin-bottom: 5px;
-  object-fit: contain;
-}
+    .progress-bar-fill {
+      background: var(--success);
+      height: 100%;
+      border-radius: 10px;
+    }
 
-.qr-code {
-  width: 16mm;
-  height: 16mm;
-}
+    .badge {
+      display: inline-block;
+      padding: 2px 6px;
+      border-radius: 10px;
+      font-size: 8px;
+      font-weight: 600;
+      text-transform: uppercase;
+    }
 
-.footer-text {
-  font-size: 7.5px;
-  color: var(--text-muted);
-}
+    .badge-success {
+      background: #dcfce7;
+      color: var(--success);
+    }
 
-/* Printing logic */
-@media print {
-  @page {
-    size: A4 portrait;
-    margin: 0;
-  }
-  body {
-    width: 210mm;
-    height: 297mm;
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-    margin: 0;
-  }
-  .page-container {
-    page-break-after: avoid;
-    page-break-inside: avoid;
-  }
-  table, tr, td, th {
-    page-break-inside: avoid;
-  }
-}
+    .badge-danger {
+      background: #fee2e2;
+      color: var(--danger);
+    }
 
+    .badge-primary {
+      background: #e0f2fe;
+      color: var(--primary-blue);
+    }
+
+    .remarks-box {
+      min-height: 40px;
+      font-style: italic;
+      font-size: 9.5px;
+      color: var(--text-dark);
+      border: 1px dashed var(--border-color);
+      padding: 6px;
+      border-radius: 4px;
+      background: rgba(240, 246, 255, 0.45);
+    }
+
+    /* Signatures */
+    .signature-box {
+      border-top: 1px solid var(--border-color);
+      width: 35mm;
+      text-align: center;
+      padding-top: 2px;
+      margin-top: 5px;
+      /* space for signature */
+      font-size: 8.5px;
+      font-weight: 600;
+      color: var(--text-dark);
+    }
+
+    .signature-img {
+      height: 25px;
+      margin-bottom: 5px;
+      object-fit: contain;
+    }
+
+    .qr-code {
+      width: 11mm;
+      height: 11mm;
+      object-fit: contain;
+      border: 1px solid var(--border-color);
+      border-radius: 3px;
+      padding: 1px;
+      background: white;
+    }
+
+    .footer-text {
+      font-size: 7.5px;
+      color: var(--text-muted);
+    }
+
+    .tagline-banner {
+      margin: 6px auto 7px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      max-width: 460px;
+    }
+
+    .tagline-text {
+      /*background: linear-gradient(180deg, #0d2873 0%, #061543 100%);*/
+      background: #0a397cda;
+      color: #ffffff;
+      font-weight: 700;
+      font-size: 10px;
+      padding: 3px 20px;
+      clip-path: polygon(10px 0, calc(100% - 10px) 0, 100% 100%, 0 100%);
+      letter-spacing: 0.4px;
+    }
+
+    .tagline-diamond {
+      width: 6px;
+      height: 6px;
+      background: #eab308;
+      transform: rotate(45deg);
+      flex-shrink: 0;
+    }
+
+    .tagline-line {
+      flex: 1;
+      height: 1.5px;
+    }
+
+    .progress-report-text {
+      font-family: 'Luckiest Guy', 'Montserrat', cursive, sans-serif;
+      font-size: 16px;
+      font-weight: 900;
+      font-style: italic;
+      letter-spacing: 1.5px;
+      color: #103b9b;
+      -webkit-text-stroke: 0.5px #103b9b;
+      text-transform: uppercase;
+      display: inline-block;
+      line-height: 1;
+      text-shadow: 0.5px 0.5px 0px rgba(16, 59, 155, 0.25);
+    }
+
+    /* Printing logic */
+    @media print {
+      @page {
+        size: A4 portrait;
+        margin: 0;
+      }
+
+      body {
+        width: 210mm;
+        height: 297mm;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        margin: 0;
+      }
+
+      .page-container {
+        page-break-after: avoid;
+        page-break-inside: avoid;
+      }
+
+      table,
+      tr,
+      td,
+      th {
+        page-break-inside: avoid;
+      }
+    }
   </style>
 </head>
+
 <body>
-  
-  {{#if showWatermark}}
+
+  {{#if logoData}}
   <div class="watermark-container">
-    {{#if school.logo}}
-      <img src="{{school.logo}}" alt="Watermark">
-    {{/if}}
+    <img src="{{logoData}}" alt="Watermark">
+  </div>
+  {{else if school.logo}}
+  <div class="watermark-container">
+    <img src="{{school.logo}}" alt="Watermark">
   </div>
   {{/if}}
 
   <div class="page-container">
-    
-    <!-- 1. HEADER (Image Banner Mode) -->
-    {{#if headerImageData}}
-    <div class="mb-2" style="width: 100%; border: 1px solid #e2e8f0; border-radius: 6px; overflow: hidden; background: #fff;">
-      <img src="{{headerImageData}}" alt="Times International School" style="width: 100%; height: auto; max-height: 42mm; object-fit: contain; display: block;">
-      <div class="flex justify-between items-center px-3 py-1" style="background-color: #f8fafc; border-top: 1px solid #e2e8f0;">
-        <div class="font-bold uppercase" style="color: #0f4c92; font-size: 13px; letter-spacing: 0.5px;">
-          {{#if reportTitle}}{{reportTitle}}{{else}}Term 1 ( Half Yearly){{/if}}
+
+    <!-- 1. HEADER (Structured HTML/CSS Layout based on Official Branding) -->
+    <div class="mb-1" style="width: 100%; overflow: hidden; background: #fff; text-align: center;">
+      <!-- Logo + Divider + School Name Block centered horizontally -->
+      <div
+        style="display: flex; align-items: center; justify-content: center; width: 100%; margin: 0 auto 1px auto; padding: 0;">
+        <!-- Left Logo -->
+        <div style="display: flex; align-items: center; justify-content: center; padding-right: 14px; flex-shrink: 0;">
+          {{#if logoData}}
+          <img src="{{logoData}}" alt="School Logo" style="width: 27mm; height: 27mm; object-fit: contain;">
+          {{else if school.logo}}
+          <img src="{{school.logo}}" alt="School Logo" style="width: 27mm; height: 27mm; object-fit: contain;">
+          {{/if}}
         </div>
-        <div style="background-color: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 10px; padding: 2px 10px; border-radius: 12px; white-space: nowrap; letter-spacing: 0.3px;">
-          SESSION: {{#if student.academic_year_name}}{{student.academic_year_name}}{{else if school.session}}{{school.session}}{{else}}2026-2027{{/if}}
+
+        <!-- Vertical Maroon Divider Line -->
+        <div style="width: 2.5px; height: 20mm; background-color: #8B1E1E; margin-right: 16px; flex-shrink: 0;"></div>
+
+        <!-- School Name in 2 Stacked Lines -->
+        <div style="text-align: left; display: flex; flex-direction: column; justify-content: center;">
+          <div
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 40px; color: #8B1E1E; line-height: 0.92; letter-spacing: 1.2px;">
+            TIMES
+          </div>
+          <div
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 30px; color: #8B1E1E; line-height: 1.0; letter-spacing: 0.8px; margin-top: 2px;">
+            INTERNATIONAL SCHOOL
+          </div>
         </div>
       </div>
-    </div>
-    {{/if}}
 
-    <!-- PREVIOUS HTML HEADER CODE (Commented) -->
-    <!--
-    <div class="flex justify-between items-center mb-2 pb-2 border-b-2 border-gray-200">
-      <div style="width: 18%; display: flex; align-items: center; justify-content: center;">
-        {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
-        {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
+      <!-- Address, Contact, and Web details -->
+      <div
+        style="text-align: center; color: #1e293b; font-size: 11px; line-height: 1.35; margin-top: 1px; padding: 0 4px;">
+        <p style="margin-bottom: 1px; font-weight: 700;">
+          <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
+            Mahendru, Patna - 800006{{/if}}</span>
+        </p>
+        <p style="margin-bottom: 1px; font-weight: 700;">
+          <span>Cont.: {{#if school.phone}}{{school.phone}}{{else}}0612-4089151 | 8700186374 | 8102657225{{/if}}</span>
+        </p>
+        <p style="font-weight: 600;">
+          <span>Email: {{#if school.email}}{{school.email}}{{else}}timesschoolpatna@gmail.com{{/if}}</span>
+          <span style="margin: 0 6px; color: #94a3b8;">|</span>
+          <span>Website: <span style="font-weight: 700; color: #0f4c92;">{{#if
+              school.website}}{{school.website}}{{else}}www.timesinternationalschool.com{{/if}}</span></span>
+        </p>
+      </div>
+
+      {{#if school.tagline}}
+      <div class="tagline-banner">
+        <div class="tagline-line" style="background: linear-gradient(to right, transparent, #eab308);">
+        </div>
+        <div class="tagline-diamond"></div>
+        <div class="tagline-text">{{school.tagline}}</div>
+        <div class="tagline-diamond"></div>
+        <div class="tagline-line" style="background: linear-gradient(to left, transparent, #eab308);">
+        </div>
+      </div>
+      {{/if}}
+
+      <!-- Header Sub-Bar: Progress Report & Session -->
+      <div class="flex items-center justify-center px-3 py-1 gap-2" style="text-align: center; margin-top: 3px;">
+        <span class="progress-report-text">
+          PROGRESS REPORT
+        </span>
+        {{#if reportTitle}}
+        <span class="font-bold uppercase"
+          style="color: #0f4c92; font-size: 16px; letter-spacing: 0.5px; font-family: 'Montserrat', sans-serif; line-height: 1; margin-top: 2px;">
+          {{reportTitle}}
+        </span>
         {{/if}}
-      </div>
-
-      <div style="width: 62%; text-align: center; padding: 0 6px;">
-        <h1 class="school-name font-bold" style="color: #0f4c92; font-size: 20.5px; margin-bottom: 2px; letter-spacing: 0.5px; text-transform: uppercase;">
-          {{#if school.name}}{{school.name}}{{else}}TIMES INTERNATIONAL SCHOOL{{/if}}
-        </h1>
-        <div class="school-details font-semibold" style="color: #334155; font-size: 10.5px; line-height: 1.4;">
-          <p style="margin-bottom: 1.5px;">Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj, Mahendru, Patna - 800006{{/if}}</p>
-          <p style="margin-bottom: 1.5px;">Cont.: {{#if school.phone}}{{school.phone}}{{else}}0612-4089151 | 8700186374 | 8102657225{{/if}}</p>
-          <p style="margin-bottom: 1.5px;">Email : {{#if school.email}}{{school.email}}{{else}}timesschoolpatna@gmail.com{{/if}} | Website :</p>
-          <p style="font-weight: 700; color: #1e293b;">{{#if school.website}}{{school.website}}{{else}}www.timesinternationalschool.com{{/if}}</p>
-        </div>
-      </div>
-
-      <div style="width: 20%; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;">
-        <div style="font-weight: 700; font-size: 13.5px; color: #0f4c92; line-height: 1.25; margin-bottom: 8px;">
-          {{#if reportTitle}}{{reportTitle}}{{else}}Term 1 ( Half Yearly){{/if}}
-        </div>
-        <div style="background-color: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 10px; padding: 3px 10px; border-radius: 12px; white-space: nowrap; letter-spacing: 0.3px;">
-          SESSION: {{#if student.academic_year_name}}{{student.academic_year_name}}{{else if school.session}}{{school.session}}{{else}}2026-2027{{/if}}
-        </div>
+        <span
+          style="background-color: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 14px; padding: 2px 10px; border-radius: 12px; white-space: nowrap; letter-spacing: 0.3px; line-height: 1; display: inline-flex; align-items: center;">
+          (Session : {{#if student.academic_year_name}}{{student.academic_year_name}}{{else if
+          school.session}}{{school.session}}{{else}}2026-2027{{/if}})
+        </span>
       </div>
     </div>
-    -->
 
 
     <!-- 2. STUDENT PROFILE -->
     <div class="card mb-2">
-  <div class="flex justify-between gap-4">
-    <!-- Left Side: Student Info Grid -->
-    <div class="flex-1 grid grid-cols-3 gap-x-4 gap-y-2">
-      <div>
-        <div class="info-label">Admission No</div>
-        <div class="info-value">{{student.admission_no}}</div>
-      </div>
-      <div>
-        <div class="info-label">Roll No</div>
-        <div class="info-value">{{student.roll_no}}</div>
-      </div>
-      <div>
-        <div class="info-label">Class & Section</div>
-        <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else}}{{student.class}}{{#if student.section}} - {{student.section}}{{/if}}{{/if}}</div>
-      </div>
-      
-      <div>
-        <div class="info-label">Student Name</div>
-        <div class="info-value">{{student.name}}</div>
-      </div>
-      <div>
-        <div class="info-label">Date of Birth</div>
-        <div class="info-value">{{student.dob}}</div>
-      </div>
-      <div>
-        <div class="info-label">Gender / Blood Group</div>
-        <div class="info-value">{{student.gender}} / {{student.blood_group}}</div>
-      </div>
+      <div class="flex justify-between gap-4">
+        <!-- Left Side: Student Info Grid -->
+        <div class="flex-1 grid grid-cols-3 gap-x-4 gap-y-2">
+          <div>
+            <div class="info-label">Admission No</div>
+            <div class="info-value">{{student.admission_no}}</div>
+          </div>
+          <div>
+            <div class="info-label">Roll No</div>
+            <div class="info-value">{{student.roll_no}}</div>
+          </div>
+          <div>
+            <div class="info-label">Class & Section</div>
+            <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else}}{{student.class}}{{#if
+              student.section}} - {{student.section}}{{/if}}{{/if}}</div>
+          </div>
 
-      <div>
-        <div class="info-label">Father's Name</div>
-        <div class="info-value">{{#if student.father_name}}{{student.father_name}}{{else}}{{student.fathers_name}}{{/if}}</div>
-      </div>
-      <div>
-        <div class="info-label">Mother's Name</div>
-        <div class="info-value">{{#if student.mother_name}}{{student.mother_name}}{{else}}{{student.mothers_name}}{{/if}}</div>
-      </div>
-      <div class="grid-col-span-2" style="grid-column: span 3;">
-        <div class="info-label">Address</div>
-        <div class="info-value">{{student.address}}</div>
+          <div>
+            <div class="info-label">Student Name</div>
+            <div class="info-value">{{student.name}}</div>
+          </div>
+          <div>
+            <div class="info-label">Date of Birth</div>
+            <div class="info-value">{{student.dob}}</div>
+          </div>
+          <div>
+            <div class="info-label">Gender / Blood Group</div>
+            <div class="info-value">{{student.gender}} / {{student.blood_group}}</div>
+          </div>
+
+          <div>
+            <div class="info-label">Father's Name</div>
+            <div class="info-value">{{#if
+              student.father_name}}{{student.father_name}}{{else}}{{student.fathers_name}}{{/if}}</div>
+          </div>
+          <div>
+            <div class="info-label">Mother's Name</div>
+            <div class="info-value">{{#if
+              student.mother_name}}{{student.mother_name}}{{else}}{{student.mothers_name}}{{/if}}</div>
+          </div>
+          <div class="grid-col-span-2" style="grid-column: span 3;">
+            <div class="info-label">Address</div>
+            <div class="info-value">{{student.address}}</div>
+          </div>
+        </div>
+
+        <!-- Right Side: Photo and Status -->
+        <div class="flex-col items-center justify-center border-l"
+          style="padding-left: 16px; border-left: 1px solid var(--border-color);">
+          {{#if student.photo}}
+          <img src="{{student.photo}}" alt="Student Photo" class="student-photo mb-2">
+          {{else}}
+          <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
+          {{/if}}
+          <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
+            {{student.status}}
+          </div>
+        </div>
       </div>
     </div>
-
-    <!-- Right Side: Photo and Status -->
-    <div class="flex-col items-center justify-center border-l" style="padding-left: 16px; border-left: 1px solid var(--border-color);">
-      {{#if student.photo}}
-        <img src="{{student.photo}}" alt="Student Photo" class="student-photo mb-2">
-      {{else}}
-        <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
-      {{/if}}
-      <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
-        {{student.status}}
-      </div>
-    </div>
-  </div>
-</div>
 
 
     <!-- 3. MARKS TABLE -->
     <div class="mb-2">
-  <div class="section-heading">Part 1: Scholastic Areas</div>
-  <table class="table-marks data-table" style="margin-bottom: 0;">
-    <thead>
-      {{#if showFinalResult}}
-      <tr class="table-header-group">
-        <th rowspan="2" style="text-align: left;">Subjects</th>
-        <th rowspan="2">Max Marks</th>
-        <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
-        <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
-        <th rowspan="2">Final Total</th>
-        <th rowspan="2">Grade</th>
-      </tr>
-      <tr>
-        <!-- Term 1 columns -->
-        {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-        <th>Total</th>
-        
-        <!-- Term 2 columns -->
-        {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-        <th>Total</th>
-      </tr>
-      {{else}}
-      <tr class="table-header-group">
-        <th rowspan="3" style="text-align: left;">Subjects</th>
-        <th rowspan="3">Max Marks</th>
-        <th colspan="{{examColSpan}}">Marks / Grade</th>
-        <th rowspan="3">Grade</th>
-      </tr>
-      <tr>
-        <th colspan="{{baseNewFields}}">{{#if exam1Name}}{{exam1Name}}{{else if reportTitle}}{{reportTitle}}{{else}}Term 1{{/if}}</th>
-        <th rowspan="2">Total</th>
-      </tr>
-      <tr>
-        <!-- Term 1 sub-subject columns -->
-        {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-      </tr>
-      {{/if}}
-    </thead>
-    <tbody>
-      {{#each subjects}}
-      <tr>
-        <td style="text-align: left; font-weight: 600; color: var(--dark-blue);">{{this.subject_name}}</td>
-        <td>{{this.max}}</td>
-        <!-- Term 1 marks -->
-        {{#each this.exam1_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
-        <td class="font-semibold">{{this.exam1_marks}}</td>
-        
-        <!-- Term 2 marks -->
-        {{#if ../showFinalResult}}
+      {{!-- <div class="section-heading">Part 1: Scholastic Areas</div> --}}
+      <table class="table-marks data-table" style="margin-bottom: 0;">
+        <thead>
+          {{#if showFinalResult}}
+          {{#if hasIaSubSubjects}}
+          <tr class="table-header-group">
+            <th rowspan="3" style="text-align: left;">Subjects</th>
+            <th rowspan="3">Max Marks</th>
+            <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
+            <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
+            <th rowspan="3">Final Total</th>
+            <th rowspan="3">Grade</th>
+          </tr>
+          <tr>
+            <!-- Term 1 columns -->
+            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
+            {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
+            {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
+            {{#if showIaPr}}<th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>{{/if}}
+            <th rowspan="2">Total</th>
+
+            <!-- Term 2 columns -->
+            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
+            {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
+            {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
+            {{#if showIaPr}}<th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>{{/if}}
+            <th rowspan="2">Total</th>
+          </tr>
+          <tr>
+            <!-- Term 1 IA columns -->
+            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
+            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
+            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
+            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+
+            <!-- Term 2 IA columns -->
+            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
+            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
+            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
+            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+          </tr>
+          {{else}}
+          <tr class="table-header-group">
+            <th rowspan="2" style="text-align: left;">Subjects</th>
+            <th rowspan="2">Max Marks</th>
+            <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
+            <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
+            <th rowspan="2">Final Total</th>
+            <th rowspan="2">Grade</th>
+          </tr>
+          <tr>
+            <!-- Term 1 columns -->
+            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
+            <th>Total</th>
+
+            <!-- Term 2 columns -->
+            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
+            <th>Total</th>
+          </tr>
+          {{/if}}
+          {{else}}
+          {{#if hasIaSubSubjects}}
+          <tr class="table-header-group">
+            <th rowspan="2" style="text-align: left;">Subjects</th>
+            <th rowspan="2">Max Marks</th>
+            {{#if showWritten}}
+            <th rowspan="2">Written <br><small>({{maxWritten}})</small></th>
+            {{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showOral}}
+            <th rowspan="2">Oral <br><small>({{maxOral}})</small></th>
+            {{/if}}
+            {{#if showTheory}}
+            <th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>
+            {{/if}}
+            {{#if showLab}}
+            <th rowspan="2">Lab <br><small>({{maxLab}})</small></th>
+            {{/if}}
+            {{#if showIaPr}}
+            <th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>
+            {{/if}}
+            <th rowspan="2">Total</th>
+            <th rowspan="2">Grade</th>
+          </tr>
+          <tr>
+            <!-- Term 1 sub-subject columns under I.A({{iaTotalMax}}) -->
+            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
+            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
+            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
+            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+          </tr>
+          {{else}}
+          <tr class="table-header-group">
+            <th style="text-align: left;">Subjects</th>
+            <th>Max Marks</th>
+            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
+            <th>Total</th>
+            <th>Grade</th>
+          </tr>
+          {{/if}}
+          {{/if}}
+        </thead>
+        <tbody>
+          {{#each subjects}}
+          <tr>
+            <td style="text-align: left; font-weight: 600; color: var(--dark-blue);">{{this.subject_name}}</td>
+            <td>{{this.max}}</td>
+            <!-- Term 1 marks -->
+            {{#each this.exam1_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
+            <td class="font-semibold">{{this.exam1_marks}}</td>
+
+            <!-- Term 2 marks -->
+            {{#if ../showFinalResult}}
             {{#each this.exam2_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
             <td class="font-semibold">{{this.exam2_marks}}</td>
-            
+
             <!-- Final Total -->
             <td class="font-bold text-primary">{{this.total}}</td>
-        {{/if}}
-        <td class="font-bold" style="color: {{gradeColor this.grade}};">{{this.grade}}</td>
-      </tr>
-      {{/each}}
-      
-      <!-- Totals Row -->
-      <tr class="row-total">
-        <td style="text-align: left;">Grand Total</td>
-        <td>{{totalMax}}</td>
-        {{#if showFinalResult}}
+            {{/if}}
+            <td class="font-bold" style="color: {{gradeColor this.grade}};">{{this.grade}}</td>
+          </tr>
+          {{/each}}
+
+          <!-- Totals Row -->
+          <tr class="row-total">
+            <td style="text-align: left;">Grand Total</td>
+            <td>{{totalMax}}</td>
+            {{#if showFinalResult}}
             <td colspan="{{exam1ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
             <td colspan="{{exam2ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
             <td class="text-primary font-bold">{{totalObtained}} / {{totalMax}}</td>
-        {{else}}
+            {{else}}
             {{#if baseNewFields}}
-                <td colspan="{{baseNewFields}}"></td>
+            <td colspan="{{baseNewFields}}"></td>
             {{/if}}
             <td class="text-primary font-bold">{{totalObtained}}</td>
-            <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if grandGrade}}{{grandGrade}}{{else}}-{{/if}}</td>
-        {{/if}}
-      </tr>
-    </tbody>
-  </table>
-</div>
+            <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if
+              grandGrade}}{{grandGrade}}{{else}}-{{/if}}</td>
+            {{/if}}
+          </tr>
+        </tbody>
+      </table>
+    </div>
 
 
-    <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE -->
-    <div class="grid grid-cols-2 gap-4">
+    <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE / RESULT SUMMARY -->
+    <div class="grid grid-cols-2 gap-4" style="align-items: start;">
+      <!-- Left Column: Co-Scholastic -->
       <div style="grid-column: span 1;">
-        <div class="mb-2">
-  <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
-  <table class="table-marks data-table" style="margin-bottom: 0;">
-    <thead>
-      <tr>
-        <th style="text-align: left;">Activity / Area</th>
+        <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
+        <table class="table-marks data-table" style="margin-bottom: 0; border: 1px solid #0e4ea6;">
+          <thead>
+            <tr style="background: #0e4ea6;">
+              <th
+                style="text-align: left; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
+                Activity / Area</th>
+              {{#if attendanceStats.hasTerm2}}
+              <th
+                style="width: 70px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
+                Term I</th>
+              <th
+                style="width: 70px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
+                Term II</th>
+              {{else}}
+              <th
+                style="width: 90px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
+                {{#if
+                attendanceStats.hasTerm1}}Term I{{else}}Grade{{/if}}</th>
+              {{/if}}
+            </tr>
+          </thead>
+          <tbody>
+            {{#each coScholastic}}
+            <tr>
+              <td style="text-align: left; font-weight: 600; color: #334155;">{{this.name}}</td>
+              {{#if ../attendanceStats.hasTerm2}}
+              <td class="font-bold text-center" style="color: {{gradeColor this.term1}};">{{this.term1}}</td>
+              <td class="font-bold text-center" style="color: {{gradeColor this.term2}};">{{this.term2}}</td>
+              {{else}}
+              <td class="font-bold text-center"
+                style="color: {{#if this.term1}}{{gradeColor this.term1}}{{else}}{{gradeColor this.grade}}{{/if}};">
+                {{#if
+                this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
+              {{/if}}
+            </tr>
+            {{/each}}
+            {{#each skillBased}}
+            <tr>
+              <td style="text-align: left; font-weight: 600; color: #334155;">{{this.name}}</td>
+              {{#if ../attendanceStats.hasTerm2}}
+              <td class="font-bold text-center" style="color: {{gradeColor this.term1}};">{{this.term1}}</td>
+              <td class="font-bold text-center" style="color: {{gradeColor this.term2}};">{{this.term2}}</td>
+              {{else}}
+              <td class="font-bold text-center"
+                style="color: {{#if this.term1}}{{gradeColor this.term1}}{{else}}{{gradeColor this.grade}}{{/if}};">
+                {{#if
+                this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
+              {{/if}}
+            </tr>
+            {{/each}}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Right Column: Attendance & Result Summary -->
+      <div style="grid-column: span 1;" class="flex-col">
+        <style>
+          .att-card {
+            border: 1.5px solid #0e4ea6;
+            border-left: 5px solid #0e4ea6;
+            border-radius: 8px;
+            padding: 8px 12px;
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+            margin-bottom: 8px;
+            box-shadow: 0 2px 4px rgba(14, 78, 166, 0.12);
+          }
+
+          .att-title {
+            color: #0e4ea6;
+            font-weight: 800;
+            font-size: 11px;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+            letter-spacing: 0.5px;
+          }
+
+          .att-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            column-gap: 10px;
+            align-items: center;
+          }
+
+          .att-pill {
+            background: #ffffff;
+            border: 1.5px solid #93c5fd;
+            border-radius: 6px;
+            padding: 5px 6px;
+            text-align: center;
+          }
+
+          .att-label {
+            color: #475569;
+            font-size: 9px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.3px;
+            line-height: 1.1;
+          }
+
+          .att-val {
+            color: #0f172a;
+            font-size: 14px;
+            font-weight: 800;
+            margin-top: 2px;
+          }
+
+          .att-percent-pill {
+            background: linear-gradient(135deg, #0e4ea6, #0a3a7c);
+            color: #ffffff;
+            border-radius: 8px;
+            padding: 5px 12px;
+            text-align: center;
+            min-width: 65px;
+            box-shadow: 0 2px 4px rgba(14, 78, 166, 0.25);
+          }
+
+          .att-percent-label {
+            color: rgba(255, 255, 255, 0.9);
+            font-size: 8.5px;
+            text-transform: uppercase;
+            font-weight: 800;
+            letter-spacing: 0.4px;
+          }
+
+          .att-percent-val {
+            color: #ffffff;
+            font-size: 15px;
+            font-weight: 900;
+            line-height: 1.1;
+          }
+
+          .att-bar-wrap {
+            grid-column: span 3;
+            margin-top: 6px;
+          }
+
+          .att-bar-bg {
+            background: #cbd5e1;
+            border-radius: 9999px;
+            height: 5px;
+            width: 100%;
+            overflow: hidden;
+          }
+
+          .att-bar-fill {
+            background: linear-gradient(90deg, #38bdf8, #0e4ea6);
+            height: 100%;
+            border-radius: 9999px;
+          }
+
+          .result-summary-container {
+            background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+            border: 1.5px solid #0e4ea6;
+            border-radius: 8px;
+            padding: 8px 10px;
+            box-shadow: 0 2px 5px rgba(14, 78, 166, 0.12);
+          }
+
+          .result-grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+          }
+
+          .result-tile {
+            border-radius: 8px;
+            padding: 6px 4px;
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            min-height: 54px;
+          }
+
+          .result-tile-percentage {
+            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+            border: 1.5px solid #93c5fd;
+            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);
+          }
+
+          .result-tile-percentage .tile-label {
+            color: #1e40af;
+          }
+
+          .result-tile-percentage .tile-val {
+            color: #1d4ed8;
+          }
+
+          .result-tile-result-pass {
+            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+            border: 1.5px solid #86efac;
+            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.08);
+          }
+
+          .result-tile-result-pass .tile-label {
+            color: #15803d;
+          }
+
+          .result-tile-result-fail {
+            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+            border: 1.5px solid #fca5a5;
+            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.08);
+          }
+
+          .result-tile-result-fail .tile-label {
+            color: #b91c1c;
+          }
+
+          .result-tile-grade {
+            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+            border: 1.5px solid #fde047;
+            box-shadow: 0 2px 4px rgba(234, 179, 8, 0.08);
+          }
+
+          .result-tile-grade .tile-label {
+            color: #854d0e;
+          }
+
+          .result-tile-grade .tile-val {
+            color: #a16207;
+          }
+
+          .tile-label {
+            font-size: 9.5px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 3px;
+            line-height: 1.1;
+          }
+
+          .tile-val {
+            font-size: 18px;
+            font-weight: 900;
+            line-height: 1.2;
+          }
+
+          .pill-badge-pass {
+            background: #16a34a;
+            color: #ffffff;
+            padding: 3px 14px;
+            border-radius: 9999px;
+            font-size: 13.5px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+            display: inline-block;
+          }
+
+          .pill-badge-fail {
+            background: #dc2626;
+            color: #ffffff;
+            padding: 3px 14px;
+            border-radius: 9999px;
+            font-size: 13.5px;
+            font-weight: 900;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+            display: inline-block;
+          }
+
+          .promotion-banner-strip {
+            margin-top: 6px;
+            padding-top: 5px;
+            border-top: 1.5px dashed #bfdbfe;
+            text-align: center;
+            font-size: 12.5px;
+            font-weight: 700;
+            color: #1e3a8a;
+          }
+
+          .promotion-banner-strip span {
+            color: #2563eb;
+            font-weight: 800;
+          }
+        </style>
+
+        <!-- ============================================================== -->
+        <!-- 1. MANUAL ATTENDANCE RECORD (ACTIVE: For manual writing after print) -->
+        <!-- ============================================================== -->
+        <div class="att-card" style="margin-bottom: 8px;">
+          <div class="att-title" style="display: flex; justify-content: space-between; align-items: center;">
+            <span>Attendance Record</span>
+          </div>
+          <div class="att-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Total Working Days</div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+            </div>
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Days Present</div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+            </div>
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Attendance %</div>
+              <div
+                style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 12px; font-weight: 800; color: #64748b; line-height: 18px;">
+                %</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ============================================================== -->
+        <!-- 2. AUTOMATED DIGITAL ATTENDANCE (PRESERVED / CURRENTLY HIDDEN)  -->
+        <!-- ============================================================== -->
+        {{!--
         {{#if attendanceStats.hasTerm1}}
-        <th>Term I</th>
+        <div class="att-card">
+          <div class="att-title">{{exam1Name}} Attendance Record</div>
+          <div class="att-grid">
+            <div class="att-pill">
+              <div class="att-label">Working Days</div>
+              <div class="att-val">{{attendanceStats.term1Working}}</div>
+            </div>
+            <div class="att-pill">
+              <div class="att-label">Days Present</div>
+              <div class="att-val text-primary">{{attendanceStats.term1Attended}}</div>
+            </div>
+            <div class="att-percent-pill">
+              <div class="att-percent-label">Attendance</div>
+              <div class="att-percent-val">{{attendanceStats.term1Percentage}}%</div>
+            </div>
+            <div class="att-bar-wrap">
+              <div class="att-bar-bg">
+                <div class="att-bar-fill" style="width: {{attendanceStats.term1Percentage}}%;"></div>
+              </div>
+            </div>
+          </div>
+        </div>
         {{/if}}
+
         {{#if attendanceStats.hasTerm2}}
-        <th>Term II</th>
-        {{/if}}
-      </tr>
-    </thead>
-    <tbody>
-      {{#each coScholastic}}
-      <tr>
-        <td style="text-align: left; font-weight: 500;">{{this.name}}</td>
-        {{#if ../attendanceStats.hasTerm1}}
-        <td class="font-bold text-center">{{this.term1}}</td>
-        {{/if}}
-        {{#if ../attendanceStats.hasTerm2}}
-        <td class="font-bold text-center">{{this.term2}}</td>
-        {{/if}}
-      </tr>
-      {{/each}}
-      {{#each skillBased}}
-      <tr>
-        <td style="text-align: left; font-weight: 500;">{{this.name}}</td>
-        {{#if ../attendanceStats.hasTerm1}}
-        <td class="font-bold text-center">{{this.term1}}</td>
-        {{/if}}
-        {{#if ../attendanceStats.hasTerm2}}
-        <td class="font-bold text-center">{{this.term2}}</td>
-        {{/if}}
-      </tr>
-      {{/each}}
-    </tbody>
-  </table>
-</div>
-
-      </div>
-      <div style="grid-column: span 1;" class="flex-col gap-3">
-        <div class="mb-2">
-  <style>
-    .att-card {
-      border: 1px solid #e2e8f0;
-      border-radius: 8px;
-      padding: 8px 12px;
-      background: #ffffff;
-      margin-bottom: 6px;
-      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-    }
-    .att-title {
-      color: #1d4ed8;
-      font-weight: 700;
-      font-size: 10.5px;
-      text-transform: uppercase;
-      margin-bottom: 6px;
-      letter-spacing: 0.5px;
-    }
-    .att-grid {
-      display: grid;
-      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) auto;
-      column-gap: 16px;
-      align-items: start;
-    }
-    .att-label {
-      color: #64748b;
-      font-size: 8px;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      line-height: 1.2;
-    }
-    .att-val {
-      color: #1e293b;
-      font-size: 12.5px;
-      font-weight: 600;
-      margin-top: 3px;
-    }
-    .att-percent-col {
-      text-align: right;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      justify-content: flex-start;
-      padding-left: 8px;
-    }
-    .att-percent-label {
-      color: #64748b;
-      font-size: 8px;
-      text-transform: uppercase;
-      font-weight: 600;
-      letter-spacing: 0.3px;
-      line-height: 1.2;
-    }
-    .att-percent-val {
-      color: #0f172a;
-      font-size: 16px;
-      font-weight: 800;
-      line-height: 1.2;
-      margin-top: 2px;
-    }
-    .att-bar-wrap {
-      grid-column: span 2;
-      margin-top: 6px;
-    }
-    .att-bar-bg {
-      background: #e2e8f0;
-      border-radius: 9999px;
-      height: 6px;
-      width: 100%;
-      overflow: hidden;
-    }
-    .att-bar-fill {
-      background: #1d4ed8;
-      height: 100%;
-      border-radius: 9999px;
-    }
-  </style>
-
-  {{#if attendanceStats.hasTerm1}}
-    {{#if attendanceStats.hasTerm2}}
-    <div class="att-card">
-      <div class="att-title" style="font-size: 9.5px;">{{exam1Name}} Attendance Record</div>
-      <div class="att-grid">
-        <div>
-          <div class="att-label">Total Working Days:</div>
-          <div class="att-val">{{attendanceStats.term1Working}}</div>
-        </div>
-        <div>
-          <div class="att-label">Days Present:</div>
-          <div class="att-val">{{attendanceStats.term1Attended}}</div>
-        </div>
-        <div class="att-percent-col">
-          <div class="att-percent-label">Attendance %</div>
-          <div class="att-percent-val">{{attendanceStats.term1Percentage}}%</div>
-        </div>
-        <div class="att-bar-wrap">
-          <div class="att-bar-bg">
-            <div class="att-bar-fill" style="width: {{attendanceStats.term1Percentage}}%;"></div>
+        <div class="att-card">
+          <div class="att-title">{{exam2Name}} Attendance Record</div>
+          <div class="att-grid">
+            <div class="att-pill">
+              <div class="att-label">Working Days</div>
+              <div class="att-val">{{attendanceStats.term2Working}}</div>
+            </div>
+            <div class="att-pill">
+              <div class="att-label">Days Present</div>
+              <div class="att-val text-primary">{{attendanceStats.term2Attended}}</div>
+            </div>
+            <div class="att-percent-pill">
+              <div class="att-percent-label">Attendance</div>
+              <div class="att-percent-val">{{attendanceStats.term2Percentage}}%</div>
+            </div>
+            <div class="att-bar-wrap">
+              <div class="att-bar-bg">
+                <div class="att-bar-fill" style="width: {{attendanceStats.term2Percentage}}%;"></div>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
-    </div>
-    {{/if}}
-  {{/if}}
+        {{/if}}
+        --}}
 
-  {{#if attendanceStats.hasTerm2}}
-    <div class="att-card">
-      <div class="att-title" style="font-size: 9.5px;">{{exam2Name}} Attendance Record</div>
-      <div class="att-grid">
-        <div>
-          <div class="att-label">Total Working Days:</div>
-          <div class="att-val">{{attendanceStats.term2Working}}</div>
-        </div>
-        <div>
-          <div class="att-label">Days Present:</div>
-          <div class="att-val">{{attendanceStats.term2Attended}}</div>
-        </div>
-        <div class="att-percent-col">
-          <div class="att-percent-label">Attendance %</div>
-          <div class="att-percent-val">{{attendanceStats.term2Percentage}}%</div>
-        </div>
-        <div class="att-bar-wrap">
-          <div class="att-bar-bg">
-            <div class="att-bar-fill" style="width: {{attendanceStats.term2Percentage}}%;"></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  {{/if}}
-
-
-</div>
-
-        
         <!-- 5. RESULT SUMMARY -->
-        <div class="card card-highlight mb-2">
-  <div class="section-heading mb-2">Result Summary</div>
-  
-  <div class="grid grid-cols-3 gap-4 text-center">
-    <div class="border-r border-white/20">
-      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Percentage</div>
-      <div class="font-bold text-white" style="font-size: 16px;">{{percentage}}%</div>
-    </div>
-    
-    <div class="border-r border-white/20">
-      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Final Result</div>
-      <div class="font-bold {{#if (eq finalResult 'Pass')}}text-success{{else}}text-danger{{/if}}" style="font-size: 16px; background: rgba(255,255,255,0.9); display: inline-block; padding: 2px 8px; border-radius: 4px; margin-top: -2px;">
-        {{finalResult}}
-      </div>
-    </div>
-    
-    <div>
-      <div class="text-muted info-label" style="color: rgba(255,255,255,0.7);">Promotion Status</div>
-      <div class="font-bold text-white" style="font-size: 16px;">
-        {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
-      </div>
-    </div>
-  </div>
-  
-  {{#if promotionStatus}}
-  <div class="mt-2 pt-2 border-t border-white/20 text-center text-white font-semibold">
-    Promoted to Class: <span class="text-gold">{{nextGrade}}</span>
-  </div>
-  {{/if}}
-</div>
+        <div>
+          <div class="section-heading">Result Summary</div>
+          <div class="result-summary-container">
+            <div class="result-grid-3">
+              <!-- Percentage Tile -->
+              <div class="result-tile result-tile-percentage">
+                <div class="tile-label">Percentage</div>
+                <div class="tile-val">{{percentage}}%</div>
+              </div>
+
+              <!-- Final Result Tile -->
+              <div
+                class="result-tile {{#if (eq finalResult 'Pass')}}result-tile-result-pass{{else}}result-tile-result-fail{{/if}}">
+                <div class="tile-label">Final Result</div>
+                <div class="tile-val">
+                  <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
+                    {{finalResult}}
+                  </span>
+                </div>
+              </div>
+
+              <!-- Grade or Promotion Status Tile -->
+              <div class="result-tile result-tile-grade">
+                <div class="tile-label">{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</div>
+                <div class="tile-val"
+                  style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
+                  {{#if showFinalResult}}
+                  {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
+                  {{else if grandGrade}}
+                  {{grandGrade}}
+                  {{else}}
+                  {{finalResult}}
+                  {{/if}}
+                </div>
+              </div>
+            </div>
+
+            {{#if showFinalResult}}
+            {{#if nextGrade}}
+            <div class="promotion-banner-strip">
+              Promoted to Class: <span>{{nextGrade}}</span>
+            </div>
+            {{else if promotionStatus}}
+            <div class="promotion-banner-strip">
+              Promotion Status: <span>{{promotionStatus}}</span>
+            </div>
+            {{/if}}
+            {{/if}}
+          </div>
+        </div>
 
       </div>
     </div>
 
     <!-- 6. REMARKS -->
-    <div class="grid grid-cols-2 gap-4 mb-2">
-  <div>
-    <div class="info-label mb-1">Class Teacher's Remarks</div>
-    <div class="remarks-box">
-      {{teacherRemark}}
+    <div style="margin-top: 8px;" class="mb-2">
+      <div class="section-heading" style="margin-bottom: 4px;">Class Teacher's Remarks</div>
+      <div class="remarks-box"
+        style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1.5px solid #bfdbfe; border-left: 4px solid #2563eb; font-size: 13px; font-style: italic; color: #1e3a8a; font-weight: 600; padding: 8px 14px; min-height: 38px; display: flex; align-items: center;">
+        "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
+      </div>
     </div>
-  </div>
-  <div>
-    <div class="info-label mb-1">Principal's Remarks</div>
-    <div class="remarks-box">
-      {{principalRemark}}
-    </div>
-  </div>
-</div>
 
 
     <!-- Fill remaining space to push footer to bottom if needed -->
@@ -777,65 +1278,59 @@ tbody tr:nth-child(even) {
 
     <!-- 7. SIGNATURES -->
     <div class="flex justify-between items-end mt-1 pt-1">
-  <div class="flex-col items-center">
-    {{#if signatures.parent}}
-      <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
-    {{else}}
-      <div style="height: 30px;"></div>
-    {{/if}}
-    <div class="signature-box">Parent / Guardian</div>
-  </div>
+      <div class="flex-col items-center">
+        {{#if signatures.parent}}
+        <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
+        {{else}}
+        <div style="height: 30px;"></div>
+        {{/if}}
+        <div class="signature-box">Parent / Guardian</div>
+      </div>
 
-  <div class="flex-col items-center">
-    {{#if signatures.teacher}}
-      <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
-    {{else}}
-      <div style="height: 30px;"></div>
-    {{/if}}
-    <div class="signature-box">Class Teacher</div>
-  </div>
+      <div class="flex-col items-center">
+        {{#if signatures.teacher}}
+        <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
+        {{else}}
+        <div style="height: 30px;"></div>
+        {{/if}}
+        <div class="signature-box">Class Teacher</div>
+      </div>
 
-  <div class="flex-col items-center">
-    {{#if signatures.controller}}
-      <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
-    {{else}}
-      <div style="height: 30px;"></div>
-    {{/if}}
-    <div class="signature-box">Exam Controller</div>
-  </div>
+      <div class="flex-col items-center">
+        {{#if signatures.controller}}
+        <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
+        {{else}}
+        <div style="height: 30px;"></div>
+        {{/if}}
+        <div class="signature-box">Exam Controller</div>
+      </div>
 
-  <div class="flex-col items-center">
-    {{#if signatures.principal}}
-      <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
-    {{else}}
-      <div style="height: 30px;"></div>
-    {{/if}}
-    <div class="signature-box">Principal</div>
-  </div>
-</div>
+      <div class="flex-col items-center">
+        {{#if signatures.principal}}
+        <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
+        {{else}}
+        <div style="height: 30px;"></div>
+        {{/if}}
+        <div class="signature-box">Principal</div>
+      </div>
+    </div>
 
 
     <!-- 8. FOOTER -->
-    <div class="mt-2 pt-2 border-t border-border-color flex justify-between items-center footer-text">
-  <div class="flex gap-3 items-center">
-    {{#if qr_code}}
-      <img src="{{qr_code}}" alt="QR Code" class="qr-code">
-    {{/if}}
-    <div class="flex-col">
-      <span class="font-semibold text-dark">Scan QR to Verify</span>
-      <span>Report Card No: {{meta.report_id}}</span>
-      <span>Generated On: {{meta.generated_on}}</span>
+    <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
+      <div style="text-align: left; line-height: 1.4;">
+        <div><strong>Report Card No:</strong> {{#if meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
+        <div><strong>Generated On:</strong> {{#if meta.generated_on}}{{meta.generated_on}}{{else}}{{currentDate}}{{/if}}</div>
+      </div>
+
+      <div style="text-align: right; line-height: 1.4;">
+        <div>Generated By: {{#if meta.generated_by}}{{meta.generated_by}}{{else}}School Administration{{/if}}</div>
+        <div>Software powered by {{#if meta.erp_name}}{{meta.erp_name}}{{else}}TIS ERP{{/if}} v{{#if meta.erp_version}}{{meta.erp_version}}{{else}}2.0{{/if}} &bull; &copy; {{#if meta.year}}{{meta.year}}{{else}}2026{{/if}} All Rights Reserved</div>
+      </div>
     </div>
-  </div>
-  
-  <div class="text-right">
-    <div>Generated By: {{meta.generated_by}}</div>
-    <div>Software powered by {{meta.erp_name}} v{{meta.erp_version}}</div>
-    <div>&copy; {{meta.year}} All Rights Reserved</div>
-  </div>
-</div>
 
 
   </div>
 </body>
+
 </html>
