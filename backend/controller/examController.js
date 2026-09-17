@@ -7,7 +7,6 @@ const path = require('path');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
-const QRCode = require('qrcode');
 const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
@@ -2555,18 +2554,6 @@ const GenerateMarksheetPDF = async (req, res) => {
             console.log('No school-info.json found');
         }
 
-        let qr_code = '';
-        try {
-            const qrText = `TIMES INTERNATIONAL SCHOOL\nStudent: ${student.name || 'N/A'}\nRoll No: ${student.roll_no || 'N/A'}\nClass: ${student.class || student.grade_name || 'N/A'}\nExam: ${rows[0].exam_name || 'Term Exam'}\nTotal: ${totalObtained || 0}/${totalMax || 0} (${percentage || 0}%)\nResult: ${finalResult || 'PASS'}\nReport No: TIS-${exam_id}-${student_id}`;
-            qr_code = await QRCode.toDataURL(qrText, {
-                margin: 1,
-                width: 180,
-                errorCorrectionLevel: 'M'
-            });
-        } catch (e) {
-            console.error('QR code error:', e);
-        }
-
         const meta = {
             report_id: `TIS-${exam_id}-${student_id}`,
             generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
@@ -2601,8 +2588,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             logoData, headerImageData, luckiestFontBase64, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark, principalRemark,
             dynamicColumns,
-            meta,
-            qr_code
+            meta
         };
 
         const templatePath = 'uploads/templates/senior_final_exam.hbs';
@@ -3436,18 +3422,6 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             };
         });
 
-        let qr_code = '';
-        try {
-            const qrText = `TIMES INTERNATIONAL SCHOOL\nStudent: ${student.name || 'N/A'}\nRoll No: ${student.roll_no || 'N/A'}\nClass: ${student.class || student.grade_name || 'N/A'}\nExam: ${reportTitle || 'Annual Exam'}\nTotal: ${totalObtained || 0}/${totalMax || 0} (${percentage || 0}%)\nResult: ${finalResult || 'PASS'}\nReport No: TIS-COMB-${student_id}`;
-            qr_code = await QRCode.toDataURL(qrText, {
-                margin: 1,
-                width: 180,
-                errorCorrectionLevel: 'M'
-            });
-        } catch (e) {
-            console.error('QR code error:', e);
-        }
-
         const meta = {
             report_id: `TIS-COMB-${student_id}`,
             generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
@@ -3482,8 +3456,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             logoData, headerImageData, luckiestFontBase64, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
             principalRemark: principalRemark || '',
-            meta,
-            qr_code
+            meta
         };
 
         // --- TEMPLATE SELECTION ---

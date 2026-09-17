@@ -290,19 +290,6 @@ class PdfService {
       };
     }
 
-    // Auto-generate real, scannable QR Code containing full student examination details
-    try {
-      const QRCode = require('qrcode');
-      const studentInfo = `TIMES INTERNATIONAL SCHOOL\nStudent: ${processedData.student?.name || 'N/A'}\nRoll No: ${processedData.student?.roll_no || 'N/A'}\nClass: ${processedData.student?.class || processedData.student?.class_section || processedData.student?.grade_name || 'N/A'}\nExam: ${processedData.reportTitle || processedData.exam1Name || 'Term Exam'}\nTotal: ${processedData.totalObtained || 0}/${processedData.totalMax || 0} (${processedData.percentage || 0}%)\nResult: ${processedData.finalResult || 'PASS'}\nReport No: ${processedData.meta?.report_id || 'VERIFIED'}`;
-      processedData.qr_code = await QRCode.toDataURL(studentInfo, {
-        margin: 1,
-        width: 180,
-        errorCorrectionLevel: 'M'
-      });
-    } catch (err) {
-      console.error('[pdfService] Error generating real QR code:', err.message);
-    }
-
     return template(processedData);
   }
 

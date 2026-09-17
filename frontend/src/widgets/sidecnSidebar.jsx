@@ -228,9 +228,9 @@ export default function AppSidebar({ user }) {
         }}
       >
         {/* HEADER SKELETON */}
-        <SidebarHeader className="px-3 py-5 border-b border-sidebar-border/50">
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-14 w-14 rounded-2xl" />
+        <SidebarHeader className="px-3 py-4 border-b border-sidebar-border/50 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+          <div className="flex items-center justify-center gap-3 group-data-[collapsible=icon]:gap-0">
+            <Skeleton className="h-28 w-28 rounded-2xl group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:rounded-xl" />
 
             <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
               <Skeleton className="h-4 w-32" />
@@ -267,13 +267,13 @@ export default function AppSidebar({ user }) {
         backgroundColor: theme === 'light' ? 'var(--app-sidebar-bg)' : undefined
       }}
     >
-      <SidebarHeader className="px-3 py-4 border-b border-sidebar-border/50">
-        <div className="flex flex-col items-center gap-3 overflow-hidden text-center">
-          <div className="flex shrink-0 items-center justify-center p-2 rounded-2xl bg-muted/40 dark:bg-slate-800/50 border border-border/50 shadow-sm group-data-[collapsible=icon]:mx-auto">
+      <SidebarHeader className="px-3 py-4 border-b border-sidebar-border/50 group-data-[collapsible=icon]:px-2 group-data-[collapsible=icon]:py-3">
+        <div className="flex flex-col items-center gap-3 overflow-hidden text-center group-data-[collapsible=icon]:gap-0">
+          <div className="flex shrink-0 items-center justify-center rounded-2xl bg-muted/40 dark:bg-slate-800/50 border border-border/50 shadow-sm transition-all duration-200 p-2 h-32 w-32 group-data-[collapsible=icon]:h-10 group-data-[collapsible=icon]:w-10 group-data-[collapsible=icon]:p-1 group-data-[collapsible=icon]:rounded-xl group-data-[collapsible=icon]:mx-auto">
             {logo ? (
-              <img src={logo.image_url} alt="Logo" className="h-32 w-32 object-contain rounded-xl" />
+              <img src={logo.image_url} alt="Logo" className="h-full w-full object-contain rounded-xl group-data-[collapsible=icon]:rounded-lg" />
             ) : (
-              <img src={SchoolLogo} alt="Logo" className="h-32 w-32 object-contain rounded-xl" />
+              <img src={SchoolLogo} alt="Logo" className="h-full w-full object-contain rounded-xl group-data-[collapsible=icon]:rounded-lg" />
             )}
           </div>
           <div className="flex flex-col items-center gap-0.5 group-data-[collapsible=icon]:hidden w-full px-1">
