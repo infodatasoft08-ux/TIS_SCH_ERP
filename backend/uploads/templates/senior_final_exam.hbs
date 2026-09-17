@@ -321,6 +321,25 @@
       border: 1px solid #1d4fd8ba;
     }
 
+    th small {
+      font-size: 10.5px;
+      font-weight: 500;
+      opacity: 0.95;
+    }
+
+    .table-marks th:first-child,
+    .table-marks td:first-child {
+      text-align: left;
+      white-space: nowrap;
+      padding-left: 8px;
+      padding-right: 8px;
+    }
+
+    .table-marks th:not(:first-child),
+    .table-marks td:not(:first-child) {
+      white-space: nowrap;
+    }
+
 
     thead tr:nth-child(2) th:last-child {
       border-right: 1px solid var(--border-color);
@@ -677,13 +696,13 @@
         <!-- Right Side: Photo and Status -->
         <div class="flex-col items-center justify-center border-l"
           style="padding-left: 16px; border-left: 1px solid var(--border-color);">
-          {{#if student.photo}}
-          <img src="{{student.photo}}" alt="Student Photo" class="student-photo mb-2">
+          {{#if (or student.photo student.avatar_url)}}
+          <img src="{{#if student.photo}}{{student.photo}}{{else}}{{student.avatar_url}}{{/if}}" alt="Student Photo" class="student-photo mb-2">
           {{else}}
           <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
           {{/if}}
           <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
-            {{student.status}}
+            {{#if student.status}}{{student.status}}{{else}}Active{{/if}}
           </div>
         </div>
       </div>
@@ -842,6 +861,230 @@
 
 
     <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE / RESULT SUMMARY -->
+    <style>
+      .att-card {
+        border: 1.5px solid #0e4ea6;
+        border-left: 5px solid #0e4ea6;
+        border-radius: 8px;
+        padding: 8px 12px;
+        background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+        margin-bottom: 8px;
+        box-shadow: 0 2px 4px rgba(14, 78, 166, 0.12);
+      }
+
+      .att-title {
+        color: #0e4ea6;
+        font-weight: 800;
+        font-size: 11px;
+        text-transform: uppercase;
+        margin-bottom: 6px;
+        letter-spacing: 0.5px;
+      }
+
+      .att-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr auto;
+        column-gap: 10px;
+        align-items: center;
+      }
+
+      .att-pill {
+        background: #ffffff;
+        border: 1.5px solid #93c5fd;
+        border-radius: 6px;
+        padding: 5px 6px;
+        text-align: center;
+      }
+
+      .att-label {
+        color: #475569;
+        font-size: 9px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        line-height: 1.1;
+      }
+
+      .att-val {
+        color: #0f172a;
+        font-size: 14px;
+        font-weight: 800;
+        margin-top: 2px;
+      }
+
+      .att-percent-pill {
+        background: linear-gradient(135deg, #0e4ea6, #0a3a7c);
+        color: #ffffff;
+        border-radius: 8px;
+        padding: 5px 12px;
+        text-align: center;
+        min-width: 65px;
+        box-shadow: 0 2px 4px rgba(14, 78, 166, 0.25);
+      }
+
+      .att-percent-label {
+        color: rgba(255, 255, 255, 0.9);
+        font-size: 8.5px;
+        text-transform: uppercase;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+      }
+
+      .att-percent-val {
+        color: #ffffff;
+        font-size: 15px;
+        font-weight: 900;
+        line-height: 1.1;
+      }
+
+      .att-bar-wrap {
+        grid-column: span 3;
+        margin-top: 6px;
+      }
+
+      .att-bar-bg {
+        background: #cbd5e1;
+        border-radius: 9999px;
+        height: 5px;
+        width: 100%;
+        overflow: hidden;
+      }
+
+      .att-bar-fill {
+        background: linear-gradient(90deg, #38bdf8, #0e4ea6);
+        height: 100%;
+        border-radius: 9999px;
+      }
+
+      .result-summary-container {
+        background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+        border: 1.5px solid #0e4ea6;
+        border-radius: 8px;
+        padding: 8px 10px;
+        box-shadow: 0 2px 5px rgba(14, 78, 166, 0.12);
+      }
+
+      .result-grid-3 {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .result-tile {
+        border-radius: 8px;
+        padding: 6px 4px;
+        text-align: center;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        min-height: 54px;
+      }
+
+      .result-tile-percentage {
+        background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+        border: 1.5px solid #93c5fd;
+        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);
+      }
+
+      .result-tile-percentage .tile-label {
+        color: #1e40af;
+      }
+
+      .result-tile-percentage .tile-val {
+        color: #1d4ed8;
+      }
+
+      .result-tile-result-pass {
+        background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
+        border: 1.5px solid #86efac;
+        box-shadow: 0 2px 4px rgba(34, 197, 94, 0.08);
+      }
+
+      .result-tile-result-pass .tile-label {
+        color: #15803d;
+      }
+
+      .result-tile-result-fail {
+        background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+        border: 1.5px solid #fca5a5;
+        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.08);
+      }
+
+      .result-tile-result-fail .tile-label {
+        color: #b91c1c;
+      }
+
+      .result-tile-grade {
+        background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+        border: 1.5px solid #fde047;
+        box-shadow: 0 2px 4px rgba(234, 179, 8, 0.08);
+      }
+
+      .result-tile-grade .tile-label {
+        color: #854d0e;
+      }
+
+      .result-tile-grade .tile-val {
+        color: #a16207;
+      }
+
+      .tile-label {
+        font-size: 9.5px;
+        font-weight: 800;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+        margin-bottom: 3px;
+        line-height: 1.1;
+      }
+
+      .tile-val {
+        font-size: 18px;
+        font-weight: 900;
+        line-height: 1.2;
+      }
+
+      .pill-badge-pass {
+        background: #16a34a;
+        color: #ffffff;
+        padding: 3px 14px;
+        border-radius: 9999px;
+        font-size: 13.5px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+        display: inline-block;
+      }
+
+      .pill-badge-fail {
+        background: #dc2626;
+        color: #ffffff;
+        padding: 3px 14px;
+        border-radius: 9999px;
+        font-size: 13.5px;
+        font-weight: 900;
+        letter-spacing: 0.5px;
+        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+        display: inline-block;
+      }
+
+      .promotion-banner-strip {
+        margin-top: 6px;
+        padding-top: 5px;
+        border-top: 1.5px dashed #bfdbfe;
+        text-align: center;
+        font-size: 12.5px;
+        font-weight: 700;
+        color: #1e3a8a;
+      }
+
+      .promotion-banner-strip span {
+        color: #2563eb;
+        font-weight: 800;
+      }
+    </style>
+
+    {{#if (or hasCoScholastic (hasItems coScholastic skillBased))}}
     <div class="grid grid-cols-2 gap-4" style="align-items: start;">
       <!-- Left Column: Co-Scholastic -->
       <div style="grid-column: span 1;">
@@ -902,232 +1145,7 @@
 
       <!-- Right Column: Attendance & Result Summary -->
       <div style="grid-column: span 1;" class="flex-col">
-        <style>
-          .att-card {
-            border: 1.5px solid #0e4ea6;
-            border-left: 5px solid #0e4ea6;
-            border-radius: 8px;
-            padding: 8px 12px;
-            background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
-            margin-bottom: 8px;
-            box-shadow: 0 2px 4px rgba(14, 78, 166, 0.12);
-          }
-
-          .att-title {
-            color: #0e4ea6;
-            font-weight: 800;
-            font-size: 11px;
-            text-transform: uppercase;
-            margin-bottom: 6px;
-            letter-spacing: 0.5px;
-          }
-
-          .att-grid {
-            display: grid;
-            grid-template-columns: 1fr 1fr auto;
-            column-gap: 10px;
-            align-items: center;
-          }
-
-          .att-pill {
-            background: #ffffff;
-            border: 1.5px solid #93c5fd;
-            border-radius: 6px;
-            padding: 5px 6px;
-            text-align: center;
-          }
-
-          .att-label {
-            color: #475569;
-            font-size: 9px;
-            text-transform: uppercase;
-            font-weight: 800;
-            letter-spacing: 0.3px;
-            line-height: 1.1;
-          }
-
-          .att-val {
-            color: #0f172a;
-            font-size: 14px;
-            font-weight: 800;
-            margin-top: 2px;
-          }
-
-          .att-percent-pill {
-            background: linear-gradient(135deg, #0e4ea6, #0a3a7c);
-            color: #ffffff;
-            border-radius: 8px;
-            padding: 5px 12px;
-            text-align: center;
-            min-width: 65px;
-            box-shadow: 0 2px 4px rgba(14, 78, 166, 0.25);
-          }
-
-          .att-percent-label {
-            color: rgba(255, 255, 255, 0.9);
-            font-size: 8.5px;
-            text-transform: uppercase;
-            font-weight: 800;
-            letter-spacing: 0.4px;
-          }
-
-          .att-percent-val {
-            color: #ffffff;
-            font-size: 15px;
-            font-weight: 900;
-            line-height: 1.1;
-          }
-
-          .att-bar-wrap {
-            grid-column: span 3;
-            margin-top: 6px;
-          }
-
-          .att-bar-bg {
-            background: #cbd5e1;
-            border-radius: 9999px;
-            height: 5px;
-            width: 100%;
-            overflow: hidden;
-          }
-
-          .att-bar-fill {
-            background: linear-gradient(90deg, #38bdf8, #0e4ea6);
-            height: 100%;
-            border-radius: 9999px;
-          }
-
-          .result-summary-container {
-            background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
-            border: 1.5px solid #0e4ea6;
-            border-radius: 8px;
-            padding: 8px 10px;
-            box-shadow: 0 2px 5px rgba(14, 78, 166, 0.12);
-          }
-
-          .result-grid-3 {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
-          }
-
-          .result-tile {
-            border-radius: 8px;
-            padding: 6px 4px;
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            min-height: 54px;
-          }
-
-          .result-tile-percentage {
-            background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
-            border: 1.5px solid #93c5fd;
-            box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);
-          }
-
-          .result-tile-percentage .tile-label {
-            color: #1e40af;
-          }
-
-          .result-tile-percentage .tile-val {
-            color: #1d4ed8;
-          }
-
-          .result-tile-result-pass {
-            background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
-            border: 1.5px solid #86efac;
-            box-shadow: 0 2px 4px rgba(34, 197, 94, 0.08);
-          }
-
-          .result-tile-result-pass .tile-label {
-            color: #15803d;
-          }
-
-          .result-tile-result-fail {
-            background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
-            border: 1.5px solid #fca5a5;
-            box-shadow: 0 2px 4px rgba(239, 68, 68, 0.08);
-          }
-
-          .result-tile-result-fail .tile-label {
-            color: #b91c1c;
-          }
-
-          .result-tile-grade {
-            background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
-            border: 1.5px solid #fde047;
-            box-shadow: 0 2px 4px rgba(234, 179, 8, 0.08);
-          }
-
-          .result-tile-grade .tile-label {
-            color: #854d0e;
-          }
-
-          .result-tile-grade .tile-val {
-            color: #a16207;
-          }
-
-          .tile-label {
-            font-size: 9.5px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 3px;
-            line-height: 1.1;
-          }
-
-          .tile-val {
-            font-size: 18px;
-            font-weight: 900;
-            line-height: 1.2;
-          }
-
-          .pill-badge-pass {
-            background: #16a34a;
-            color: #ffffff;
-            padding: 3px 14px;
-            border-radius: 9999px;
-            font-size: 13.5px;
-            font-weight: 900;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
-            display: inline-block;
-          }
-
-          .pill-badge-fail {
-            background: #dc2626;
-            color: #ffffff;
-            padding: 3px 14px;
-            border-radius: 9999px;
-            font-size: 13.5px;
-            font-weight: 900;
-            letter-spacing: 0.5px;
-            box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
-            display: inline-block;
-          }
-
-          .promotion-banner-strip {
-            margin-top: 6px;
-            padding-top: 5px;
-            border-top: 1.5px dashed #bfdbfe;
-            text-align: center;
-            font-size: 12.5px;
-            font-weight: 700;
-            color: #1e3a8a;
-          }
-
-          .promotion-banner-strip span {
-            color: #2563eb;
-            font-weight: 800;
-          }
-        </style>
-
-        <!-- ============================================================== -->
-        <!-- 1. MANUAL ATTENDANCE RECORD (ACTIVE: For manual writing after print) -->
-        <!-- ============================================================== -->
+        <!-- Attendance Record -->
         <div class="att-card" style="margin-bottom: 8px;">
           <div class="att-title" style="display: flex; justify-content: space-between; align-items: center;">
             <span>Attendance Record</span>
@@ -1153,62 +1171,7 @@
           </div>
         </div>
 
-        <!-- ============================================================== -->
-        <!-- 2. AUTOMATED DIGITAL ATTENDANCE (PRESERVED / CURRENTLY HIDDEN)  -->
-        <!-- ============================================================== -->
-        {{!--
-        {{#if attendanceStats.hasTerm1}}
-        <div class="att-card">
-          <div class="att-title">{{exam1Name}} Attendance Record</div>
-          <div class="att-grid">
-            <div class="att-pill">
-              <div class="att-label">Working Days</div>
-              <div class="att-val">{{attendanceStats.term1Working}}</div>
-            </div>
-            <div class="att-pill">
-              <div class="att-label">Days Present</div>
-              <div class="att-val text-primary">{{attendanceStats.term1Attended}}</div>
-            </div>
-            <div class="att-percent-pill">
-              <div class="att-percent-label">Attendance</div>
-              <div class="att-percent-val">{{attendanceStats.term1Percentage}}%</div>
-            </div>
-            <div class="att-bar-wrap">
-              <div class="att-bar-bg">
-                <div class="att-bar-fill" style="width: {{attendanceStats.term1Percentage}}%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {{/if}}
-
-        {{#if attendanceStats.hasTerm2}}
-        <div class="att-card">
-          <div class="att-title">{{exam2Name}} Attendance Record</div>
-          <div class="att-grid">
-            <div class="att-pill">
-              <div class="att-label">Working Days</div>
-              <div class="att-val">{{attendanceStats.term2Working}}</div>
-            </div>
-            <div class="att-pill">
-              <div class="att-label">Days Present</div>
-              <div class="att-val text-primary">{{attendanceStats.term2Attended}}</div>
-            </div>
-            <div class="att-percent-pill">
-              <div class="att-percent-label">Attendance</div>
-              <div class="att-percent-val">{{attendanceStats.term2Percentage}}%</div>
-            </div>
-            <div class="att-bar-wrap">
-              <div class="att-bar-bg">
-                <div class="att-bar-fill" style="width: {{attendanceStats.term2Percentage}}%;"></div>
-              </div>
-            </div>
-          </div>
-        </div>
-        {{/if}}
-        --}}
-
-        <!-- 5. RESULT SUMMARY -->
+        <!-- Result Summary -->
         <div>
           <div class="section-heading">Result Summary</div>
           <div class="result-summary-container">
@@ -1262,6 +1225,88 @@
 
       </div>
     </div>
+    {{else}}
+    <!-- Full Width Layout when NO Co-Scholastic subjects exist -->
+    <div class="grid grid-cols-2 gap-4" style="align-items: stretch; margin-bottom: 2px;">
+      <!-- Left Column: Attendance Record Full Height -->
+      <div style="grid-column: span 1; display: flex; flex-direction: column;">
+        <div class="section-heading" style="margin-bottom: 4px;">Attendance Record</div>
+        <div class="att-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 80px;">
+          <div class="att-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Total Working Days</div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+            </div>
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Days Present</div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+            </div>
+            <div class="att-pill"
+              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
+              <div class="att-label">Attendance %</div>
+              <div
+                style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 12px; font-weight: 800; color: #64748b; line-height: 18px;">
+                %</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right Column: Result Summary Full Height -->
+      <div style="grid-column: span 1; display: flex; flex-direction: column;">
+        <div class="section-heading" style="margin-bottom: 4px;">Result Summary</div>
+        <div class="result-summary-container" style="flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 80px;">
+          <div class="result-grid-3">
+            <!-- Percentage Tile -->
+            <div class="result-tile result-tile-percentage">
+              <div class="tile-label">Percentage</div>
+              <div class="tile-val">{{percentage}}%</div>
+            </div>
+
+            <!-- Final Result Tile -->
+            <div
+              class="result-tile {{#if (eq finalResult 'Pass')}}result-tile-result-pass{{else}}result-tile-result-fail{{/if}}">
+              <div class="tile-label">Final Result</div>
+              <div class="tile-val">
+                <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
+                  {{finalResult}}
+                </span>
+              </div>
+            </div>
+
+            <!-- Grade or Promotion Status Tile -->
+            <div class="result-tile result-tile-grade">
+              <div class="tile-label">{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</div>
+              <div class="tile-val"
+                style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
+                {{#if showFinalResult}}
+                {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
+                {{else if grandGrade}}
+                {{grandGrade}}
+                {{else}}
+                {{finalResult}}
+                {{/if}}
+              </div>
+            </div>
+          </div>
+
+          {{#if showFinalResult}}
+          {{#if nextGrade}}
+          <div class="promotion-banner-strip">
+            Promoted to Class: <span>{{nextGrade}}</span>
+          </div>
+          {{else if promotionStatus}}
+          <div class="promotion-banner-strip">
+            Promotion Status: <span>{{promotionStatus}}</span>
+          </div>
+          {{/if}}
+          {{/if}}
+        </div>
+      </div>
+    </div>
+    {{/if}}
 
     <!-- 6. REMARKS -->
     <div style="margin-top: 8px;" class="mb-2">

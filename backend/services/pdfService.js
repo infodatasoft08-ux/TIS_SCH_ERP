@@ -19,6 +19,11 @@ handlebars.registerHelper('and', function (...args) {
   return args.every(Boolean);
 });
 
+handlebars.registerHelper('hasItems', function (...args) {
+  args.pop(); // Remove options object
+  return args.some(arr => Array.isArray(arr) && arr.length > 0);
+});
+
 handlebars.registerHelper('gradeColor', function (grade) {
   if (!grade) return '#cbd5e1';
   const gStr = String(grade).toUpperCase();

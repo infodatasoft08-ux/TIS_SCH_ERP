@@ -200,6 +200,19 @@ th {
   vertical-align: middle;
 }
 
+.table-marks th:first-child,
+.table-marks td:first-child {
+  text-align: left;
+  white-space: nowrap;
+  padding-left: 8px;
+  padding-right: 8px;
+}
+
+.table-marks th:not(:first-child),
+.table-marks td:not(:first-child) {
+  white-space: nowrap;
+}
+
 
 thead tr:nth-child(2) th:last-child {
   border-right: 1px solid var(--border-color);
@@ -430,13 +443,13 @@ tbody tr:nth-child(even) {
 
     <!-- Right Side: Photo and Status -->
     <div class="flex-col items-center justify-center border-l" style="padding-left: 16px; border-left: 1px solid var(--border-color);">
-      {{#if student.photo}}
-        <img src="{{student.photo}}" alt="Student Photo" class="student-photo mb-2">
+      {{#if (or student.photo student.avatar_url)}}
+        <img src="{{#if student.photo}}{{student.photo}}{{else}}{{student.avatar_url}}{{/if}}" alt="Student Photo" class="student-photo mb-2">
       {{else}}
         <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
       {{/if}}
       <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
-        {{student.status}}
+        {{#if student.status}}{{student.status}}{{else}}Active{{/if}}
       </div>
     </div>
   </div>

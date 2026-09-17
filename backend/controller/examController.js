@@ -4,6 +4,7 @@ const puppeteer = require('puppeteer');
 const pdfService = require('../services/pdfService');
 const storageService = require('../services/storageService');
 const path = require('path');
+const fs = require('fs');
 const { generateAdmitCardPDF, generateExamRoutinePDF } = require('../helper/pdfHelper');
 const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
@@ -12,6 +13,25 @@ const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
+
+const resolveStudentPhoto = (photoPath) => {
+    if (!photoPath) return null;
+    if (typeof photoPath !== 'string') return null;
+    if (photoPath.startsWith('http://') || photoPath.startsWith('https://') || photoPath.startsWith('data:image')) {
+        return photoPath;
+    }
+    try {
+        const fullPath = path.isAbsolute(photoPath) ? photoPath : path.join(__dirname, '..', photoPath);
+        if (fs.existsSync(fullPath)) {
+            const ext = path.extname(fullPath).replace('.', '').toLowerCase() || 'jpeg';
+            const base64 = fs.readFileSync(fullPath).toString('base64');
+            return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${base64}`;
+        }
+    } catch (e) {
+        console.error('Error resolving student photo:', e.message);
+    }
+    return photoPath;
+};
 
 const calculateGrade = (pct) => {
     const val = Number(pct) || 0;
@@ -2297,10 +2317,13 @@ const GenerateMarksheetPDF = async (req, res) => {
             classSectionDisplay = `${className} - ${sectionName}`;
         }
 
+        const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
         const student = {
             id: rows[0].student_id,
             name: rows[0].student_name,
-            avatar_url: rows[0].avatar_url,
+            avatar_url: studentPhoto,
+            photo: studentPhoto,
+            status: rows[0].status || 'Active',
             roll_no: rows[0].roll_no || 'N/A',
             class: classSectionDisplay,
             class_name: className,
@@ -2499,6 +2522,8 @@ const GenerateMarksheetPDF = async (req, res) => {
             term2: '-'
         }));
 
+        const hasCoScholastic = Boolean((coScholastic && coScholastic.length > 0) || (skillBased && skillBased.length > 0));
+
         const getNextGrade = (currentGradeName, customNextClass) => {
             if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
             if (!currentGradeName) return 'Next Class';
@@ -2598,7 +2623,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             grandGrade,
             currentDate, finalResult, promotionStatus: null,
             nextGrade, ptmStats,
-            logoData, headerImageData, luckiestFontBase64, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark, principalRemark,
             dynamicColumns,
             meta
@@ -2968,10 +2993,13 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             classSectionDisplay = `${className} - ${sectionName}`;
         }
 
+        const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
         const student = {
             id: rows[0].student_id,
             name: rows[0].student_name,
-            avatar_url: rows[0].avatar_url,
+            avatar_url: studentPhoto,
+            photo: studentPhoto,
+            status: rows[0].status || 'Active',
             roll_no: rows[0].roll_no || 'N/A',
             class: classSectionDisplay,
             class_name: className,
@@ -3282,6 +3310,8 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             term2: s.exam2_grade !== '-' ? s.exam2_grade : (s.exam2_marks !== '-' ? s.exam2_marks : '')
         }));
 
+        const hasCoScholastic = Boolean((coScholastic && coScholastic.length > 0) || (skillBased && skillBased.length > 0));
+
         const getNextGrade = (currentGradeName, customNextClass) => {
             if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
             if (!currentGradeName) return 'Next Class';
@@ -3468,7 +3498,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             grandGrade,
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
-            logoData, headerImageData, luckiestFontBase64, chartData, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, chartData, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
             principalRemark: principalRemark || '',
             meta
