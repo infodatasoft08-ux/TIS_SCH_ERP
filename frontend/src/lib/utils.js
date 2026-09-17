@@ -23,16 +23,32 @@ export function getClassRank(classNameOrObject) {
   if (str.includes("nur")) return 3;
 
   // 3. LKG / Lower KG / KG-I
-  if (str.includes("l.k.g") || str.includes("lkg") || str.includes("lower") || str.includes("kg-i") || str.includes("kg 1") || str.includes("kg-1")) return 4;
+  if (str.includes("l.k.g") || str.includes("lkg") || str.includes("lower") || str.includes("kg-i") || str.includes("kg 1") || str.includes("kg-1") || str.includes("jr")) return 4;
 
   // 4. UKG / Upper KG / KG-II / Prep
-  if (str.includes("u.k.g") || str.includes("ukg") || str.includes("upper") || str.includes("kg-ii") || str.includes("kg 2") || str.includes("kg-2") || str.includes("prep")) return 5;
+  if (str.includes("u.k.g") || str.includes("ukg") || str.includes("upper") || str.includes("kg-ii") || str.includes("kg 2") || str.includes("kg-2") || str.includes("prep") || str.includes("sr")) return 5;
 
-  // 5. Numeric class 1 to 12
+  // 5. Roman numerals (checked from XII down to I)
+  const clean = " " + str.replace(/[^a-z0-9]/g, " ") + " ";
+  if (/\b(xii|twelfth)\b/.test(clean)) return 112;
+  if (/\b(xi|eleventh)\b/.test(clean)) return 111;
+  if (/\b(x|tenth)\b/.test(clean)) return 110;
+  if (/\b(ix|ninth)\b/.test(clean)) return 109;
+  if (/\b(viii|eighth)\b/.test(clean)) return 108;
+  if (/\b(vii|seventh)\b/.test(clean)) return 107;
+  if (/\b(vi|sixth)\b/.test(clean)) return 106;
+  if (/\b(v|fifth)\b/.test(clean)) return 105;
+  if (/\b(iv|fourth)\b/.test(clean)) return 104;
+  if (/\b(iii|third)\b/.test(clean)) return 103;
+  if (/\b(ii|second)\b/.test(clean)) return 102;
+  if (/\b(i|first)\b/.test(clean)) return 101;
+
+  // 6. Numeric class 1 to 12
   const numMatch = str.match(/\d+/);
   if (numMatch) {
     const num = parseInt(numMatch[0], 10);
-    return 100 + num;
+    if (num >= 1 && num <= 12) return 100 + num;
+    return 200 + num;
   }
 
   return 999;

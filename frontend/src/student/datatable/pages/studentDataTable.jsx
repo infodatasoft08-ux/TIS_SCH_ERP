@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import AddStudentDialog from "@/student/forms/pages/addStudentForm";
 import AddParentDialog from "@/student/forms/pages/addParentForm";
 import { exportToExcel, exportToPDF, exportToCSV } from "@/utils/exportHelper";
+import { printPdfBlob } from "@/utils/fileHelper";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +21,7 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileDown } from "lucide-react";
 import BulkImportDialog from "@/pages/BulkImportDialog";
+import { sortClasses } from "@/lib/utils";
 import DetailsDialog from "@/components/DetailsDialog";
 import { User, Mail, Phone, Calendar, MapPin, GraduationCap, Eye, Hash, ShieldCheck } from 'lucide-react';
 import { useAuth } from "@/auth/AuthContext";
@@ -68,8 +70,8 @@ export default function StudentsPage() {
       // Always replace the data for the current page
       setStudents(newStudents);
       if (reset) {
-        setClasses(classesRes.data.classes || []);
-        setGrades(gradesRes.data.grades || []);
+        setClasses(sortClasses(classesRes.data.classes || []));
+        setGrades(sortClasses(gradesRes.data.grades || []));
       }
 
       setHasMore(newStudents.length === newLimit);
@@ -167,37 +169,7 @@ export default function StudentsPage() {
       const res = await API.get(`/students/download/admission-form/${studentId}`, {
         responseType: "blob",
       });
-      // const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-      // const printWindow = window.open(url, "_blank");
-      // if (printWindow) {
-      //   printWindow.onload = () => {
-      //     printWindow.print();
-      //   };
-      // } else {
-      //   toast.error("Pop-up blocked. Please allow pop-ups to print.");
-      // }
-
-      if (isMobileApp) {
-        const reader = new FileReader();
-        reader.onloadend = () => {
-          const base64 = reader.result.split(',')[1];
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'print',
-            payload: { base64 }
-          }));
-        };
-        reader.readAsDataURL(res.data);
-      } else {
-        const url = window.URL.createObjectURL(new Blob([res.data], { type: 'application/pdf' }));
-        const printWindow = window.open(url, "_blank");
-        if (printWindow) {
-          printWindow.onload = () => {
-            printWindow.print();
-          };
-        } else {
-          toast.error("Pop-up blocked. Please allow pop-ups to print.");
-        }
-      }
+      printPdfBlob(res.data);
     } catch (err) {
       console.error("Failed to print admission form", err);
       toast.error("Failed to generate admission form");
@@ -336,7 +308,7 @@ export default function StudentsPage() {
         cell: ({ row }) => {
           const student = row.original;
           return (
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center gap-1.5 whitespace-nowrap pr-2">
               <Button
                 variant="outline"
                 size="sm"
@@ -425,7 +397,7 @@ export default function StudentsPage() {
         </div>
       </div>
 
-      <div className="px-2 sm:px-4 md:px-6 max-w-7xl mx-auto">
+      <div className="px-2 sm:px-4 md:px-6 w-full mx-auto">
         <Card className="border-0 shadow-sm bg-white/50 dark:bg-gray-900/50 backdrop-blur-sm rounded-2xl">
           <CardContent className="p-3 sm:p-6">
             <DataTable
