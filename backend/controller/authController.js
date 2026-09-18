@@ -496,16 +496,16 @@ const verifyStudentDetails = async (req, res) => {
     // Search in students table matching admission_no OR phone OR email OR parent_contact
     const [students] = await db.execute(
       `SELECT s.id as student_id, s.user_id, s.name, s.admission_no, s.date_of_birth, s.phone_number, s.parent_contact,
-              u.email, u.phone_number as user_phone
+              u.email, u.phone as user_phone
        FROM students s
        JOIN users u ON u.id = s.user_id
        WHERE (
          LOWER(TRIM(s.admission_no)) = LOWER(TRIM(?))
          OR LOWER(TRIM(u.email)) = LOWER(TRIM(?))
          OR (? != '' AND (
-             REPLACE(REPLACE(TRIM(u.phone_number), '+91', ''), ' ', '') = ?
-             OR REPLACE(REPLACE(TRIM(s.phone_number), '+91', ''), ' ', '') = ?
-             OR REPLACE(REPLACE(TRIM(s.parent_contact), '+91', ''), ' ', '') = ?
+             REPLACE(REPLACE(TRIM(COALESCE(u.phone, '')), '+91', ''), ' ', '') = ?
+             OR REPLACE(REPLACE(TRIM(COALESCE(s.phone_number, '')), '+91', ''), ' ', '') = ?
+             OR REPLACE(REPLACE(TRIM(COALESCE(s.parent_contact, '')), '+91', ''), ' ', '') = ?
          ))
        )`,
       [rawId, rawId, cleanPhone, cleanPhone, cleanPhone, cleanPhone]
@@ -557,6 +557,100 @@ const verifyStudentDetails = async (req, res) => {
     });
   } catch (err) {
     console.error('verifyStudentDetails error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Verify Teacher / Staff Details for Direct Password Reset (No Email OTP needed)
+ * Matches: (Employee Code OR Phone OR Email) AND (Aadhaar Number OR Hire Date)
+ */
+const verifyTeacherDetails = async (req, res) => {
+  const { identifier, securityKey } = req.body;
+  if (!identifier || !securityKey) {
+    return res.status(400).json({ error: 'Employee Code / Phone / Email and Aadhaar Number or Joining Date are required' });
+  }
+
+  try {
+    const rawId = identifier.trim();
+    const cleanPhone = cleanPhoneNumber(rawId) || rawId.replace(/[^0-9]/g, '');
+    const cleanSecKey = securityKey.trim().replace(/[^0-9a-zA-Z-]/g, '');
+
+    // Search teacher / staff user
+    const [teachers] = await db.execute(
+      `SELECT t.id as teacher_id, t.user_id, t.employee_code, t.hire_date,
+              u.id as user_id, u.name, u.email, u.phone, u.adhar_no, u.role_id
+       FROM users u
+       LEFT JOIN teachers t ON t.user_id = u.id
+       WHERE u.role_id IN (2, 4)
+         AND (
+           LOWER(TRIM(COALESCE(t.employee_code, ''))) = LOWER(TRIM(?))
+           OR LOWER(TRIM(u.email)) = LOWER(TRIM(?))
+           OR (? != '' AND REPLACE(REPLACE(TRIM(COALESCE(u.phone, '')), '+91', ''), ' ', '') = ?)
+         )`,
+      [rawId, rawId, cleanPhone, cleanPhone]
+    );
+
+    if (teachers.length === 0) {
+      return res.status(404).json({ error: 'No Teacher/Staff record found with the provided details.' });
+    }
+
+    // Match either Aadhaar No (full or last 4 digits) or Hire Date
+    const matchedTeacher = teachers.find(t => {
+      // Check Aadhaar
+      if (t.adhar_no) {
+        const cleanAdhar = String(t.adhar_no).replace(/[^0-9]/g, '');
+        const inputAdhar = String(cleanSecKey).replace(/[^0-9]/g, '');
+        if (inputAdhar.length >= 4 && (cleanAdhar === inputAdhar || cleanAdhar.endsWith(inputAdhar))) {
+          return true;
+        }
+      }
+
+      // Check Hire Date if securityKey is a valid date
+      if (t.hire_date) {
+        const inputDate = new Date(securityKey);
+        if (!isNaN(inputDate.getTime())) {
+          const tDate = new Date(t.hire_date);
+          if (
+            tDate.getFullYear() === inputDate.getFullYear() &&
+            tDate.getMonth() === inputDate.getMonth() &&
+            tDate.getDate() === inputDate.getDate()
+          ) {
+            return true;
+          }
+        }
+      }
+
+      return false;
+    });
+
+    if (!matchedTeacher) {
+      return res.status(400).json({ error: 'Aadhaar Number or Joining Date does not match our records.' });
+    }
+
+    // Generate secure reset token valid for 15 minutes
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    resetTokenStore.set(resetToken, {
+      userId: matchedTeacher.user_id,
+      email: matchedTeacher.email,
+      name: matchedTeacher.name,
+      role: 'teacher',
+      expiresAt
+    });
+
+    return res.json({
+      success: true,
+      message: 'Teacher identity verified successfully!',
+      resetToken,
+      teacher: {
+        name: matchedTeacher.name,
+        employee_code: matchedTeacher.employee_code,
+        email: matchedTeacher.email
+      }
+    });
+  } catch (err) {
+    console.error('verifyTeacherDetails error:', err);
     return res.status(500).json({ error: 'Internal server error' });
   }
 };
@@ -1641,6 +1735,7 @@ module.exports = {
   sendOtp,
   verifyOtp,
   verifyStudentDetails,
+  verifyTeacherDetails,
   resetPasswordWithToken,
   submitContactForm,
   submitAdmissionForm,
