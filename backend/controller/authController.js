@@ -270,10 +270,13 @@ const logout = async (req, res) => {
   }
 };
 
+const crypto = require('crypto');
 const otpGenerator = require('otp-generator');
 
 // In-memory OTP store (email -> { otp, expiresAt, verified })
 const otpStore = new Map();
+// In-memory reset token store (token -> { userId, email, studentName, expiresAt })
+const resetTokenStore = new Map();
 const apiKey = process.env.BREVO_API_KEY;
 const BREVO_URL = 'https://api.brevo.com/v3/smtp/email';
 
@@ -474,7 +477,131 @@ const forgotPassword = async (req, res) => {
   } finally {
     conn.release();
   }
-}
+};
+
+/**
+ * Verify Student Details for Direct Password Reset (No Email OTP needed)
+ * Matches: (Admission No OR Phone OR Email) AND Date of Birth
+ */
+const verifyStudentDetails = async (req, res) => {
+  const { identifier, dob } = req.body;
+  if (!identifier || !dob) {
+    return res.status(400).json({ error: 'Admission No / Phone / Email and Date of Birth are required' });
+  }
+
+  try {
+    const rawId = identifier.trim();
+    const cleanPhone = cleanPhoneNumber(rawId) || rawId.replace(/[^0-9]/g, '');
+
+    // Search in students table matching admission_no OR phone OR email OR parent_contact
+    const [students] = await db.execute(
+      `SELECT s.id as student_id, s.user_id, s.name, s.admission_no, s.date_of_birth, s.phone_number, s.parent_contact,
+              u.email, u.phone_number as user_phone
+       FROM students s
+       JOIN users u ON u.id = s.user_id
+       WHERE (
+         LOWER(TRIM(s.admission_no)) = LOWER(TRIM(?))
+         OR LOWER(TRIM(u.email)) = LOWER(TRIM(?))
+         OR (? != '' AND (
+             REPLACE(REPLACE(TRIM(u.phone_number), '+91', ''), ' ', '') = ?
+             OR REPLACE(REPLACE(TRIM(s.phone_number), '+91', ''), ' ', '') = ?
+             OR REPLACE(REPLACE(TRIM(s.parent_contact), '+91', ''), ' ', '') = ?
+         ))
+       )`,
+      [rawId, rawId, cleanPhone, cleanPhone, cleanPhone, cleanPhone]
+    );
+
+    if (students.length === 0) {
+      return res.status(404).json({ error: 'No student record found with the provided Admission No / Phone / Email.' });
+    }
+
+    // Match Date of Birth
+    const inputDate = new Date(dob);
+    if (isNaN(inputDate.getTime())) {
+      return res.status(400).json({ error: 'Invalid Date of Birth format.' });
+    }
+
+    const matchedStudent = students.find(s => {
+      if (!s.date_of_birth) return false;
+      const sDob = new Date(s.date_of_birth);
+      return (
+        sDob.getFullYear() === inputDate.getFullYear() &&
+        sDob.getMonth() === inputDate.getMonth() &&
+        sDob.getDate() === inputDate.getDate()
+      );
+    });
+
+    if (!matchedStudent) {
+      return res.status(400).json({ error: 'Date of Birth does not match our records.' });
+    }
+
+    // Generate secure reset token valid for 15 minutes
+    const resetToken = crypto.randomBytes(24).toString('hex');
+    const expiresAt = Date.now() + 15 * 60 * 1000;
+    resetTokenStore.set(resetToken, {
+      userId: matchedStudent.user_id,
+      email: matchedStudent.email,
+      studentName: matchedStudent.name,
+      expiresAt
+    });
+
+    return res.json({
+      success: true,
+      message: 'Student verified successfully!',
+      resetToken,
+      student: {
+        name: matchedStudent.name,
+        admission_no: matchedStudent.admission_no,
+        email: matchedStudent.email
+      }
+    });
+  } catch (err) {
+    console.error('verifyStudentDetails error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+};
+
+/**
+ * Reset password using valid verification token
+ */
+const resetPasswordWithToken = async (req, res) => {
+  const { resetToken, newPassword } = req.body;
+
+  if (!resetToken || !newPassword || newPassword.length < 6) {
+    return res.status(400).json({ error: 'Valid reset token and new password (min 6 chars) are required' });
+  }
+
+  const record = resetTokenStore.get(resetToken);
+  if (!record) {
+    return res.status(400).json({ error: 'Invalid or expired session. Please verify your details again.' });
+  }
+
+  if (Date.now() > record.expiresAt) {
+    resetTokenStore.delete(resetToken);
+    return res.status(400).json({ error: 'Verification session expired. Please verify again.' });
+  }
+
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const cleanedNewPass = cleanPhoneNumber(newPassword) || String(newPassword).trim().replace(/\s+/g, '');
+    const newHash = await bcrypt.hash(cleanedNewPass, SALT_ROUNDS);
+
+    await conn.execute('UPDATE users SET password_hash = ? WHERE id = ?', [newHash, record.userId]);
+
+    resetTokenStore.delete(resetToken);
+
+    await conn.commit();
+    return res.json({ success: true, message: 'Password reset successfully!' });
+  } catch (err) {
+    await conn.rollback();
+    console.error('resetPasswordWithToken error:', err);
+    return res.status(500).json({ error: 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
 
 // register (admin or teacher) - protected if needed; for simplicity allow open
 const AddStaffUser = async (req, res) => {
@@ -1513,6 +1640,8 @@ module.exports = {
   forgotPassword,
   sendOtp,
   verifyOtp,
+  verifyStudentDetails,
+  resetPasswordWithToken,
   submitContactForm,
   submitAdmissionForm,
   AddStaffUser,
