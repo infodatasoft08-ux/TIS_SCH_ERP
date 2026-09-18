@@ -4,46 +4,24 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from "sonner";
 import API from "@/api";
 import { isValidEmail } from '@/utils/emailValidator';
-import { GraduationCap, Briefcase, Mail, KeyRound, Calendar, ShieldCheck, ArrowLeft, Eye, EyeOff, Loader2, UserCheck, IdCard } from 'lucide-react';
+import { Mail, KeyRound, ArrowLeft, Eye, EyeOff, Loader2, ShieldCheck, RefreshCw, Send, CheckCircle2 } from 'lucide-react';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
 
-  // Mode: 'student', 'teacher', 'email'
-  const [mode, setMode] = useState('student');
-
-  // Student Direct Reset States
-  const [studentStep, setStudentStep] = useState(1); // 1: Verify, 2: Set New Password
-  const [studentIdentifier, setStudentIdentifier] = useState('');
-  const [dob, setDob] = useState('');
-  const [verifiedStudent, setVerifiedStudent] = useState(null);
-  const [studentResetToken, setStudentResetToken] = useState('');
-  const [studentNewPass, setStudentNewPass] = useState('');
-  const [studentConfirmPass, setStudentConfirmPass] = useState('');
-  const [showStudentNewPass, setShowStudentNewPass] = useState(false);
-  const [showStudentConfirmPass, setShowStudentConfirmPass] = useState(false);
-
-  // Teacher Direct Reset States
-  const [teacherStep, setTeacherStep] = useState(1); // 1: Verify, 2: Set New Password
-  const [teacherIdentifier, setTeacherIdentifier] = useState('');
-  const [teacherSecurityKey, setTeacherSecurityKey] = useState('');
-  const [verifiedTeacher, setVerifiedTeacher] = useState(null);
-  const [teacherResetToken, setTeacherResetToken] = useState('');
-  const [teacherNewPass, setTeacherNewPass] = useState('');
-  const [teacherConfirmPass, setTeacherConfirmPass] = useState('');
-  const [showTeacherNewPass, setShowTeacherNewPass] = useState(false);
-  const [showTeacherConfirmPass, setShowTeacherConfirmPass] = useState(false);
-
-  // Email OTP States
-  const [emailStep, setEmailStep] = useState(1); // 1: Email, 2: OTP, 3: New Password
+  // Email OTP Steps: 1: Email, 2: OTP, 3: New Password
+  const [emailStep, setEmailStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
-  const [emailNewPass, setEmailNewPass] = useState('');
-  const [showEmailNewPass, setShowEmailNewPass] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Shared States
+  // Status & loading
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const containerVariants = {
     hidden: { opacity: 0, y: 15 },
@@ -56,157 +34,26 @@ export default function ForgotPasswordPage() {
     visible: { opacity: 1, y: 0 }
   };
 
-  // -------------------------------------------------------------
-  // STUDENT VERIFICATION FLOW (No Email OTP)
-  // -------------------------------------------------------------
-  const handleVerifyStudent = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!studentIdentifier.trim()) {
-      setError("Please enter your Admission No, Phone Number or Email.");
-      return;
-    }
-    if (!dob) {
-      setError("Please select your Date of Birth.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await API.post('/auth/forgot/verify-student', {
-        identifier: studentIdentifier.trim(),
-        dob: dob
+  const startResendTimer = () => {
+    setResendCooldown(45);
+    const interval = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) {
+          clearInterval(interval);
+          return 0;
+        }
+        return prev - 1;
       });
-
-      if (res.data.success) {
-        setStudentResetToken(res.data.resetToken);
-        setVerifiedStudent(res.data.student);
-        toast.success(res.data.message || "Student verified successfully!");
-        setStudentStep(2);
-      }
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to verify details. Please check your info.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
+    }, 1000);
   };
 
-  const handleResetStudentPassword = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!studentNewPass || studentNewPass.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      return;
-    }
-    if (studentNewPass !== studentConfirmPass) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await API.put('/auth/forgot/reset-with-token', {
-        resetToken: studentResetToken,
-        newPassword: studentNewPass
-      });
-
-      if (res.data.success) {
-        toast.success("Password reset successfully! Please login with your new password.");
-        setTimeout(() => navigate('/login', { replace: true }), 1200);
-      }
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to reset password. Please try again.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // -------------------------------------------------------------
-  // TEACHER / STAFF VERIFICATION FLOW (No Email OTP)
-  // -------------------------------------------------------------
-  const handleVerifyTeacher = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!teacherIdentifier.trim()) {
-      setError("Please enter your Employee Code, Mobile Number or Email.");
-      return;
-    }
-    if (!teacherSecurityKey.trim()) {
-      setError("Please enter your Aadhaar Number or Joining Date.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await API.post('/auth/forgot/verify-teacher', {
-        identifier: teacherIdentifier.trim(),
-        securityKey: teacherSecurityKey.trim()
-      });
-
-      if (res.data.success) {
-        setTeacherResetToken(res.data.resetToken);
-        setVerifiedTeacher(res.data.teacher);
-        toast.success(res.data.message || "Teacher verified successfully!");
-        setTeacherStep(2);
-      }
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to verify teacher details. Please check your info.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleResetTeacherPassword = async (e) => {
-    e.preventDefault();
-    setError(null);
-
-    if (!teacherNewPass || teacherNewPass.length < 6) {
-      setError("Password must be at least 6 characters long.");
-      return;
-    }
-    if (teacherNewPass !== teacherConfirmPass) {
-      setError("Passwords do not match.");
-      return;
-    }
-
-    setIsSubmitting(true);
-    try {
-      const res = await API.put('/auth/forgot/reset-with-token', {
-        resetToken: teacherResetToken,
-        newPassword: teacherNewPass
-      });
-
-      if (res.data.success) {
-        toast.success("Password reset successfully! Please login with your new password.");
-        setTimeout(() => navigate('/login', { replace: true }), 1200);
-      }
-    } catch (err) {
-      const msg = err?.response?.data?.error || "Failed to reset password. Please try again.";
-      setError(msg);
-      toast.error(msg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  // -------------------------------------------------------------
-  // EMAIL OTP FLOW
-  // -------------------------------------------------------------
+  // Step 1: Send OTP to Email
   const handleSendOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
     setError(null);
 
-    if (!email) {
-      setError("Please enter your email address.");
+    if (!email || !email.trim()) {
+      setError("Please enter your registered email address.");
       return;
     }
     if (!isValidEmail(email)) {
@@ -217,12 +64,13 @@ export default function ForgotPasswordPage() {
     setIsSubmitting(true);
     try {
       const res = await API.post('/auth/forgot/send-otp', { email: email.trim() });
-      if (res.data.success) {
-        toast.success(res.data.message || 'OTP sent to your email');
+      if (res.data?.success) {
+        toast.success(res.data.message || 'OTP sent successfully to your email');
         setEmailStep(2);
+        startResendTimer();
       }
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Failed to send OTP';
+      const msg = err?.response?.data?.error || 'Failed to send OTP. Please check your email address.';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -230,24 +78,28 @@ export default function ForgotPasswordPage() {
     }
   };
 
+  // Step 2: Verify OTP
   const handleVerifyOtp = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!otp.trim()) {
-      setError("Please enter the 6-digit OTP.");
+    if (!otp || !otp.trim()) {
+      setError("Please enter the 6-digit OTP sent to your email.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await API.post('/auth/forgot/verify-otp', { email: email.trim(), otp: otp.trim() });
-      if (res.data.success) {
-        toast.success('OTP verified successfully');
+      const res = await API.post('/auth/forgot/verify-otp', {
+        email: email.trim(),
+        otp: otp.trim()
+      });
+      if (res.data?.success) {
+        toast.success('OTP verified successfully!');
         setEmailStep(3);
       }
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Invalid OTP';
+      const msg = err?.response?.data?.error || 'Invalid or expired OTP. Please try again.';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -255,24 +107,34 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleResetEmailPassword = async (e) => {
+  // Step 3: Set New Password
+  const handleResetPassword = async (e) => {
     e.preventDefault();
     setError(null);
 
-    if (!emailNewPass || emailNewPass.length < 6) {
+    if (!newPassword || newPassword.length < 6) {
       setError("Password must be at least 6 characters long.");
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setError("Passwords do not match.");
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const res = await API.put('/auth/forgot/password', { email: email.trim(), newPassword: emailNewPass });
-      if (res.data.success) {
-        toast.success('Password updated successfully!');
-        setTimeout(() => navigate('/login', { replace: true }), 1000);
+      const res = await API.post('/auth/forgot/reset-password', {
+        email: email.trim(),
+        otp: otp.trim(),
+        new_password: newPassword.trim()
+      });
+
+      if (res.data?.success) {
+        toast.success("Password reset successfully! Please log in with your new password.");
+        setTimeout(() => navigate('/login', { replace: true }), 1500);
       }
     } catch (err) {
-      const msg = err?.response?.data?.error || 'Update failed';
+      const msg = err?.response?.data?.error || 'Failed to reset password. Please try again.';
       setError(msg);
       toast.error(msg);
     } finally {
@@ -281,397 +143,78 @@ export default function ForgotPasswordPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-3 sm:p-6">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/40 to-slate-100 dark:from-slate-950 dark:via-slate-900 dark:to-slate-950 flex items-center justify-center p-4 sm:p-6">
       <div className="w-full max-w-md relative">
-        {/* Method Toggle Buttons (3 Options) */}
-        <div className="bg-muted/70 p-1 rounded-2xl flex gap-1 mb-4 shadow-sm border">
-          <button
-            type="button"
-            onClick={() => {
-              setMode('student');
-              setError(null);
-            }}
-            className={`flex-1 py-2 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all ${
-              mode === 'student'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <GraduationCap className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span>Student</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('teacher');
-              setError(null);
-            }}
-            className={`flex-1 py-2 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all ${
-              mode === 'teacher'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Briefcase className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span>Teacher</span>
-          </button>
-          <button
-            type="button"
-            onClick={() => {
-              setMode('email');
-              setError(null);
-            }}
-            className={`flex-1 py-2 px-2 sm:px-3 rounded-xl text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 sm:gap-1.5 transition-all ${
-              mode === 'email'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
-            }`}
-          >
-            <Mail className="w-3.5 h-3.5 sm:w-4 sm:h-4 shrink-0" />
-            <span>Email OTP</span>
-          </button>
+        {/* Step Indicator Header */}
+        <div className="flex items-center justify-center gap-2 mb-4">
+          <div className={`h-2 rounded-full transition-all duration-300 ${emailStep >= 1 ? 'w-10 bg-indigo-600' : 'w-4 bg-muted'}`} />
+          <div className={`h-2 rounded-full transition-all duration-300 ${emailStep >= 2 ? 'w-10 bg-indigo-600' : 'w-4 bg-muted'}`} />
+          <div className={`h-2 rounded-full transition-all duration-300 ${emailStep >= 3 ? 'w-10 bg-indigo-600' : 'w-4 bg-muted'}`} />
         </div>
 
         {/* Card Container */}
-        <div className="bg-card border rounded-3xl shadow-xl p-5 sm:p-8 overflow-hidden backdrop-blur-md">
+        <div className="bg-card border rounded-3xl shadow-xl p-6 sm:p-8 overflow-hidden backdrop-blur-md">
           {error && (
             <motion.div
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: 'auto' }}
-              className="mb-4 p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl"
+              className="mb-5 p-3.5 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-900 rounded-xl"
             >
-              <div className="text-xs sm:text-sm text-red-600 dark:text-red-400 font-medium">{error}</div>
+              <div className="text-xs sm:text-sm text-red-600 dark:text-red-400 font-medium leading-relaxed">
+                {error}
+              </div>
             </motion.div>
           )}
 
           <AnimatePresence mode="wait">
-            {/* ========================================================= */}
-            {/* MODE 1: STUDENT DIRECT RESET (DOB + ADMISSION / PHONE) */}
-            {/* ========================================================= */}
-            {mode === 'student' && studentStep === 1 && (
-              <motion.div key="student-step1" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="text-center sm:text-left mb-5">
-                  <div className="inline-flex p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-2">
-                    <UserCheck className="w-6 h-6" />
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Student Password Reset</h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Enter your school details to verify identity instantly without OTP.
-                  </p>
-                </motion.div>
-
-                <form onSubmit={handleVerifyStudent} className="space-y-4">
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
-                      Admission No / Phone / Email
-                    </label>
-                    <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      type="text"
-                      value={studentIdentifier}
-                      onChange={e => setStudentIdentifier(e.target.value)}
-                      placeholder="e.g. ADM-001 or 9876543210"
-                      required
-                    />
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
-                      Date of Birth (DOB)
-                    </label>
-                    <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      type="date"
-                      value={dob}
-                      onChange={e => setDob(e.target.value)}
-                      required
-                    />
-                    <span className="text-[11px] text-muted-foreground mt-1 block">
-                      Enter date of birth registered in school records.
-                    </span>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>
-                      ) : (
-                        'Verify Student'
-                      )}
-                    </button>
-                  </motion.div>
-                </form>
-              </motion.div>
-            )}
-
-            {mode === 'student' && studentStep === 2 && (
-              <motion.div key="student-step2" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="mb-4">
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-xl flex items-center gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div>
-                      <div className="text-xs text-emerald-700 dark:text-emerald-300 font-bold">Verified Student</div>
-                      <div className="text-sm font-extrabold text-emerald-900 dark:text-emerald-100">
-                        {verifiedStudent?.name} {verifiedStudent?.admission_no ? `(${verifiedStudent.admission_no})` : ''}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div variants={itemVariants} className="mb-4">
-                  <h2 className="text-lg sm:text-xl font-black text-foreground">Create New Password</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Please choose a new password with at least 6 characters.</p>
-                </motion.div>
-
-                <form onSubmit={handleResetStudentPassword} className="space-y-3.5">
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1 text-foreground">New Password</label>
-                    <div className="relative">
-                      <input
-                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                        type={showStudentNewPass ? 'text' : 'password'}
-                        value={studentNewPass}
-                        onChange={e => setStudentNewPass(e.target.value)}
-                        placeholder="At least 6 characters"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowStudentNewPass(!showStudentNewPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showStudentNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1 text-foreground">Confirm New Password</label>
-                    <div className="relative">
-                      <input
-                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                        type={showStudentConfirmPass ? 'text' : 'password'}
-                        value={studentConfirmPass}
-                        onChange={e => setStudentConfirmPass(e.target.value)}
-                        placeholder="Re-enter password"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowStudentConfirmPass(!showStudentConfirmPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showStudentConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</>
-                      ) : (
-                        'Save & Login'
-                      )}
-                    </button>
-                  </motion.div>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ========================================================= */}
-            {/* MODE 2: TEACHER DIRECT RESET (AADHAAR / HIRE DATE + EMP CODE / PHONE) */}
-            {/* ========================================================= */}
-            {mode === 'teacher' && teacherStep === 1 && (
-              <motion.div key="teacher-step1" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="text-center sm:text-left mb-5">
-                  <div className="inline-flex p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-2">
-                    <Briefcase className="w-6 h-6" />
-                  </div>
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Teacher Password Reset</h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Verify via Employee Code / Mobile & Aadhaar / Joining Date.
-                  </p>
-                </motion.div>
-
-                <form onSubmit={handleVerifyTeacher} className="space-y-4">
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
-                      Employee Code / Mobile / Email
-                    </label>
-                    <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      type="text"
-                      value={teacherIdentifier}
-                      onChange={e => setTeacherIdentifier(e.target.value)}
-                      placeholder="e.g. EMP-001 or 9876543210"
-                      required
-                    />
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
-                      Aadhaar Number OR Joining Date
-                    </label>
-                    <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
-                      type="text"
-                      value={teacherSecurityKey}
-                      onChange={e => setTeacherSecurityKey(e.target.value)}
-                      placeholder="Aadhaar Number (12 digits / Last 4) or YYYY-MM-DD"
-                      required
-                    />
-                    <span className="text-[11px] text-muted-foreground mt-1 block">
-                      Enter registered Aadhaar Number or Joining Date (YYYY-MM-DD).
-                    </span>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>
-                      ) : (
-                        'Verify Teacher'
-                      )}
-                    </button>
-                  </motion.div>
-                </form>
-              </motion.div>
-            )}
-
-            {mode === 'teacher' && teacherStep === 2 && (
-              <motion.div key="teacher-step2" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="mb-4">
-                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-900 rounded-xl flex items-center gap-3">
-                    <ShieldCheck className="w-5 h-5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-                    <div>
-                      <div className="text-xs text-emerald-700 dark:text-emerald-300 font-bold">Verified Teacher / Staff</div>
-                      <div className="text-sm font-extrabold text-emerald-900 dark:text-emerald-100">
-                        {verifiedTeacher?.name} {verifiedTeacher?.employee_code ? `(${verifiedTeacher.employee_code})` : ''}
-                      </div>
-                    </div>
-                  </div>
-                </motion.div>
-
-                <motion.div variants={itemVariants} className="mb-4">
-                  <h2 className="text-lg sm:text-xl font-black text-foreground">Create New Password</h2>
-                  <p className="text-xs text-muted-foreground mt-0.5">Please choose a new password with at least 6 characters.</p>
-                </motion.div>
-
-                <form onSubmit={handleResetTeacherPassword} className="space-y-3.5">
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1 text-foreground">New Password</label>
-                    <div className="relative">
-                      <input
-                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                        type={showTeacherNewPass ? 'text' : 'password'}
-                        value={teacherNewPass}
-                        onChange={e => setTeacherNewPass(e.target.value)}
-                        placeholder="At least 6 characters"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowTeacherNewPass(!showTeacherNewPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showTeacherNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1 text-foreground">Confirm New Password</label>
-                    <div className="relative">
-                      <input
-                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                        type={showTeacherConfirmPass ? 'text' : 'password'}
-                        value={teacherConfirmPass}
-                        onChange={e => setTeacherConfirmPass(e.target.value)}
-                        placeholder="Re-enter password"
-                        required
-                        minLength={6}
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setShowTeacherConfirmPass(!showTeacherConfirmPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                      >
-                        {showTeacherConfirmPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                      </button>
-                    </div>
-                  </motion.div>
-
-                  <motion.div variants={itemVariants} className="pt-2">
-                    <button
-                      type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-                    >
-                      {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</>
-                      ) : (
-                        'Save & Login'
-                      )}
-                    </button>
-                  </motion.div>
-                </form>
-              </motion.div>
-            )}
-
-            {/* ========================================================= */}
-            {/* MODE 3: EMAIL OTP FLOW */}
-            {/* ========================================================= */}
-            {mode === 'email' && emailStep === 1 && (
-              <motion.div key="email-step1" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="text-center sm:text-left mb-5">
-                  <div className="inline-flex p-2.5 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-2">
+            {/* ------------------------------------------------------------- */}
+            {/* STEP 1: ENTER REGISTERED EMAIL */}
+            {/* ------------------------------------------------------------- */}
+            {emailStep === 1 && (
+              <motion.div key="step-1" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+                <motion.div variants={itemVariants} className="text-center sm:text-left mb-6">
+                  <div className="inline-flex p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-3 shadow-inner">
                     <Mail className="w-6 h-6" />
                   </div>
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Email OTP Reset</h1>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Forgot Password</h1>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Enter your registered email address to receive an OTP.
+                    Enter your registered email address and we'll send you an OTP verification code.
                   </p>
                 </motion.div>
 
                 <form onSubmit={handleSendOtp} className="space-y-4">
                   <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">Registered Email</label>
-                    <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                      type="email"
-                      value={email}
-                      onChange={e => setEmail(e.target.value)}
-                      placeholder="name@school.com"
-                      required
-                    />
+                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
+                      Email Address
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="w-full h-11 px-3.5 pl-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all placeholder:text-muted-foreground"
+                        type="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        placeholder="e.g. yourname@example.com"
+                        required
+                        autoFocus
+                      />
+                      <Mail className="w-4 h-4 text-muted-foreground absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    </div>
                   </motion.div>
 
                   <motion.div variants={itemVariants} className="pt-2">
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Sending...</>
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Sending OTP...
+                        </>
                       ) : (
-                        'Send OTP'
+                        <>
+                          <Send className="w-4 h-4" /> Send OTP Code
+                        </>
                       )}
                     </button>
                   </motion.div>
@@ -679,81 +222,140 @@ export default function ForgotPasswordPage() {
               </motion.div>
             )}
 
-            {mode === 'email' && emailStep === 2 && (
-              <motion.div key="email-step2" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="text-center sm:text-left mb-5">
+            {/* ------------------------------------------------------------- */}
+            {/* STEP 2: VERIFY OTP */}
+            {/* ------------------------------------------------------------- */}
+            {emailStep === 2 && (
+              <motion.div key="step-2" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+                <motion.div variants={itemVariants} className="text-center sm:text-left mb-6">
+                  <div className="inline-flex p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-3 shadow-inner">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
                   <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Verify OTP</h1>
                   <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-                    Enter the 6-digit OTP sent to <strong className="text-foreground">{email}</strong>
+                    Enter the 6-digit code sent to <span className="font-semibold text-foreground">{email}</span>
                   </p>
                 </motion.div>
 
                 <form onSubmit={handleVerifyOtp} className="space-y-4">
                   <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">One Time Password (OTP)</label>
+                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
+                      6-Digit OTP Code
+                    </label>
                     <input
-                      className="w-full h-11 px-3.5 border rounded-xl bg-background text-foreground text-center tracking-widest text-lg font-mono focus:ring-2 focus:ring-indigo-500 transition-all"
+                      className="w-full h-12 px-3 text-center tracking-[0.5em] font-mono text-xl font-bold border rounded-xl bg-background text-foreground focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
                       type="text"
-                      value={otp}
-                      onChange={e => setOtp(e.target.value)}
-                      placeholder="• • • • • •"
                       maxLength={6}
+                      value={otp}
+                      onChange={(e) => setOtp(e.target.value.replace(/\D/g, ''))}
+                      placeholder="······"
                       required
+                      autoFocus
                     />
+                  </motion.div>
+
+                  <motion.div variants={itemVariants} className="flex items-center justify-between text-xs pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setEmailStep(1)}
+                      className="text-muted-foreground hover:text-foreground underline transition-colors"
+                    >
+                      Change Email
+                    </button>
+                    <button
+                      type="button"
+                      disabled={resendCooldown > 0 || isSubmitting}
+                      onClick={handleSendOtp}
+                      className="text-indigo-600 dark:text-indigo-400 font-semibold disabled:text-muted-foreground hover:underline transition-colors"
+                    >
+                      {resendCooldown > 0 ? `Resend in ${resendCooldown}s` : 'Resend OTP'}
+                    </button>
                   </motion.div>
 
                   <motion.div variants={itemVariants} className="pt-2">
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      disabled={isSubmitting || otp.length < 4}
+                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Verifying...</>
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Verifying...
+                        </>
                       ) : (
-                        'Verify OTP'
+                        <>
+                          <CheckCircle2 className="w-4 h-4" /> Verify OTP
+                        </>
                       )}
                     </button>
                   </motion.div>
                 </form>
-
-                <div className="mt-4 flex justify-between text-xs font-medium">
-                  <button type="button" onClick={() => setEmailStep(1)} className="text-muted-foreground hover:text-foreground">
-                    Change Email
-                  </button>
-                  <button type="button" onClick={handleSendOtp} disabled={isSubmitting} className="text-indigo-600 dark:text-indigo-400 hover:underline">
-                    Resend OTP
-                  </button>
-                </div>
               </motion.div>
             )}
 
-            {mode === 'email' && emailStep === 3 && (
-              <motion.div key="email-step3" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
-                <motion.div variants={itemVariants} className="text-center sm:text-left mb-5">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Create New Password</h1>
-                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">Enter your new secure password.</p>
+            {/* ------------------------------------------------------------- */}
+            {/* STEP 3: SET NEW PASSWORD */}
+            {/* ------------------------------------------------------------- */}
+            {emailStep === 3 && (
+              <motion.div key="step-3" variants={containerVariants} initial="hidden" animate="visible" exit="exit">
+                <motion.div variants={itemVariants} className="text-center sm:text-left mb-6">
+                  <div className="inline-flex p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-3 shadow-inner">
+                    <KeyRound className="w-6 h-6" />
+                  </div>
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight text-foreground">Set New Password</h1>
+                  <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                    Enter your new secure password (minimum 6 characters).
+                  </p>
                 </motion.div>
 
-                <form onSubmit={handleResetEmailPassword} className="space-y-4">
+                <form onSubmit={handleResetPassword} className="space-y-4">
                   <motion.div variants={itemVariants}>
-                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">New Password</label>
+                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
+                      New Password
+                    </label>
                     <div className="relative">
                       <input
-                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 transition-all"
-                        type={showEmailNewPass ? 'text' : 'password'}
-                        value={emailNewPass}
-                        onChange={e => setEmailNewPass(e.target.value)}
-                        placeholder="At least 6 characters"
+                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        type={showNewPassword ? "text" : "password"}
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="Enter new password (min 6 chars)"
+                        required
+                        minLength={6}
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowNewPassword(!showNewPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        tabIndex={-1}
+                      >
+                        {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                  </motion.div>
+
+                  <motion.div variants={itemVariants}>
+                    <label className="block text-xs sm:text-sm font-semibold mb-1.5 text-foreground">
+                      Confirm New Password
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="w-full h-11 px-3.5 pr-10 border rounded-xl bg-background text-foreground text-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+                        type={showConfirmPassword ? "text" : "password"}
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
                         required
                         minLength={6}
                       />
                       <button
                         type="button"
-                        onClick={() => setShowEmailNewPass(!showEmailNewPass)}
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        tabIndex={-1}
                       >
-                        {showEmailNewPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
                   </motion.div>
@@ -762,12 +364,16 @@ export default function ForgotPasswordPage() {
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md disabled:opacity-50 transition-all flex items-center justify-center gap-2"
+                      className="w-full h-11 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-sm shadow-md shadow-indigo-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
                     >
                       {isSubmitting ? (
-                        <><Loader2 className="w-4 h-4 animate-spin" /> Updating...</>
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" /> Updating Password...
+                        </>
                       ) : (
-                        'Set New Password'
+                        <>
+                          <KeyRound className="w-4 h-4" /> Update Password
+                        </>
                       )}
                     </button>
                   </motion.div>
@@ -776,8 +382,19 @@ export default function ForgotPasswordPage() {
             )}
           </AnimatePresence>
 
+          {/* Admin Instant Reset Help Notice Banner */}
+          <div className="mt-6 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200/80 dark:border-amber-900/40 text-amber-800 dark:text-amber-300 text-xs flex items-start gap-2.5">
+            <KeyRound className="w-4 h-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+            <div className="leading-relaxed">
+              <span className="font-bold">Need instant password reset?</span>
+              <p className="text-[11px] text-amber-700 dark:text-amber-300/90 mt-0.5">
+                School Admin and Class Teachers can directly reset your password in 1-click from their dashboard without waiting for email OTP.
+              </p>
+            </div>
+          </div>
+
           {/* Back to Login Footer */}
-          <div className="mt-6 pt-4 border-t text-center">
+          <div className="mt-5 pt-4 border-t text-center">
             <Link
               to="/login"
               className="inline-flex items-center gap-1.5 text-xs sm:text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"

@@ -14,7 +14,8 @@ import {
     Heart,
     Contact2,
     CalendarDays,
-    Check
+    Check,
+    KeyRound
 } from 'lucide-react';
 import {
     Card,
@@ -30,12 +31,15 @@ import { toast } from 'sonner';
 import ResponsiveDataTable from '@/components/common/ResponsiveDataTable';
 import API from '@/api';
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import ResetPasswordDialog from "@/components/ResetPasswordDialog";
 
 const ClassStudent = () => {
     const [data, setData] = useState({ class: null, students: [] });
     const [loading, setLoading] = useState(true);
     const [viewProfile, setViewProfile] = useState(false);
     const [selectedStudent, setSelectedStudent] = useState(null);
+    const [resetPasswordDialogOpen, setResetPasswordDialogOpen] = useState(false);
+    const [resetPasswordUser, setResetPasswordUser] = useState(null);
 
     const fetchStudents = async () => {
         setLoading(true);
@@ -123,12 +127,35 @@ const ClassStudent = () => {
             headerClassName: "text-right",
             cellClassName: "text-right",
             render: (student) => (
-                <div className="flex justify-end gap-2">
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-primary/5 text-primary">
+                <div className="flex justify-end items-center gap-1.5">
+                    <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 rounded-full hover:bg-primary/5 text-primary"
+                        onClick={() => handleViewProfile(student)}
+                        title="View Profile"
+                    >
                         <Eye className="h-4 w-4" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 rounded-full hover:bg-green-500/5 text-green-600">
-                        <PhoneCall className="h-4 w-4" />
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-8 bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200 rounded-full px-2.5 text-xs font-semibold"
+                        title="Direct Password Reset"
+                        onClick={() => {
+                            setResetPasswordUser({
+                                id: student.student_id || student.id,
+                                name: student.student_name,
+                                email: student.student_email,
+                                phone: student.student_contact,
+                                identifier: student.roll_no ? `Roll #${student.roll_no}` : "",
+                                role: "student"
+                            });
+                            setResetPasswordDialogOpen(true);
+                        }}
+                    >
+                        <KeyRound className="h-3.5 w-3.5 mr-1" />
+                        <span>Reset Pass</span>
                     </Button>
                 </div>
             )
@@ -204,9 +231,23 @@ const ClassStudent = () => {
                     <Button onClick={() => handleViewProfile(student)} variant="outline" className="flex-1 h-9 rounded-xl text-xs font-bold gap-2">
                         <Eye className="h-3.5 w-3.5" /> View Profile
                     </Button>
-                    {/* <Button className="flex-1 h-9 rounded-xl text-xs font-bold shadow-lg shadow-primary/20 gap-2">
-                        <PhoneCall className="h-3.5 w-3.5" /> Contact
-                    </Button> */}
+                    <Button
+                        onClick={() => {
+                            setResetPasswordUser({
+                                id: student.student_id || student.id,
+                                name: student.student_name,
+                                email: student.student_email,
+                                phone: student.student_contact,
+                                identifier: student.roll_no ? `Roll #${student.roll_no}` : "",
+                                role: "student"
+                            });
+                            setResetPasswordDialogOpen(true);
+                        }}
+                        variant="outline"
+                        className="flex-1 h-9 rounded-xl text-xs font-bold gap-1.5 bg-amber-50 text-amber-700 hover:bg-amber-100 border-amber-200"
+                    >
+                        <KeyRound className="h-3.5 w-3.5" /> Reset Pass
+                    </Button>
                 </div>
             </CardContent>
         </Card>
@@ -424,6 +465,15 @@ const ClassStudent = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+
+            <ResetPasswordDialog
+                isOpen={resetPasswordDialogOpen}
+                onClose={() => {
+                    setResetPasswordDialogOpen(false);
+                    setResetPasswordUser(null);
+                }}
+                targetUser={resetPasswordUser}
+            />
         </div>
     );
 };

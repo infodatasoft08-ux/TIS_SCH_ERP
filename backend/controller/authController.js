@@ -437,7 +437,8 @@ const verifyOtp = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
-  const { email, newPassword } = req.body;
+  const { email } = req.body;
+  const newPassword = req.body.newPassword || req.body.new_password;
 
   if (!isNonEmptyString(email) || !isNonEmptyString(newPassword) || newPassword.length < 6) {
     return res.status(400).json({ error: 'email and newPassword required (min 6 chars)' });
@@ -455,7 +456,6 @@ const forgotPassword = async (req, res) => {
     const [uRows] = await conn.execute(`SELECT id, password_hash FROM users WHERE email = ? FOR UPDATE`, [email]);
     if (uRows.length === 0) {
       await conn.rollback();
-      conn.release();
       return res.status(404).json({ error: 'User not found' });
     }
 
@@ -1069,16 +1069,16 @@ const UpdateStaffPassword = async (req, res) => {
     await conn.beginTransaction();
 
     const [trows] = await conn.execute(`SELECT user_id FROM staff WHERE id = ? FOR UPDATE`, [id]);
-    if (trows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'Staff not found' }); }
+    if (trows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'Staff not found' }); }
     const userId = trows[0].user_id;
 
     const [uRows] = await conn.execute(`SELECT password_hash FROM users WHERE id = ? FOR UPDATE`, [userId]);
-    if (uRows.length === 0) { await conn.rollback(); conn.release(); return res.status(404).json({ error: 'User not found' }); }
+    if (uRows.length === 0) { await conn.rollback(); return res.status(404).json({ error: 'User not found' }); }
     const currentHash = uRows[0].password_hash;
 
     if (isNonEmptyString(current_password)) {
       const ok = await bcrypt.compare(current_password, currentHash);
-      if (!ok) { await conn.rollback(); conn.release(); return res.status(403).json({ error: 'Current password invalid' }); }
+      if (!ok) { await conn.rollback(); return res.status(403).json({ error: 'Current password invalid' }); }
     }
 
     const cleanedNewPass = cleanPhoneNumber(new_password) || String(new_password).trim().replace(/\s+/g, '');
@@ -1734,9 +1734,6 @@ module.exports = {
   forgotPassword,
   sendOtp,
   verifyOtp,
-  verifyStudentDetails,
-  verifyTeacherDetails,
-  resetPasswordWithToken,
   submitContactForm,
   submitAdmissionForm,
   AddStaffUser,
