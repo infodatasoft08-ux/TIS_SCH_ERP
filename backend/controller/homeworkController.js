@@ -343,10 +343,13 @@ const deleteHomework = async (req, res) => {
 const getStudentHomework = async (req, res) => {
     const { student_id } = req.params;
     try {
-        // Get student's current grade and class
+        // Get student's current grade and class (supports students.id or users.id)
         const [studentRecs] = await db.execute(
-            "SELECT grade_id, class_id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC LIMIT 1",
-            [student_id]
+            `SELECT sar.grade_id, sar.class_id 
+             FROM student_academic_records sar
+             WHERE sar.student_id = ? OR sar.student_id IN (SELECT id FROM students WHERE user_id = ?)
+             ORDER BY sar.academic_year_id DESC, sar.id DESC LIMIT 1`,
+            [student_id, student_id]
         );
 
         if (studentRecs.length === 0) return res.json({ homeworks: [] });
@@ -359,7 +362,7 @@ const getStudentHomework = async (req, res) => {
              JOIN grades g ON g.id = h.grade_id
              LEFT JOIN classes c ON c.id = h.class_id
              WHERE h.grade_id = ? AND (h.class_id IS NULL OR h.class_id = ?)
-             ORDER BY h.homework_date DESC LIMIT 30`,
+             ORDER BY h.homework_date DESC, h.id DESC LIMIT 50`,
             [grade_id, class_id]
         );
 

@@ -91,12 +91,30 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
     }
   };
 
+const isAcademicSubject = (sub) => {
+  const type = (sub?.subject_type || '').toLowerCase().trim();
+  return (
+    type !== 'co-scholastic' &&
+    type !== 'coscholastic' &&
+    type !== 'co_scholastic' &&
+    type !== 'skill-based' &&
+    type !== 'skill_based' &&
+    type !== 'skill based' &&
+    type !== 'skill' &&
+    type !== 'co-curricular' &&
+    type !== 'cocurricular' &&
+    type !== 'activity' &&
+    type !== 'non-academic'
+  );
+};
+
   const resetFormWithEditData = async () => {
     setIsFetchingData(true);
     try {
       // Fetch subjects for the grade first
       const subRes = await API.get(`/admin/get/grade/${homeworkToEdit.grade_id}/subjects`);
-      const gradeSubjects = subRes.data.subjects || [];
+      const allSubjects = subRes.data.subjects || [];
+      const gradeSubjects = allSubjects.filter(isAcademicSubject);
       setSubjects(gradeSubjects);
 
       // Prepare subject_homeworks by matching grade subjects with existing homework details
@@ -147,7 +165,8 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
   const fetchSubjects = async (gradeId) => {
     try {
       const res = await API.get(`/admin/get/grade/${gradeId}/subjects`);
-      const gradeSubjects = res.data.subjects || [];
+      const allSubjects = res.data.subjects || [];
+      const gradeSubjects = allSubjects.filter(isAcademicSubject);
       setSubjects(gradeSubjects);
 
       const newFields = gradeSubjects.map(sub => ({
@@ -210,27 +229,27 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[90vh] overflow-hidden flex flex-col p-0">
-        <DialogHeader className="p-6">
-          <DialogTitle className="text-2xl flex items-center gap-2">
-            <BookOpen className="w-6 h-6" />
+      <DialogContent className="w-[95vw] sm:max-w-[700px] max-h-[92vh] rounded-2xl sm:rounded-3xl overflow-hidden flex flex-col p-0 border shadow-2xl">
+        <DialogHeader className="p-4 sm:p-6 border-b bg-muted/20">
+          <DialogTitle className="text-xl sm:text-2xl flex items-center gap-2 font-bold">
+            <BookOpen className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             {homeworkToEdit ? "Update Homework" : "Create New Homework"}
           </DialogTitle>
         </DialogHeader>
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="flex-1 overflow-hidden flex flex-col">
-            <ScrollArea className="flex-1 overflow-y-auto p-6">
-              <div className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <ScrollArea className="flex-1 overflow-y-auto p-4 sm:p-6">
+              <div className="space-y-4 sm:space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="title"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Homework Title</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Homework Title</FormLabel>
                         <FormControl>
-                          <Input placeholder="e.g. Weekly Homework, Project Task" {...field} />
+                          <Input className="h-10 sm:h-11 rounded-xl text-sm" placeholder="e.g. Weekly Homework, Chapter 3 Revision" {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -242,10 +261,10 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                     name="academic_year_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Academic Year</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Academic Year</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-10 sm:h-11 rounded-xl text-sm">
                               <SelectValue placeholder="Select Year" />
                             </SelectTrigger>
                           </FormControl>
@@ -261,13 +280,13 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="grade_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target Grade / Class</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Target Grade / Class</FormLabel>
                         <Select
                           onValueChange={(val) => {
                             field.onChange(val);
@@ -276,7 +295,7 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                           value={field.value}
                         >
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-10 sm:h-11 rounded-xl text-sm">
                               <SelectValue placeholder="Select Grade" />
                             </SelectTrigger>
                           </FormControl>
@@ -296,10 +315,10 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                     name="class_id"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Target Section (Optional)</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Target Section (Optional)</FormLabel>
                         <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
-                            <SelectTrigger>
+                            <SelectTrigger className="h-10 sm:h-11 rounded-xl text-sm">
                               <SelectValue placeholder="All Sections" />
                             </SelectTrigger>
                           </FormControl>
@@ -316,17 +335,17 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                   />
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
                   <FormField
                     control={form.control}
                     name="homework_date"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Submission Date</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Submission Date</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                            <Input type="date" className="pl-10" {...field} />
+                            <Input type="date" className="pl-10 h-10 sm:h-11 rounded-xl text-sm" {...field} />
                           </div>
                         </FormControl>
                         <FormMessage />
@@ -339,10 +358,11 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                     name="file"
                     render={({ field: { value, onChange, ...field } }) => (
                       <FormItem>
-                        <FormLabel>Attachment (Optional) - PDF or Image (Max 2MB)</FormLabel>
+                        <FormLabel className="text-xs sm:text-sm font-semibold">Attachment (PDF / Image &le; 2MB)</FormLabel>
                         <FormControl>
                           <Input
                             type="file"
+                            className="h-10 sm:h-11 rounded-xl text-xs sm:text-sm file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-xs file:font-semibold"
                             accept=".pdf,image/*"
                             onChange={(e) => {
                               const file = e.target.files[0];
@@ -362,25 +382,33 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                   />
                 </div>
 
-
-                <div className="space-y-4 pt-4 border-t">
-                  <h3 className="text-lg font-semibold flex items-center gap-2">
-                    <Hash className="w-5 h-5 text-primary" />
+                <div className="space-y-3 sm:space-y-4 pt-3 sm:pt-4 border-t">
+                  <h3 className="text-base sm:text-lg font-bold flex items-center gap-2">
+                    <Hash className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     Subject Wise Homework
                   </h3>
 
                   {fields.length === 0 && selectedGrade && !isFetchingData && (
-                    <p className="text-muted-foreground text-sm italic">No subjects assigned to this grade.</p>
+                    <div className="p-4 rounded-xl bg-muted/40 border text-center">
+                      <p className="text-muted-foreground text-xs sm:text-sm italic">No academic subjects assigned to this grade.</p>
+                    </div>
                   )}
 
                   {!selectedGrade && (
-                    <p className="text-muted-foreground text-sm italic">Please select a grade to see subjects.</p>
+                    <div className="p-4 rounded-xl bg-muted/40 border text-center">
+                      <p className="text-muted-foreground text-xs sm:text-sm italic">Please select a grade above to enter subject homework.</p>
+                    </div>
                   )}
 
-                  <div className="grid grid-cols-1 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:gap-4">
                     {fields.map((field, index) => (
-                      <div key={field.id} className="p-4 rounded-lg border bg-muted/30 space-y-2">
-                        <label className="text-sm font-bold text-primary uppercase">{field.subject_name}</label>
+                      <div key={field.id} className="p-3.5 sm:p-4 rounded-xl border bg-card shadow-sm space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs sm:text-sm font-bold text-primary uppercase tracking-wide">
+                            {field.subject_name}
+                          </label>
+                          <span className="text-[10px] text-muted-foreground uppercase font-medium">Academic</span>
+                        </div>
                         <FormField
                           control={form.control}
                           name={`subject_homeworks.${index}.description`}
@@ -388,9 +416,9 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
                             <FormItem>
                               <FormControl>
                                 <Textarea
-                                  placeholder={`Enter homework for ${fields[index].subject_name}...`}
-                                  className="resize-none"
-                                  rows={3}
+                                  placeholder={`Enter homework details for ${fields[index].subject_name}...`}
+                                  className="resize-none rounded-xl text-xs sm:text-sm min-h-[75px]"
+                                  rows={2}
                                   {...field}
                                 />
                               </FormControl>
@@ -405,9 +433,11 @@ export default function AddHomeworkForm({ open, onOpenChange, onSuccess, homewor
               </div>
             </ScrollArea>
 
-            <DialogFooter className="p-6 border-t bg-muted/20">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-              <Button type="submit" disabled={isLoading}>
+            <DialogFooter className="p-3 sm:p-5 border-t bg-muted/20 flex flex-col-reverse sm:flex-row gap-2 sm:justify-end">
+              <Button type="button" variant="outline" className="w-full sm:w-auto h-10 sm:h-10 rounded-xl" onClick={() => onOpenChange(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={isLoading} className="w-full sm:w-auto h-10 sm:h-10 rounded-xl font-semibold bg-primary">
                 {isLoading ? (
                   <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Saving...</>
                 ) : (

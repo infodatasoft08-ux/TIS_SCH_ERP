@@ -123,7 +123,7 @@ export default function HomeworkPage() {
       cell: ({ row }) => (
         <div className="flex flex-wrap gap-1">
           {row.original.details?.map((d, i) => (
-            <Badge key={i} variant="ghost" className="bg-blue-50 text-blue-700 text-[10px]">
+            <Badge key={i} variant="outline" className="bg-blue-50/80 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-[11px] border-blue-200 dark:border-blue-900">
               {d.subject_name}
             </Badge>
           ))}
@@ -134,14 +134,16 @@ export default function HomeworkPage() {
       id: "actions",
       header: "Actions",
       cell: ({ row }) => (
-        <div className="flex gap-2">
+        <div className="flex items-center gap-1.5 sm:gap-2">
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8 hover:bg-blue-50 hover:text-blue-600"
             onClick={() => {
               setSelectedHomework(row.original);
               setIsFormOpen(true);
             }}
+            title="Edit Homework"
           >
             <Edit className="h-4 w-4 text-blue-600" />
           </Button>
@@ -149,7 +151,9 @@ export default function HomeworkPage() {
             <Button
               variant="ghost"
               size="icon"
+              className="h-8 w-8 hover:bg-green-50 hover:text-green-600"
               asChild
+              title="Download Attachment"
             >
               <a href={row.original.attachment_url} target="_blank" rel="noopener noreferrer">
                 <Download className="h-4 w-4 text-green-600" />
@@ -159,13 +163,16 @@ export default function HomeworkPage() {
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8 hover:bg-red-50 hover:text-red-600"
             onClick={() => setDeleteId(row.original.id)}
+            title="Delete Homework"
           >
             <Trash2 className="h-4 w-4 text-red-600" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
+            className="h-8 w-8 hover:bg-indigo-50 hover:text-indigo-600"
             onClick={() => setSendId(row.original.id)}
             title="Send WhatsApp Notification"
           >
@@ -179,7 +186,7 @@ export default function HomeworkPage() {
   return (
     <div className="min-h-screen pb-12">
       {/* Header Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-8 mb-4 sm:mb-6 rounded-2xl text-white">
+      <div className="bg-gradient-to-r from-blue-600 to-indigo-700 p-4 sm:p-8 mb-4 sm:mb-6 rounded-2xl text-white shadow-md">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
           <div>
             <h1 className="text-2xl md:text-4xl font-extrabold tracking-tight flex items-center gap-2 sm:gap-3">
@@ -206,6 +213,14 @@ export default function HomeworkPage() {
               }}
               addButtonText="New Homework"
               onRefresh={loadHomeworks}
+              onEditMobile={(row) => {
+                setSelectedHomework(row);
+                setIsFormOpen(true);
+              }}
+              onDeleteMobile={(row) => setDeleteId(row.id)}
+              onDownloadMobile={(row) => {
+                if (row.attachment_url) window.open(row.attachment_url, '_blank');
+              }}
               leftOfSearch={
                 <div className="grid grid-cols-2 gap-2 w-full lg:flex lg:w-auto">
                   <Select onValueChange={setSelectedGrade} value={selectedGrade}>
