@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { restrictRoles } = require('../middleware/admincheck');
 const { AddTeacher, GetTeacher, GetTeacherById, UpdateTeacher, UpdateTeacherPassword, DeleteTeacher, AsignTeacherForSubject, GetClassByteacherSuperviser, GetSubjectByAssignTeacher, GetTeachersAssignOnSubject, DeleteSubjectAssignOnTeacher, GetAllTeacherSubjectAssignments, GetStudentsOfMySupervisedClass, GetSubjectsByTeacherId, GetPublicTeachers, DownloadTeacherPdf } = require('../controller/teachersController');
 const { vaildation } = require('../middleware/validateMiddleware');
 const { createTeacher } = require('../middleware/teacherMiddleware');
@@ -15,7 +16,7 @@ router.get('/public/:id/download-pdf', DownloadTeacherPdf);
 // curl -X POST http://localhost:5000/api/teachers \
 //  -H "Content-Type: application/json" \
 //  -d '{"first_name":"Asha","last_name":"Sharma","email":"asha@example.com","password":"Secret123","role_id":2,"employee_code":"T-100","hire_date":"2024-08-01","qualification":"MSc","bio":"Math teacher"}'
-router.post('/add/teacher', auth, uploadTeacherImage.single('image'), AddTeacher);
+router.post('/add/teacher', auth, restrictRoles([1, 5]), uploadTeacherImage.single('image'), AddTeacher);
 
 // List teachers:
 // curl http://localhost:5000/api/teachers?q=asha&limit=20
@@ -30,7 +31,7 @@ router.get('/get/teacher/me', auth, GetTeacherById);
 // curl -X PUT http://localhost:5000/api/teachers/1 \
 //  -H "Content-Type: application/json" \
 //  -d '{"first_name":"Asha","last_name":"K.","email":"asha.k@example.com","qualification":"MSc, BEd"}'
-router.put('/update/teacher/:id', auth, uploadTeacherImage.single('image'), UpdateTeacher);
+router.put('/update/teacher/:id', auth, restrictRoles([1, 5]), uploadTeacherImage.single('image'), UpdateTeacher);
 
 // Change password:
 // curl -X PUT http://localhost:5000/api/teachers/1/password \
@@ -40,7 +41,7 @@ router.put('/update/teacher/:id/password', auth, UpdateTeacherPassword);
 
 // Delete teacher:
 // curl -X DELETE http://localhost:5000/api/teachers/1
-router.delete('/delete/teacher/:id', auth, DeleteTeacher);
+router.delete('/delete/teacher/:id', auth, restrictRoles([1, 5]), DeleteTeacher);
 
 // Get assigned subject for teacher (me):
 router.get('/get/teacher/subjects', auth, GetSubjectByAssignTeacher);
@@ -54,11 +55,11 @@ router.get('/get/teacher/:subject_id/teachers', auth, GetTeachersAssignOnSubject
 // curl -X POST http://localhost:5000/api/teachers/1/subjects \
 //  -H "Content-Type: application/json" \
 //  -d '{"subject_ids":[1,2,3]}'
-router.post('/add/teacher/:id/subjects', auth, AsignTeacherForSubject);
+router.post('/add/teacher/:id/subjects', auth, restrictRoles([1, 5]), AsignTeacherForSubject);
 
 // Remove subject:
 // curl -X DELETE http://localhost:5000/api/teachers/delete/teacher/:id/subject/:id
-router.delete('/delete/teacher/:id/subject/:subject_id', auth, DeleteSubjectAssignOnTeacher);
+router.delete('/delete/teacher/:id/subject/:subject_id', auth, restrictRoles([1, 5]), DeleteSubjectAssignOnTeacher);
 router.get('/get/teacher-subjects', auth, GetAllTeacherSubjectAssignments);
 
 /**

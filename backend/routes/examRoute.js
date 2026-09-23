@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { restrictRoles } = require('../middleware/admincheck');
 const {
     AddExamGroup,
     GetExamGroups,
@@ -24,17 +25,18 @@ const {
 } = require('../controller/examController');
 
 // Exam Groups
-router.post('/add/exams', auth, AddExamGroup);
+router.post('/add/exams', auth, restrictRoles([1, 5]), AddExamGroup);
 router.get('/list/exams', auth, GetExamGroups);
-router.put('/update/exams/:id', auth, UpdateExamGroup);
-router.put('/publish/exams/:id', auth, PublishExam);
-router.delete('/delete/exam/:id', auth, DeleteExamGroup);
+router.put('/update/exams/:id', auth, restrictRoles([1, 5]), UpdateExamGroup);
+router.put('/publish/exams/:id', auth, restrictRoles([1, 5]), PublishExam);
+router.delete('/delete/exam/:id', auth, restrictRoles([1, 5]), DeleteExamGroup);
 
 // Exam Routine
-router.put('/update/routine', auth, UpdateExamRoutine);
+router.put('/update/routine', auth, restrictRoles([1, 5]), UpdateExamRoutine);
 
 // Exam Marks/Results
-router.post('/insert/exam/:id/results', auth, AddExamGroupMarks); // :id is exam_group_id
+router.post('/insert/exam/:id/results', auth, restrictRoles([1, 5]), AddExamGroupMarks); // :id is exam_group_id
+
 router.get('/list/exam/:id/results', auth, GetExamGroupResults); // :id is exam_group_id
 router.get('/list/all-student-summaries', auth, GetAllStudentExamSummaries);
 router.post('/generate-marksheet', auth, GenerateMarksheetPDF);

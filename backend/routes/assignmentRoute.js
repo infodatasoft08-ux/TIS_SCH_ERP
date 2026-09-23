@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
+const { restrictRoles } = require('../middleware/admincheck');
 const { AddAssignment, SubmitAssignment, GetAssignmentSubmissions, GradeAssignmentSubmission, GetStudentAssignments, GetAssignment, UpdateAssignment, DeleteAssignment, DeleteAssignmentSubmission } = require('../controller/assignmentController');
 
 
@@ -8,7 +9,7 @@ const { AddAssignment, SubmitAssignment, GetAssignmentSubmissions, GradeAssignme
 // curl -X POST http://localhost:5000/api/assignments/add/assignment \
 //  -H "Content-Type: application/json" \
 //  -d '{"class_id":3,"subject_id":7,"title":"Math HW 1","description":"Ch 1-2 problems","assigned_date":"2025-11-20","due_date":"2025-11-27","max_marks":20}'
-router.post('/add/assignment', auth, AddAssignment);
+router.post('/add/assignment', auth, restrictRoles([1, 5]), AddAssignment);
 
 
 router.get('/get/assignment', auth, GetAssignment);
@@ -18,10 +19,10 @@ router.get('/get/assignment', auth, GetAssignment);
 // curl -X POST http://localhost:5000/api/assignments/add/assignments/lesseion \
 //  -H "Content-Type: application/json" \
 //  -d '{"lesson_id":12,"title":"Lesson 12 Quiz","assigned_date":"2025-11-25","due_date":"2025-11-25"}'
-router.post('/add/assignments/lesseion', auth, AddAssignment);
+router.post('/add/assignments/lesseion', auth, restrictRoles([1, 5]), AddAssignment);
 
 
-router.put('/update/assignment/:id', auth, UpdateAssignment);
+router.put('/update/assignment/:id', auth, restrictRoles([1, 5]), UpdateAssignment);
 
 
 // Student submit:
@@ -45,7 +46,7 @@ router.get('/list/assignment/:id/submissions', auth, GetAssignmentSubmissions);
 // curl -X PUT http://localhost:5000/api/assignments/grade/assignment/submissions/:id \
 //  -H "Content-Type: application/json" \
 //  -d '{"marks_obtained":18,"remarks":"Good work","graded_by_teacher_id":2}'
-router.put('/grade/assignment/submissions/:submission_id', auth, GradeAssignmentSubmission);
+router.put('/grade/assignment/submissions/:submission_id', auth, restrictRoles([1, 5]), GradeAssignmentSubmission);
 
 
 // Student dashboard assignments:
@@ -53,10 +54,9 @@ router.put('/grade/assignment/submissions/:submission_id', auth, GradeAssignment
 // curl http://localhost:5000/api/assignments/students/10/assignments
 router.get('/get/dashboard/student/:id/assignments', auth, GetStudentAssignments);
 
-router.delete('/del/assignment/:assignment_id', auth, DeleteAssignment);
+router.delete('/del/assignment/:assignment_id', auth, restrictRoles([1, 5]), DeleteAssignment);
 
-router.delete('/del/assignment/submissions/:submission_id', auth, DeleteAssignmentSubmission);
+router.delete('/del/assignment/submissions/:submission_id', auth, restrictRoles([1, 5]), DeleteAssignmentSubmission);
 
 
-
-module.exports = router;
+module.exports = router;

@@ -142,50 +142,50 @@ export default function App() {
                   {/* Relative child paths (NO leading slash) */}
                   <Route path="dashboard" element={<Dashboard />} />
                   {/* Student Route */}
-                  <Route path="students/list" element={<StudentsDatable />} />
-                  <Route path="students/add" element={<AddStudents />} />
-                  <Route path="students/attendance" element={<TakeAttendance />} />
+                  <Route path="students/list" element={<ProtectedRoute blockedRoles={[1, 5]}><StudentsDatable /></ProtectedRoute>} />
+                  <Route path="students/add" element={<ProtectedRoute blockedRoles={[1, 5]}><AddStudents /></ProtectedRoute>} />
+                  <Route path="students/attendance" element={<ProtectedRoute blockedRoles={[1, 5]}><TakeAttendance /></ProtectedRoute>} />
                   <Route path="student/acadamic" element={<AcademicRecordsPage />} />
                   {/* Teacher Route */}
-                  <Route path="teachers/list" element={<TeachersOperation />} />
-                  <Route path="teacher/students" element={<ClassStudent />} />
+                  <Route path="teachers/list" element={<ProtectedRoute blockedRoles={[1, 5]}><TeachersOperation /></ProtectedRoute>} />
+                  <Route path="teacher/students" element={<ProtectedRoute blockedRoles={[1, 5]}><ClassStudent /></ProtectedRoute>} />
                   {/* Class Route */}
-                  <Route path="class/add" element={<AddClasses />} />
-                  <Route path="class/attendance" element={<StudentAttendanceSummary />} />
-                  <Route path="class/time_table" element={<CreateTimeTable />} />
-                  <Route path="class/class_time_table" element={<ClassTimeTablePage />} />
-                  <Route path="class/subjects" element={<AssignSubjectOnClass />} />
+                  <Route path="class/add" element={<ProtectedRoute blockedRoles={[1, 5]}><AddClasses /></ProtectedRoute>} />
+                  <Route path="class/attendance" element={<ProtectedRoute blockedRoles={[1, 5]}><StudentAttendanceSummary /></ProtectedRoute>} />
+                  <Route path="class/time_table" element={<ProtectedRoute blockedRoles={[1, 5]}><CreateTimeTable /></ProtectedRoute>} />
+                  <Route path="class/class_time_table" element={<ProtectedRoute blockedRoles={[1, 5]}><ClassTimeTablePage /></ProtectedRoute>} />
+                  <Route path="class/subjects" element={<ProtectedRoute blockedRoles={[1, 5]}><AssignSubjectOnClass /></ProtectedRoute>} />
                   {/* Subject Route */}
-                  <Route path="subject/assign" element={<TeacherSubjectAssign />} />
-                  <Route path="subject/teacher_subject" element={<ViewSubjectAssignToTeacher />} />
+                  <Route path="subject/assign" element={<ProtectedRoute blockedRoles={[1, 5]}><TeacherSubjectAssign /></ProtectedRoute>} />
+                  <Route path="subject/teacher_subject" element={<ProtectedRoute blockedRoles={[1, 5]}><ViewSubjectAssignToTeacher /></ProtectedRoute>} />
                   <Route path="subject/student_subject" element={<ViewMySubjects />} />
-                  <Route path="subject/add" element={<AddSubject />} />
+                  <Route path="subject/add" element={<ProtectedRoute blockedRoles={[1, 5]}><AddSubject /></ProtectedRoute>} />
                   {/* Staff Route */}
-                  <Route path="staff/add" element={<StaffOperation />} />
-                  <Route path="employees/attendance" element={<EmployeeAttendanceTaker />} />
+                  <Route path="staff/add" element={<ProtectedRoute blockedRoles={[1, 5]}><StaffOperation /></ProtectedRoute>} />
+                  <Route path="employees/attendance" element={<ProtectedRoute blockedRoles={[1, 5]}><EmployeeAttendanceTaker /></ProtectedRoute>} />
 
                   {/* Finance Route */}
-                  <Route path="finance/fee-structure/list" element={<FeeTypes />} />
+                  <Route path="finance/fee-structure/list" element={<ProtectedRoute blockedRoles={[1, 5]}><FeeTypes /></ProtectedRoute>} />
                   <Route
                     path="finance/transactions/list"
-                    element={<PaymentHistory />}
+                    element={<ProtectedRoute blockedRoles={[1, 5]}><PaymentHistory /></ProtectedRoute>}
                   />
                   <Route
                     path="finance/feestructure/add"
-                    element={<ClassFeeStructure />}
+                    element={<ProtectedRoute blockedRoles={[1, 5]}><ClassFeeStructure /></ProtectedRoute>}
                   />
                   <Route
                     path="finance/students/fees"
-                    element={<StudentFeeSummary />}
+                    element={<ProtectedRoute blockedRoles={[1, 5]}><StudentFeeSummary /></ProtectedRoute>}
                   />
-                  <Route path="finance/invoice/manage" element={<Invoices />} />
+                  <Route path="finance/invoice/manage" element={<ProtectedRoute blockedRoles={[1, 5]}><Invoices /></ProtectedRoute>} />
                   <Route
                     path="finance/invoices/:invoiceId"
-                    element={<InvoiceDetails />}
+                    element={<ProtectedRoute blockedRoles={[1, 5]}><InvoiceDetails /></ProtectedRoute>}
                   />
                   {/* Exam */}
-                  <Route path="exam/create_exam" element={<ExamDataTable />} />
-                  <Route path="academic-years" element={<AcademicYearDataTable />} />
+                  <Route path="exam/create_exam" element={<ProtectedRoute blockedRoles={[1, 5]}><ExamDataTable /></ProtectedRoute>} />
+                  <Route path="academic-years" element={<ProtectedRoute blockedRoles={[1, 5]}><AcademicYearDataTable /></ProtectedRoute>} />
                   <Route
                     path="exam/exams_student"
                     element={<CheckExams />}
@@ -197,27 +197,27 @@ export default function App() {
 
                   {/* Announcement Route */}
                   <Route path="announcement/list" element={<DynamicAnnouncement />} />
-                  <Route path="announcement/add" element={<CreateAnouncementDatable />} />
+                  <Route path="announcement/add" element={<ProtectedRoute blockedRoles={[1, 5]} redirectTo="/school/announcement/list"><CreateAnouncementDatable /></ProtectedRoute>} />
 
                   {/* Assignment Route */}
-                  <Route path="assignments/manage" element={<Assignment />} />
+                  <Route path="assignments/manage" element={<ProtectedRoute blockedRoles={[1, 5]}><Assignment /></ProtectedRoute>} />
                   <Route path="assignments/student" element={<SubmitAssignment />} />
                   {/* Notes Route */}
-                  <Route path="notes/manage" element={<NotesManagement />} />
+                  <Route path="notes/manage" element={<ProtectedRoute blockedRoles={[1, 5]}><NotesManagement /></ProtectedRoute>} />
                   <Route path="notes/view" element={<NotesViewer />} />
                   {/* Homework Route */}
-                  <Route path="homework/manage" element={<HomeworkPage />} />
+                  <Route path="homework/manage" element={<ProtectedRoute blockedRoles={[1, 5]}><HomeworkPage /></ProtectedRoute>} />
                   <Route path="homework/student" element={<StudentHomeworkPage />} />
-                  <Route path="bulk-import" element={<BulkImport />} />
-                  <Route path="export-data" element={<ExportDataPage />} />
+                  <Route path="bulk-import" element={<ProtectedRoute blockedRoles={[1, 5]}><BulkImport /></ProtectedRoute>} />
+                  <Route path="export-data" element={<ProtectedRoute blockedRoles={[1, 5]}><ExportDataPage /></ProtectedRoute>} />
                   {/* Setting Route */}
-                  <Route path="setting" element={<RoleMenuAdmin />} />
+                  <Route path="setting" element={<ProtectedRoute allowedRoles={[12, 'developer']}><RoleMenuAdmin /></ProtectedRoute>} />
                   <Route path="settings" element={<Settings />} />
                   <Route path="profile" element={<Profile />} />
-                  <Route path="registered" element={<RegisteredRequests />} />
+                  <Route path="registered" element={<ProtectedRoute blockedRoles={[1, 5]}><RegisteredRequests /></ProtectedRoute>} />
                   {/* ID Card & Certificate Generator Routes */}
-                  <Route path="idcard/templates" element={<TemplateUploadPage />} />
-                  <Route path="idcard/generate" element={<GenerateDocumentsPage />} />
+                  <Route path="idcard/templates" element={<ProtectedRoute blockedRoles={[1, 5]}><TemplateUploadPage /></ProtectedRoute>} />
+                  <Route path="idcard/generate" element={<ProtectedRoute blockedRoles={[1, 5]}><GenerateDocumentsPage /></ProtectedRoute>} />
                 </Route>
 
                 {/* fallback */}
