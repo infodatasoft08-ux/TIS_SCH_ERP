@@ -14,21 +14,27 @@ export default function DynamicAnnouncement() {
                     <Megaphone className="w-5 h-5 sm:w-6 sm:h-6 text-blue-500" />
                     <h3 className="text-xl sm:text-2xl font-bold">Announcements & Events</h3>
                 </div>
-                {user.role_id === 1 ? (
+                {user?.role_id === 1 ? (
                     <AnnouncementDashboard
                         userRole="student"
                         userId={user?.id}
                         canManage={false}
                     />
-                ) : user.sub_role === 'staff' ? (
+                ) : (user?.role_id === 3 || user?.role_id === 6) ? (
                     <AnnouncementDashboard
-                        userRole="staff"
+                        userRole="admin"
                         userId={user?.id}
                         canManage={true}
                     />
-                ) : user.role_id === 2 ? (
+                ) : user?.role_id === 2 ? (
                     <AnnouncementDashboard
                         userRole="teacher"
+                        userId={user?.id}
+                        canManage={true}
+                    />
+                ) : (user?.role_id === 4 || user?.sub_role === 'staff') ? (
+                    <AnnouncementDashboard
+                        userRole="staff"
                         userId={user?.id}
                         canManage={true}
                     />
@@ -38,8 +44,7 @@ export default function DynamicAnnouncement() {
                         userId={user?.id}
                         canManage={false}
                     />
-                )
-                }
+                )}
             </div>
         </div>
     );

@@ -17,6 +17,7 @@ export default function NotificationBell() {
     const { t } = useLanguage();
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(false);
+    const [open, setOpen] = useState(false);
     const navigate = useNavigate();
     const { user } = useAuth();
 
@@ -40,15 +41,17 @@ export default function NotificationBell() {
     };
 
     const handleNotificationClick = (notif) => {
-        if (notif.type === 'notice') {
-            navigate('/school/announcement/list');
-        } else {
-            navigate('/school/announcement/list');
-        }
+        setOpen(false);
+        navigate('/school/announcement/list');
+    };
+
+    const handleViewAll = () => {
+        setOpen(false);
+        navigate('/school/announcement/list');
     };
 
     return (
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button variant="ghost" size="icon" className="relative">
                     <Bell className="h-5 w-5" />
@@ -108,7 +111,7 @@ export default function NotificationBell() {
                         variant="ghost"
                         size="sm"
                         className="w-full text-xs text-primary"
-                        onClick={() => user.role_id === 3 || user.role_id === 2 || user.role_id === 4 ? navigate('/school/announcement/list') : navigate('/school/announcement/add')}
+                        onClick={handleViewAll}
                     >
                         View All Announcements
                     </Button>
