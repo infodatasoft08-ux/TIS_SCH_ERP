@@ -2465,15 +2465,16 @@ const GenerateMarksheetPDF = async (req, res) => {
             (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
 
         const dynamicColumns = [];
-        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
         if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
         if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
         if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
         if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'I.A./PR', max: maxIaPr });
+        // if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+        if (showOral) dynamicColumns.push({ id: 'oral', name: hasIaSubSubjects ? 'Oral' : 'I.A', max: maxOral });
+        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
 
         subjects.forEach(sub => {
             sub.exam1_dynamicMarks = dynamicColumns.map(col => {
@@ -2523,6 +2524,76 @@ const GenerateMarksheetPDF = async (req, res) => {
         }));
 
         const hasCoScholastic = Boolean((coScholastic && coScholastic.length > 0) || (skillBased && skillBased.length > 0));
+
+        const barPalette = [
+            '#3b82f6', // Blue (Maths)
+            '#f97316', // Orange (English)
+            '#22c55e', // Green (Hindi)
+            '#ef4444', // Red (Drawing)
+            '#a855f7', // Purple (Urdu)
+            '#eab308', // Amber (S.S.P.D)
+            '#14b8a6', // Teal (Islamic)
+            '#ec4899', // Pink (E.V.S)
+            '#6366f1', // Indigo
+            '#06b6d4', // Cyan
+            '#84cc16', // Lime
+            '#f43f5e'  // Rose
+        ];
+
+        const getShortSubjectName = (name) => {
+            if (!name) return '';
+            const n = name.trim();
+            if (/^math/i.test(n)) return 'Maths';
+            if (/^islamic/i.test(n)) return 'Islamic';
+            if (/^e\.?v\.?s/i.test(n) || /environmental/i.test(n)) return 'E.V.S';
+            if (/^s\.?\s*s\.?\s*p\.?\s*d/i.test(n)) return 'S.S.P.D';
+            if (/^drawing|^art/i.test(n)) return 'Drawing';
+            if (/^social/i.test(n)) return 'S.St';
+            if (/^science/i.test(n)) return 'Science';
+            if (/^computer/i.test(n)) return 'Comp';
+            if (/^general knowledge|^g\.?k/i.test(n)) return 'G.K';
+            if (n.length > 8) {
+                const first = n.split(/[\s(&]+/)[0];
+                return first.length <= 8 ? first : first.substring(0, 7) + '.';
+            }
+            return n;
+        };
+
+        const chartAcademic = subjects.filter(s => !s.subject_type || s.subject_type === 'academic');
+        const numSubjects = chartAcademic.length || 1;
+        const plotWidth = 620;
+        const step = plotWidth / numSubjects;
+        const barWidth = Math.min(36, Math.max(16, Math.floor(step * 0.45)));
+
+        const performanceChart = chartAcademic.map((sub, i) => {
+            const rawScore = (sub.exam1_marks !== '-' && sub.exam1_marks !== undefined && sub.exam1_marks !== null)
+                ? Number(sub.exam1_marks)
+                : (Number(sub.total) || 0);
+            const score = isNaN(rawScore) ? 0 : rawScore;
+            const heightPct = sub.max > 100
+                ? Math.round(Math.min(100, Math.max(0, (score / sub.max) * 100)))
+                : Math.round(Math.min(100, Math.max(0, score)));
+
+            const barHeight = Math.max(1, Math.round((heightPct / 100) * 65));
+            const barX = Math.round(38 + (i * step) + ((step - barWidth) / 2));
+            const barY = 82 - barHeight;
+            const scoreY = Math.max(10, barY - 4);
+            const labelX = barX + Math.round(barWidth / 2);
+
+            return {
+                name: sub.subject_name,
+                shortName: getShortSubjectName(sub.subject_name),
+                score,
+                heightPct,
+                barHeight,
+                barWidth,
+                barX,
+                barY,
+                scoreY,
+                labelX,
+                color: barPalette[i % barPalette.length]
+            };
+        });
 
         const getNextGrade = (currentGradeName, customNextClass) => {
             if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
@@ -2623,7 +2694,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             grandGrade,
             currentDate, finalResult, promotionStatus: null,
             nextGrade, ptmStats,
-            logoData, headerImageData, luckiestFontBase64, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark, principalRemark,
             dynamicColumns,
             meta
@@ -3436,33 +3507,68 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
 
         const dynamicColumns = [];
-        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
         if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
         if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing (Comp.)', max: maxWritingComp });
         if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
         if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'I.A./PR', max: maxIaPr });
+        // if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+        if (showOral) dynamicColumns.push({ id: 'oral', name: hasIaSubSubjects ? 'Oral' : 'I.A', max: maxOral });
+        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
 
         const formattedAcademicSubjects = academicSubjects.map(s => {
             const exam1_dynamicMarks = [];
             const exam2_dynamicMarks = [];
-            if (showWritten) { exam1_dynamicMarks.push({ value: s.exam1_written || '-' }); exam2_dynamicMarks.push({ value: s.exam2_written || '-' }); }
+            if (showTheory) { exam1_dynamicMarks.push({ value: s.exam1_theory || '-' }); exam2_dynamicMarks.push({ value: s.exam2_theory || '-' }); }
+            if (showLab) { exam1_dynamicMarks.push({ value: s.exam1_lab || '-' }); exam2_dynamicMarks.push({ value: s.exam2_lab || '-' }); }
+            if (showIaPr) { exam1_dynamicMarks.push({ value: s.exam1_ia_pr || '-' }); exam2_dynamicMarks.push({ value: s.exam2_ia_pr || '-' }); }
             if (showReading) { exam1_dynamicMarks.push({ value: s.exam1_reading || '-' }); exam2_dynamicMarks.push({ value: s.exam2_reading || '-' }); }
             if (showWritingComp) { exam1_dynamicMarks.push({ value: s.exam1_writing_comp || '-' }); exam2_dynamicMarks.push({ value: s.exam2_writing_comp || '-' }); }
             if (showDictation) { exam1_dynamicMarks.push({ value: s.exam1_dictation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_dictation || '-' }); }
             if (showRecitation) { exam1_dynamicMarks.push({ value: s.exam1_recitation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_recitation || '-' }); }
             if (showOral) { exam1_dynamicMarks.push({ value: s.exam1_oral || '-' }); exam2_dynamicMarks.push({ value: s.exam2_oral || '-' }); }
-            if (showTheory) { exam1_dynamicMarks.push({ value: s.exam1_theory || '-' }); exam2_dynamicMarks.push({ value: s.exam2_theory || '-' }); }
-            if (showLab) { exam1_dynamicMarks.push({ value: s.exam1_lab || '-' }); exam2_dynamicMarks.push({ value: s.exam2_lab || '-' }); }
-            if (showIaPr) { exam1_dynamicMarks.push({ value: s.exam1_ia_pr || '-' }); exam2_dynamicMarks.push({ value: s.exam2_ia_pr || '-' }); }
+            if (showWritten) { exam1_dynamicMarks.push({ value: s.exam1_written || '-' }); exam2_dynamicMarks.push({ value: s.exam2_written || '-' }); }
 
             return {
                 ...s,
                 exam1_dynamicMarks,
                 exam2_dynamicMarks
+            };
+        });
+
+        const chartAcademicCombined = formattedAcademicSubjects.filter(s => !s.subject_type || s.subject_type === 'academic');
+        const numSubjectsCombined = chartAcademicCombined.length || 1;
+        const plotWidthCombined = 620;
+        const stepCombined = plotWidthCombined / numSubjectsCombined;
+        const barWidthCombined = Math.min(36, Math.max(16, Math.floor(stepCombined * 0.45)));
+
+        const performanceChart = chartAcademicCombined.map((sub, i) => {
+            const rawScore = Number(sub.total) || Number(sub.yearly_avg) || 0;
+            const score = isNaN(rawScore) ? 0 : rawScore;
+            const heightPct = sub.max > 100
+                ? Math.round(Math.min(100, Math.max(0, (score / sub.max) * 100)))
+                : Math.round(Math.min(100, Math.max(0, score)));
+
+            const barHeight = Math.max(1, Math.round((heightPct / 100) * 65));
+            const barX = Math.round(38 + (i * stepCombined) + ((stepCombined - barWidthCombined) / 2));
+            const barY = 82 - barHeight;
+            const scoreY = Math.max(8, barY - 3);
+            const labelX = barX + Math.round(barWidthCombined / 2);
+
+            return {
+                name: sub.subject_name,
+                shortName: getShortSubjectName(sub.subject_name),
+                score,
+                heightPct,
+                barHeight,
+                barWidth,
+                barX,
+                barY,
+                scoreY,
+                labelX,
+                color: barPalette[i % barPalette.length]
             };
         });
 
@@ -3498,7 +3604,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             grandGrade,
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
-            logoData, headerImageData, luckiestFontBase64, chartData, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
+            logoData, headerImageData, luckiestFontBase64, chartData, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
             principalRemark: principalRemark || '',
             meta

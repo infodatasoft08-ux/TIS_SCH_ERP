@@ -25,4 +25,4 @@ router.get('/get/menus/tree', authMiddleware, fetchMenuTree);
 router.get('/get/allroles', authMiddleware, getAllRoles);
 router.get('/get/open-allroles', getAllRoles);
 
-module.exports = router;
+module.exports = router;

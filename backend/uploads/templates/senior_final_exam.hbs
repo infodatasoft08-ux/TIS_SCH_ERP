@@ -99,15 +99,24 @@
     .section-heading {
       font-family: 'Poppins', sans-serif;
       font-weight: 700;
-      font-size: 12px;
-      color: #0e4da6c9;
+      font-size: 11px;
+      color: #0e4ea6;
       background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%);
-      padding: 3.5px 10px;
+      padding: 2px 8px;
       border-radius: 4px;
-      margin-bottom: 6px;
-      border-left: 4px solid #0e4da6e7;
+      margin-bottom: 3.5px;
+      border-left: 3.5px solid #0e4ea6;
       text-transform: uppercase;
       letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .section-heading svg {
+      width: 12px;
+      height: 12px;
+      flex-shrink: 0;
     }
 
     .table-marks {
@@ -305,9 +314,9 @@
 
     th,
     td {
-      padding: 3.5px 4px;
+      padding: 2.2px 3.5px;
       border: 1px solid var(--border-color);
-      font-size: 14.5px;
+      font-size: 13.5px;
       text-align: center;
     }
 
@@ -322,17 +331,26 @@
     }
 
     th small {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 500;
       opacity: 0.95;
+      display: block;
+      text-align: center;
     }
 
-    .table-marks th:first-child,
-    .table-marks td:first-child {
+    .table-marks thead tr:first-child th:first-child,
+    .table-marks tbody td:first-child,
+    .table-marks .row-total td:first-child {
       text-align: left;
       white-space: nowrap;
       padding-left: 8px;
       padding-right: 8px;
+    }
+
+    .table-marks thead tr:not(:first-child) th {
+      text-align: center !important;
+      padding-left: 4px;
+      padding-right: 4px;
     }
 
     .table-marks th:not(:first-child),
@@ -367,8 +385,8 @@
 
     /* Specific elements */
     .student-photo {
-      width: 25mm;
-      height: 32mm;
+      width: 22mm;
+      height: 28mm;
       object-fit: cover;
       border: 1px solid var(--border-color);
       border-radius: 4px;
@@ -377,15 +395,15 @@
     }
 
     .info-label {
-      font-size: 11px;
+      font-size: 10px;
       color: var(--text-muted);
       text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 2px;
+      margin-bottom: 1.5px;
     }
 
     .info-value {
-      font-size: 13.5px;
+      font-size: 12.5px;
       font-weight: 700;
       color: var(--text-dark);
     }
@@ -432,12 +450,13 @@
     .remarks-box {
       min-height: 40px;
       font-style: italic;
-      font-size: 9.5px;
+      font-size: 11.5px;
       color: var(--text-dark);
       border: 1px dashed var(--border-color);
-      padding: 6px;
+      padding: 6px 8px;
       border-radius: 4px;
       background: rgba(240, 246, 255, 0.45);
+      line-height: 1.35;
     }
 
     /* Signatures */
@@ -573,23 +592,23 @@
         <!-- Left Logo -->
         <div style="display: flex; align-items: center; justify-content: center; padding-right: 14px; flex-shrink: 0;">
           {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 27mm; height: 27mm; object-fit: contain;">
+          <img src="{{logoData}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
           {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 27mm; height: 27mm; object-fit: contain;">
+          <img src="{{school.logo}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
           {{/if}}
         </div>
 
         <!-- Vertical Maroon Divider Line -->
-        <div style="width: 2.5px; height: 20mm; background-color: #8B1E1E; margin-right: 16px; flex-shrink: 0;"></div>
+        <div style="width: 2.5px; height: 18mm; background-color: #8B1E1E; margin-right: 16px; flex-shrink: 0;"></div>
 
         <!-- School Name in 2 Stacked Lines -->
         <div style="text-align: left; display: flex; flex-direction: column; justify-content: center;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 40px; color: #8B1E1E; line-height: 0.92; letter-spacing: 1.2px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 38px; color: #8B1E1E; line-height: 0.92; letter-spacing: 1px;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 900; font-size: 30px; color: #8B1E1E; line-height: 1.0; letter-spacing: 0.8px; margin-top: 2px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 30px; color: #8B1E1E; line-height: 1.0; letter-spacing: 0.7px; margin-top: 2px;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -597,7 +616,7 @@
 
       <!-- Address, Contact, and Web details -->
       <div
-        style="text-align: center; color: #1e293b; font-size: 11px; line-height: 1.35; margin-top: 1px; padding: 0 4px;">
+        style="text-align: center; color: #1e293b; font-size: 11px; line-height: 1.25; margin-top: 1px; padding: 0 4px;">
         <p style="margin-bottom: 1px; font-weight: 700;">
           <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
             Mahendru, Patna - 800006{{/if}}</span>
@@ -646,10 +665,10 @@
 
 
     <!-- 2. STUDENT PROFILE -->
-    <div class="card mb-2">
-      <div class="flex justify-between gap-4">
+    <div class="card mb-1" style="padding: 4px 8px;">
+      <div class="flex justify-between gap-3">
         <!-- Left Side: Student Info Grid -->
-        <div class="flex-1 grid grid-cols-3 gap-x-4 gap-y-2">
+        <div class="flex-1 grid grid-cols-3 gap-x-3 gap-y-1">
           <div>
             <div class="info-label">Admission No</div>
             <div class="info-value">{{student.admission_no}}</div>
@@ -659,9 +678,8 @@
             <div class="info-value">{{student.roll_no}}</div>
           </div>
           <div>
-            <div class="info-label">Class & Section</div>
-            <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else}}{{student.class}}{{#if
-              student.section}} - {{student.section}}{{/if}}{{/if}}</div>
+            <div class="info-label">Class</div>
+            <div class="info-value">{{student.class_name}}</div>
           </div>
 
           <div>
@@ -697,7 +715,8 @@
         <div class="flex-col items-center justify-center border-l"
           style="padding-left: 16px; border-left: 1px solid var(--border-color);">
           {{#if (or student.photo student.avatar_url)}}
-          <img src="{{#if student.photo}}{{student.photo}}{{else}}{{student.avatar_url}}{{/if}}" alt="Student Photo" class="student-photo mb-2">
+          <img src="{{#if student.photo}}{{student.photo}}{{else}}{{student.avatar_url}}{{/if}}" alt="Student Photo"
+            class="student-photo mb-2">
           {{else}}
           <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
           {{/if}}
@@ -726,35 +745,41 @@
           </tr>
           <tr>
             <!-- Term 1 columns -->
-            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
             {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
             {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
-            {{#if showIaPr}}<th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>{{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showIaPr}}<th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>{{/if}}
+            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
+            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
             <th rowspan="2">Total</th>
 
             <!-- Term 2 columns -->
-            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
             {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
             {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
-            {{#if showIaPr}}<th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>{{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showIaPr}}<th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>{{/if}}
+            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
+            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
             <th rowspan="2">Total</th>
           </tr>
           <tr>
             <!-- Term 1 IA columns -->
-            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
-            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
-            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
-            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+            {{#if showReading}}<th style="text-align: center;">Reading <br><small>({{maxReading}})</small></th>{{/if}}
+            {{#if showWritingComp}}<th style="text-align: center;">Writing <br><small>({{maxWritingComp}})</small></th>
+            {{/if}}
+            {{#if showDictation}}<th style="text-align: center;">Dictation <br><small>({{maxDictation}})</small></th>
+            {{/if}}
+            {{#if showRecitation}}<th style="text-align: center;">Recitation <br><small>({{maxRecitation}})</small></th>
+            {{/if}}
 
             <!-- Term 2 IA columns -->
-            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
-            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
-            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
-            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+            {{#if showReading}}<th style="text-align: center;">Reading <br><small>({{maxReading}})</small></th>{{/if}}
+            {{#if showWritingComp}}<th style="text-align: center;">Writing <br><small>({{maxWritingComp}})</small></th>
+            {{/if}}
+            {{#if showDictation}}<th style="text-align: center;">Dictation <br><small>({{maxDictation}})</small></th>
+            {{/if}}
+            {{#if showRecitation}}<th style="text-align: center;">Recitation <br><small>({{maxRecitation}})</small></th>
+            {{/if}}
           </tr>
           {{else}}
           <tr class="table-header-group">
@@ -780,13 +805,6 @@
           <tr class="table-header-group">
             <th rowspan="2" style="text-align: left;">Subjects</th>
             <th rowspan="2">Max Marks</th>
-            {{#if showWritten}}
-            <th rowspan="2">Written <br><small>({{maxWritten}})</small></th>
-            {{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showOral}}
-            <th rowspan="2">Oral <br><small>({{maxOral}})</small></th>
-            {{/if}}
             {{#if showTheory}}
             <th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>
             {{/if}}
@@ -794,17 +812,33 @@
             <th rowspan="2">Lab <br><small>({{maxLab}})</small></th>
             {{/if}}
             {{#if showIaPr}}
-            <th rowspan="2">I.A./PR <br><small>({{maxIaPr}})</small></th>
+            <th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>
+            {{/if}}
+            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
+            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
+            {{#if showWritten}}
+            <th rowspan="2">Written <br><small>({{maxWritten}})</small></th>
             {{/if}}
             <th rowspan="2">Total</th>
             <th rowspan="2">Grade</th>
           </tr>
           <tr>
             <!-- Term 1 sub-subject columns under I.A({{iaTotalMax}}) -->
-            {{#if showReading}}<th>Reading <br><small>({{maxReading}})</small></th>{{/if}}
-            {{#if showWritingComp}}<th>Writing <br><small>({{maxWritingComp}})</small></th>{{/if}}
-            {{#if showDictation}}<th>Dictation <br><small>({{maxDictation}})</small></th>{{/if}}
-            {{#if showRecitation}}<th>Recitation <br><small>({{maxRecitation}})</small></th>{{/if}}
+            {{#if showReading}}<th style="text-align: center; font-size: 10.5px;">Reading
+              <br><small>({{maxReading}})</small>
+            </th>{{/if}}
+            {{#if showWritingComp}}<th style="text-align: center; font-size: 10.5px;">Writing
+              <br><small>({{maxWritingComp}})</small>
+            </th>
+            {{/if}}
+            {{#if showDictation}}<th style="text-align: center; font-size: 10.5px;">Dictation
+              <br><small>({{maxDictation}})</small>
+            </th>
+            {{/if}}
+            {{#if showRecitation}}<th style="text-align: center; font-size: 10.5px;">Recitation
+              <br><small>({{maxRecitation}})</small>
+            </th>
+            {{/if}}
           </tr>
           {{else}}
           <tr class="table-header-group">
@@ -860,40 +894,92 @@
     </div>
 
 
-    <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE / RESULT SUMMARY -->
+    <!-- 4. CO-SCHOLASTIC GRADING & ATTENDANCE / RESULT SUMMARY / GRAPH -->
     <style>
+      .perf-chart-card {
+        border: 1.5px solid #0e4ea6;
+        border-left: 4px solid #0e4ea6;
+        border-radius: 6px;
+        padding: 4px 6px 3px 4px;
+        background: linear-gradient(135deg, rgba(240, 247, 255, 0.6) 0%, rgba(224, 239, 254, 0.6) 100%);
+        margin-bottom: 5px;
+        box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
+      }
+
+      .co-scholastic-table {
+        margin-bottom: 0;
+        border: 1px solid #0e4ea6;
+        border-collapse: collapse;
+        width: 100%;
+      }
+
+      .co-scholastic-table th,
+      .co-scholastic-table td {
+        padding: 3px 6px !important;
+        font-size: 11.5px !important;
+        line-height: 1.3 !important;
+        border: 1px solid #cbd5e1 !important;
+      }
+
+      .co-scholastic-table th {
+        background: #0e4da6c1 !important;
+        color: #ffffff !important;
+        font-weight: 700 !important;
+        text-align: center;
+        border-bottom: 2px solid #0a3a7c !important;
+      }
+
+      .co-scholastic-table td:first-child {
+        text-align: left !important;
+        font-weight: 600 !important;
+        color: #334155 !important;
+      }
+
       .att-card {
         border: 1.5px solid #0e4ea6;
-        border-left: 5px solid #0e4ea6;
-        border-radius: 8px;
-        padding: 8px 12px;
-        background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
-        margin-bottom: 8px;
-        box-shadow: 0 2px 4px rgba(14, 78, 166, 0.12);
+        border-left: 4px solid #0e4ea6;
+        border-radius: 6px;
+        padding: 4px 6px;
+        background: linear-gradient(135deg, rgba(240, 247, 255, 0.6) 0%, rgba(224, 239, 254, 0.6) 100%);
+        margin-bottom: 5px;
+        box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
       }
 
       .att-title {
         color: #0e4ea6;
         font-weight: 800;
-        font-size: 11px;
+        font-size: 10px;
         text-transform: uppercase;
-        margin-bottom: 6px;
-        letter-spacing: 0.5px;
+        margin-bottom: 3px;
+        letter-spacing: 0.4px;
+        display: flex;
+        align-items: center;
+        gap: 4.5px;
+      }
+
+      .att-title svg {
+        width: 12px;
+        height: 12px;
+        flex-shrink: 0;
       }
 
       .att-grid {
         display: grid;
         grid-template-columns: 1fr 1fr auto;
-        column-gap: 10px;
+        column-gap: 6px;
         align-items: center;
       }
 
       .att-pill {
         background: #ffffff;
         border: 1.5px solid #93c5fd;
-        border-radius: 6px;
-        padding: 5px 6px;
+        border-radius: 5px;
+        padding: 3px 5px;
         text-align: center;
+        min-height: 35px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
       }
 
       .att-label {
@@ -901,67 +987,35 @@
         font-size: 9px;
         text-transform: uppercase;
         font-weight: 800;
-        letter-spacing: 0.3px;
+        letter-spacing: 0.25px;
         line-height: 1.1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+      }
+
+      .att-label svg {
+        width: 11px;
+        height: 11px;
+        flex-shrink: 0;
+        color: #0e4ea6;
       }
 
       .att-val {
         color: #0f172a;
-        font-size: 14px;
+        font-size: 13px;
         font-weight: 800;
-        margin-top: 2px;
-      }
-
-      .att-percent-pill {
-        background: linear-gradient(135deg, #0e4ea6, #0a3a7c);
-        color: #ffffff;
-        border-radius: 8px;
-        padding: 5px 12px;
-        text-align: center;
-        min-width: 65px;
-        box-shadow: 0 2px 4px rgba(14, 78, 166, 0.25);
-      }
-
-      .att-percent-label {
-        color: rgba(255, 255, 255, 0.9);
-        font-size: 8.5px;
-        text-transform: uppercase;
-        font-weight: 800;
-        letter-spacing: 0.4px;
-      }
-
-      .att-percent-val {
-        color: #ffffff;
-        font-size: 15px;
-        font-weight: 900;
-        line-height: 1.1;
-      }
-
-      .att-bar-wrap {
-        grid-column: span 3;
-        margin-top: 6px;
-      }
-
-      .att-bar-bg {
-        background: #cbd5e1;
-        border-radius: 9999px;
-        height: 5px;
-        width: 100%;
-        overflow: hidden;
-      }
-
-      .att-bar-fill {
-        background: linear-gradient(90deg, #38bdf8, #0e4ea6);
-        height: 100%;
-        border-radius: 9999px;
+        margin-top: 1px;
       }
 
       .result-summary-container {
-        background: linear-gradient(135deg, #f0f7ff 0%, #e0effe 100%);
+        background: linear-gradient(135deg, rgba(240, 247, 255, 0.6) 0%, rgba(224, 239, 254, 0.6) 100%);
         border: 1.5px solid #0e4ea6;
-        border-radius: 8px;
-        padding: 8px 10px;
-        box-shadow: 0 2px 5px rgba(14, 78, 166, 0.12);
+        border-left: 4px solid #0e4ea6;
+        border-radius: 6px;
+        padding: 4px 6px;
+        box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
       }
 
       .result-grid-3 {
@@ -971,20 +1025,20 @@
       }
 
       .result-tile {
-        border-radius: 8px;
-        padding: 6px 4px;
+        border-radius: 6px;
+        padding: 4px 6px;
         text-align: center;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        min-height: 54px;
+        min-height: 40px;
       }
 
       .result-tile-percentage {
         background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
         border: 1.5px solid #93c5fd;
-        box-shadow: 0 2px 4px rgba(59, 130, 246, 0.08);
+        box-shadow: 0 1px 2px rgba(59, 130, 246, 0.08);
       }
 
       .result-tile-percentage .tile-label {
@@ -998,7 +1052,7 @@
       .result-tile-result-pass {
         background: linear-gradient(135deg, #f0fdf4 0%, #dcfce7 100%);
         border: 1.5px solid #86efac;
-        box-shadow: 0 2px 4px rgba(34, 197, 94, 0.08);
+        box-shadow: 0 1px 2px rgba(34, 197, 94, 0.08);
       }
 
       .result-tile-result-pass .tile-label {
@@ -1008,7 +1062,7 @@
       .result-tile-result-fail {
         background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
         border: 1.5px solid #fca5a5;
-        box-shadow: 0 2px 4px rgba(239, 68, 68, 0.08);
+        box-shadow: 0 1px 2px rgba(239, 68, 68, 0.08);
       }
 
       .result-tile-result-fail .tile-label {
@@ -1018,7 +1072,7 @@
       .result-tile-grade {
         background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
         border: 1.5px solid #fde047;
-        box-shadow: 0 2px 4px rgba(234, 179, 8, 0.08);
+        box-shadow: 0 1px 2px rgba(234, 179, 8, 0.08);
       }
 
       .result-tile-grade .tile-label {
@@ -1034,46 +1088,56 @@
         font-weight: 800;
         text-transform: uppercase;
         letter-spacing: 0.5px;
-        margin-bottom: 3px;
+        margin-bottom: 2.5px;
         line-height: 1.1;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 4.5px;
+      }
+
+      .tile-label svg {
+        width: 13px;
+        height: 13px;
+        flex-shrink: 0;
       }
 
       .tile-val {
-        font-size: 18px;
+        font-size: 15.5px;
         font-weight: 900;
-        line-height: 1.2;
+        line-height: 1.1;
       }
 
       .pill-badge-pass {
         background: #16a34a;
         color: #ffffff;
-        padding: 3px 14px;
+        padding: 2.5px 14px;
         border-radius: 9999px;
-        font-size: 13.5px;
+        font-size: 12.5px;
         font-weight: 900;
-        letter-spacing: 0.5px;
-        box-shadow: 0 2px 4px rgba(22, 163, 74, 0.25);
+        letter-spacing: 0.4px;
+        box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
         display: inline-block;
       }
 
       .pill-badge-fail {
         background: #dc2626;
         color: #ffffff;
-        padding: 3px 14px;
+        padding: 2.5px 14px;
         border-radius: 9999px;
-        font-size: 13.5px;
+        font-size: 12.5px;
         font-weight: 900;
-        letter-spacing: 0.5px;
-        box-shadow: 0 2px 4px rgba(220, 38, 38, 0.25);
+        letter-spacing: 0.4px;
+        box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
         display: inline-block;
       }
 
       .promotion-banner-strip {
-        margin-top: 6px;
-        padding-top: 5px;
+        margin-top: 4px;
+        padding-top: 3px;
         border-top: 1.5px dashed #bfdbfe;
         text-align: center;
-        font-size: 12.5px;
+        font-size: 10px;
         font-weight: 700;
         color: #1e3a8a;
       }
@@ -1082,60 +1146,192 @@
         color: #2563eb;
         font-weight: 800;
       }
+
+      .remarks-box {
+        background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%);
+        border: 1.5px solid #bfdbfe;
+        border-left: 4px solid #2563eb;
+        font-size: 9.5px;
+        font-style: italic;
+        color: #1e3a8a;
+        font-weight: 600;
+        padding: 5px 8px;
+        min-height: 30px;
+        display: flex;
+        align-items: center;
+        border-radius: 4px;
+      }
     </style>
 
-    {{#if (or hasCoScholastic (hasItems coScholastic skillBased))}}
-    <div class="grid grid-cols-2 gap-4" style="align-items: start;">
-      <!-- Left Column: Co-Scholastic -->
-      <div style="grid-column: span 1;">
-        <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
-        <table class="table-marks data-table" style="margin-bottom: 0; border: 1px solid #0e4ea6;">
-          <thead>
-            <tr style="background: #0e4ea6;">
-              <th
-                style="text-align: left; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
-                Activity / Area</th>
-              {{#if attendanceStats.hasTerm2}}
-              <th
-                style="width: 70px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
-                Term I</th>
-              <th
-                style="width: 70px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
-                Term II</th>
+    <!-- 4. SUBJECT PERFORMANCE GRAPH (FULL WIDTH) -->
+    {{#if (hasItems performanceChart)}}
+    <div class="perf-chart-card" style="margin-top: 4px; margin-bottom: 6px;">
+      <div class="section-heading" style="margin-bottom: 2px;">Subject Performance</div>
+      <svg viewBox="0 0 680 102" style="width: 100%; height: 92px; display: block; overflow: visible;"
+        xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Grid Lines -->
+        <line x1="36" y1="12" x2="675" y2="12" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+        <line x1="36" y1="26" x2="675" y2="26" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+        <line x1="36" y1="40" x2="675" y2="40" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+        <line x1="36" y1="54" x2="675" y2="54" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+        <line x1="36" y1="68" x2="675" y2="68" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+
+        <!-- Y-Axis Labels -->
+        <text x="30" y="16" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">100</text>
+        <text x="30" y="30" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">80</text>
+        <text x="30" y="44" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">60</text>
+        <text x="30" y="58" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">40</text>
+        <text x="30" y="72" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">20</text>
+        <text x="30" y="85" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">0</text>
+
+        <!-- Y-Axis & X-Axis Lines -->
+        <line x1="35" y1="10" x2="35" y2="82" stroke="#64748b" stroke-width="1.2" />
+        <line x1="35" y1="82" x2="675" y2="82" stroke="#64748b" stroke-width="1.2" />
+
+        <!-- Bars & Labels -->
+        {{#each performanceChart}}
+        <text x="{{this.labelX}}" y="{{this.scoreY}}" font-size="11.5" font-weight="800" fill="#0f172a"
+          text-anchor="middle" font-family="'Poppins', sans-serif">{{this.score}}</text>
+        <rect x="{{this.barX}}" y="{{this.barY}}" width="{{this.barWidth}}" height="{{this.barHeight}}" rx="3" ry="3"
+          fill="{{this.color}}" />
+        <text x="{{this.labelX}}" y="97" font-size="11" font-weight="700" fill="#1e293b" text-anchor="middle"
+          font-family="'Poppins', sans-serif">{{this.shortName}}</text>
+        {{/each}}
+      </svg>
+    </div>
+    {{/if}}
+
+    <!-- 5. RESULT SUMMARY (Full Width) -->
+    <div style="margin-bottom: 5px;">
+      <div class="section-heading">Result Summary</div>
+      <div class="result-summary-container">
+        <div class="result-grid-3">
+          <!-- Percentage Tile -->
+          <div class="result-tile result-tile-percentage">
+            <div class="tile-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <line x1="19" y1="5" x2="5" y2="19"></line>
+                <circle cx="6.5" cy="6.5" r="2.5" fill="currentColor"></circle>
+                <circle cx="17.5" cy="17.5" r="2.5" fill="currentColor"></circle>
+              </svg>
+              <span>Percentage</span>
+            </div>
+            <div class="tile-val">{{percentage}}%</div>
+          </div>
+
+          <!-- Final Result Tile -->
+          <div
+            class="result-tile {{#if (eq finalResult 'Pass')}}result-tile-result-pass{{else}}result-tile-result-fail{{/if}}">
+            <div class="tile-label">
+              {{#if (eq finalResult 'Pass')}}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+                <path d="m9 12 2 2 4-4"></path>
+              </svg>
               {{else}}
-              <th
-                style="width: 90px; color: #ffffff; font-weight: 700; border-bottom: 2px solid #0a3a7c; background: #0e4ea6;">
-                {{#if
-                attendanceStats.hasTerm1}}Term I{{else}}Grade{{/if}}</th>
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+              {{/if}}
+              <span>Final Result</span>
+            </div>
+            <div class="tile-val">
+              <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
+                {{finalResult}}
+              </span>
+            </div>
+          </div>
+
+          <!-- Grade or Promotion Status Tile -->
+          <div class="result-tile result-tile-grade">
+            <div class="tile-label">
+              <svg viewBox="0 0 24 24" fill="currentColor" stroke="none">
+                <polygon
+                  points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
+                </polygon>
+              </svg>
+              <span>{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</span>
+            </div>
+            <div class="tile-val"
+              style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
+              {{#if showFinalResult}}
+              {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
+              {{else if grandGrade}}
+              {{grandGrade}}
+              {{else}}
+              {{finalResult}}
+              {{/if}}
+            </div>
+          </div>
+        </div>
+
+        {{#if showFinalResult}}
+        {{#if nextGrade}}
+        <div class="promotion-banner-strip">
+          Promoted to Class: <span>{{nextGrade}}</span>
+        </div>
+        {{else if promotionStatus}}
+        <div class="promotion-banner-strip">
+          Promotion Status: <span>{{promotionStatus}}</span>
+        </div>
+        {{/if}}
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- 6. LOWER SECTIONS (Co-Scholastic, Attendance & Teacher's Remarks) -->
+    {{#if (or hasCoScholastic (hasItems coScholastic skillBased))}}
+    <div class="grid grid-cols-2 gap-3" style="align-items: start;">
+      <!-- Left Column: Co-Scholastic & Skill-Based Areas -->
+      <div style="grid-column: span 1; display: flex; flex-direction: column;">
+        <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
+        <table class="co-scholastic-table">
+          <thead>
+            <tr>
+              <th style="text-align: left;">Activity / Area</th>
+              {{#if attendanceStats.hasTerm2}}
+              <th style="width: 55px;">Term I</th>
+              <th style="width: 55px;">Term II</th>
+              {{else}}
+              <th style="width: 65px;">{{#if attendanceStats.hasTerm1}}Term I{{else}}Grade{{/if}}</th>
               {{/if}}
             </tr>
           </thead>
           <tbody>
             {{#each coScholastic}}
             <tr>
-              <td style="text-align: left; font-weight: 600; color: #334155;">{{this.name}}</td>
+              <td>{{this.name}}</td>
               {{#if ../attendanceStats.hasTerm2}}
               <td class="font-bold text-center" style="color: {{gradeColor this.term1}};">{{this.term1}}</td>
               <td class="font-bold text-center" style="color: {{gradeColor this.term2}};">{{this.term2}}</td>
               {{else}}
               <td class="font-bold text-center"
                 style="color: {{#if this.term1}}{{gradeColor this.term1}}{{else}}{{gradeColor this.grade}}{{/if}};">
-                {{#if
-                this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
+                {{#if this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
               {{/if}}
             </tr>
             {{/each}}
             {{#each skillBased}}
             <tr>
-              <td style="text-align: left; font-weight: 600; color: #334155;">{{this.name}}</td>
+              <td>{{this.name}}</td>
               {{#if ../attendanceStats.hasTerm2}}
               <td class="font-bold text-center" style="color: {{gradeColor this.term1}};">{{this.term1}}</td>
               <td class="font-bold text-center" style="color: {{gradeColor this.term2}};">{{this.term2}}</td>
               {{else}}
               <td class="font-bold text-center"
                 style="color: {{#if this.term1}}{{gradeColor this.term1}}{{else}}{{gradeColor this.grade}}{{/if}};">
-                {{#if
-                this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
+                {{#if this.term1}}{{this.term1}}{{else}}{{this.grade}}{{/if}}</td>
               {{/if}}
             </tr>
             {{/each}}
@@ -1143,179 +1339,143 @@
         </table>
       </div>
 
-      <!-- Right Column: Attendance & Result Summary -->
-      <div style="grid-column: span 1;" class="flex-col">
+      <!-- Right Column: Attendance Record & Teacher Remarks -->
+      <div style="grid-column: span 1; display: flex; flex-direction: column;">
         <!-- Attendance Record -->
-        <div class="att-card" style="margin-bottom: 8px;">
-          <div class="att-title" style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="att-card" style="margin-bottom: 5px;">
+          <div class="att-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
             <span>Attendance Record</span>
           </div>
-          <div class="att-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div class="att-label">Total Working Days</div>
-              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+          <div class="att-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div class="att-pill">
+              <div class="att-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Total Working Days</span>
+              </div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div class="att-label">Days Present</div>
-              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+            <div class="att-pill">
+              <div class="att-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <path d="m9 16 2 2 4-4"></path>
+                </svg>
+                <span>Days Present</span>
+              </div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 44px; display: flex; flex-direction: column; justify-content: space-between;">
+            {{!-- <div class="att-pill">
               <div class="att-label">Attendance %</div>
               <div
-                style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 12px; font-weight: 800; color: #64748b; line-height: 18px;">
+                style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 11px; font-weight: 800; color: #64748b; line-height: 14px;">
                 %</div>
-            </div>
+            </div> --}}
           </div>
         </div>
 
-        <!-- Result Summary -->
+        <!-- Class Teacher's Remarks -->
         <div>
-          <div class="section-heading">Result Summary</div>
-          <div class="result-summary-container">
-            <div class="result-grid-3">
-              <!-- Percentage Tile -->
-              <div class="result-tile result-tile-percentage">
-                <div class="tile-label">Percentage</div>
-                <div class="tile-val">{{percentage}}%</div>
-              </div>
-
-              <!-- Final Result Tile -->
-              <div
-                class="result-tile {{#if (eq finalResult 'Pass')}}result-tile-result-pass{{else}}result-tile-result-fail{{/if}}">
-                <div class="tile-label">Final Result</div>
-                <div class="tile-val">
-                  <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
-                    {{finalResult}}
-                  </span>
-                </div>
-              </div>
-
-              <!-- Grade or Promotion Status Tile -->
-              <div class="result-tile result-tile-grade">
-                <div class="tile-label">{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</div>
-                <div class="tile-val"
-                  style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
-                  {{#if showFinalResult}}
-                  {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
-                  {{else if grandGrade}}
-                  {{grandGrade}}
-                  {{else}}
-                  {{finalResult}}
-                  {{/if}}
-                </div>
-              </div>
-            </div>
-
-            {{#if showFinalResult}}
-            {{#if nextGrade}}
-            <div class="promotion-banner-strip">
-              Promoted to Class: <span>{{nextGrade}}</span>
-            </div>
-            {{else if promotionStatus}}
-            <div class="promotion-banner-strip">
-              Promotion Status: <span>{{promotionStatus}}</span>
-            </div>
-            {{/if}}
-            {{/if}}
+          <div class="section-heading">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            <span>Class Teacher's Remarks</span>
+          </div>
+          <div class="remarks-box">
+            "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
           </div>
         </div>
-
       </div>
     </div>
     {{else}}
-    <!-- Full Width Layout when NO Co-Scholastic subjects exist -->
-    <div class="grid grid-cols-2 gap-4" style="align-items: stretch; margin-bottom: 2px;">
-      <!-- Left Column: Attendance Record Full Height -->
+    <!-- Layout when NO Co-Scholastic subjects exist -->
+    <div class="grid grid-cols-2 gap-3" style="align-items: start; margin-bottom: 2px;">
+      <!-- Left Column: Attendance Record -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="margin-bottom: 4px;">Attendance Record</div>
-        <div class="att-card" style="margin-bottom: 0; flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 80px;">
-          <div class="att-grid" style="grid-template-columns: 1fr 1fr 1fr; gap: 8px;">
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div class="att-label">Total Working Days</div>
-              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
+        <div class="att-card" style="margin-bottom: 0;">
+          <div class="att-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+              stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            <span>Attendance Record</span>
+          </div>
+          <div class="att-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
+            <div class="att-pill">
+              <div class="att-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                </svg>
+                <span>Total Working Days</span>
+              </div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div class="att-label">Days Present</div>
-              <div style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px;"></div>
-            </div>
-            <div class="att-pill"
-              style="padding: 6px 6px; min-height: 52px; display: flex; flex-direction: column; justify-content: space-between;">
-              <div class="att-label">Attendance %</div>
-              <div
-                style="border-bottom: 1.5px dashed #94a3b8; height: 18px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 12px; font-weight: 800; color: #64748b; line-height: 18px;">
-                %</div>
+            <div class="att-pill">
+              <div class="att-label">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+                  stroke-linejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                  <line x1="16" y1="2" x2="16" y2="6"></line>
+                  <line x1="8" y1="2" x2="8" y2="6"></line>
+                  <line x1="3" y1="10" x2="21" y2="10"></line>
+                  <path d="m9 16 2 2 4-4"></path>
+                </svg>
+                <span>Days Present</span>
+              </div>
+              <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
           </div>
         </div>
       </div>
 
-      <!-- Right Column: Result Summary Full Height -->
+      <!-- Right Column: Teacher Remarks -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="margin-bottom: 4px;">Result Summary</div>
-        <div class="result-summary-container" style="flex: 1; display: flex; flex-direction: column; justify-content: center; min-height: 80px;">
-          <div class="result-grid-3">
-            <!-- Percentage Tile -->
-            <div class="result-tile result-tile-percentage">
-              <div class="tile-label">Percentage</div>
-              <div class="tile-val">{{percentage}}%</div>
-            </div>
-
-            <!-- Final Result Tile -->
-            <div
-              class="result-tile {{#if (eq finalResult 'Pass')}}result-tile-result-pass{{else}}result-tile-result-fail{{/if}}">
-              <div class="tile-label">Final Result</div>
-              <div class="tile-val">
-                <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
-                  {{finalResult}}
-                </span>
-              </div>
-            </div>
-
-            <!-- Grade or Promotion Status Tile -->
-            <div class="result-tile result-tile-grade">
-              <div class="tile-label">{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</div>
-              <div class="tile-val"
-                style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
-                {{#if showFinalResult}}
-                {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
-                {{else if grandGrade}}
-                {{grandGrade}}
-                {{else}}
-                {{finalResult}}
-                {{/if}}
-              </div>
-            </div>
-          </div>
-
-          {{#if showFinalResult}}
-          {{#if nextGrade}}
-          <div class="promotion-banner-strip">
-            Promoted to Class: <span>{{nextGrade}}</span>
-          </div>
-          {{else if promotionStatus}}
-          <div class="promotion-banner-strip">
-            Promotion Status: <span>{{promotionStatus}}</span>
-          </div>
-          {{/if}}
-          {{/if}}
+        <div class="section-heading">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+            <polyline points="14 2 14 8 20 8"></polyline>
+            <line x1="16" y1="13" x2="8" y2="13"></line>
+            <line x1="16" y1="17" x2="8" y2="17"></line>
+            <polyline points="10 9 9 9 8 9"></polyline>
+          </svg>
+          <span>Class Teacher's Remarks</span>
+        </div>
+        <div class="remarks-box">
+          "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
         </div>
       </div>
     </div>
     {{/if}}
-
-    <!-- 6. REMARKS -->
-    <div style="margin-top: 8px;" class="mb-2">
-      <div class="section-heading" style="margin-bottom: 4px;">Class Teacher's Remarks</div>
-      <div class="remarks-box"
-        style="background: linear-gradient(135deg, #f8fafc 0%, #eff6ff 100%); border: 1.5px solid #bfdbfe; border-left: 4px solid #2563eb; font-size: 13px; font-style: italic; color: #1e3a8a; font-weight: 600; padding: 8px 14px; min-height: 38px; display: flex; align-items: center;">
-        "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
-      </div>
-    </div>
 
 
     <!-- Fill remaining space to push footer to bottom if needed -->
@@ -1323,14 +1483,14 @@
 
     <!-- 7. SIGNATURES -->
     <div class="flex justify-between items-end mt-1 pt-1">
-      <div class="flex-col items-center">
+      {{!-- <div class="flex-col items-center">
         {{#if signatures.parent}}
         <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
         {{else}}
         <div style="height: 30px;"></div>
         {{/if}}
         <div class="signature-box">Parent / Guardian</div>
-      </div>
+      </div> --}}
 
       <div class="flex-col items-center">
         {{#if signatures.teacher}}
@@ -1362,15 +1522,20 @@
 
 
     <!-- 8. FOOTER -->
-    <div style="margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
+    <div
+      style="margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
       <div style="text-align: left; line-height: 1.4;">
-        <div><strong>Report Card No:</strong> {{#if meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
-        <div><strong>Generated On:</strong> {{#if meta.generated_on}}{{meta.generated_on}}{{else}}{{currentDate}}{{/if}}</div>
+        <div><strong>Report Card No:</strong> {{#if
+          meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
+        <div><strong>Generated On:</strong> {{#if meta.generated_on}}{{meta.generated_on}}{{else}}{{currentDate}}{{/if}}
+        </div>
       </div>
 
       <div style="text-align: right; line-height: 1.4;">
         <div>Generated By: {{#if meta.generated_by}}{{meta.generated_by}}{{else}}School Administration{{/if}}</div>
-        <div>Software powered by {{#if meta.erp_name}}{{meta.erp_name}}{{else}}TIS ERP{{/if}} v{{#if meta.erp_version}}{{meta.erp_version}}{{else}}2.0{{/if}} &bull; &copy; {{#if meta.year}}{{meta.year}}{{else}}2026{{/if}} All Rights Reserved</div>
+        <div>Software powered by {{#if meta.erp_name}}{{meta.erp_name}}{{else}}TIS ERP{{/if}} v{{#if
+          meta.erp_version}}{{meta.erp_version}}{{else}}2.0{{/if}} &bull; &copy; {{#if
+          meta.year}}{{meta.year}}{{else}}2026{{/if}} All Rights Reserved</div>
       </div>
     </div>
 
