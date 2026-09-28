@@ -2465,16 +2465,23 @@ const GenerateMarksheetPDF = async (req, res) => {
             (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
 
         const dynamicColumns = [];
-        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-        if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
-        if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
-        if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
-        if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-        // if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        if (showOral) dynamicColumns.push({ id: 'oral', name: hasIaSubSubjects ? 'Oral' : 'I.A', max: maxOral });
-        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        if (hasIaSubSubjects) {
+            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+            if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
+            if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
+            if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
+            if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
+            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        } else {
+            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
+        }
 
         subjects.forEach(sub => {
             sub.exam1_dynamicMarks = dynamicColumns.map(col => {
@@ -3507,29 +3514,52 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
 
         const dynamicColumns = [];
-        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-        if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
-        if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing (Comp.)', max: maxWritingComp });
-        if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
-        if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-        // if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        if (showOral) dynamicColumns.push({ id: 'oral', name: hasIaSubSubjects ? 'Oral' : 'I.A', max: maxOral });
-        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        if (hasIaSubSubjects) {
+            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+            if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
+            if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing (Comp.)', max: maxWritingComp });
+            if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
+            if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
+            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        } else {
+            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
+        }
 
         const formattedAcademicSubjects = academicSubjects.map(s => {
-            const exam1_dynamicMarks = [];
-            const exam2_dynamicMarks = [];
-            if (showTheory) { exam1_dynamicMarks.push({ value: s.exam1_theory || '-' }); exam2_dynamicMarks.push({ value: s.exam2_theory || '-' }); }
-            if (showLab) { exam1_dynamicMarks.push({ value: s.exam1_lab || '-' }); exam2_dynamicMarks.push({ value: s.exam2_lab || '-' }); }
-            if (showIaPr) { exam1_dynamicMarks.push({ value: s.exam1_ia_pr || '-' }); exam2_dynamicMarks.push({ value: s.exam2_ia_pr || '-' }); }
-            if (showReading) { exam1_dynamicMarks.push({ value: s.exam1_reading || '-' }); exam2_dynamicMarks.push({ value: s.exam2_reading || '-' }); }
-            if (showWritingComp) { exam1_dynamicMarks.push({ value: s.exam1_writing_comp || '-' }); exam2_dynamicMarks.push({ value: s.exam2_writing_comp || '-' }); }
-            if (showDictation) { exam1_dynamicMarks.push({ value: s.exam1_dictation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_dictation || '-' }); }
-            if (showRecitation) { exam1_dynamicMarks.push({ value: s.exam1_recitation || '-' }); exam2_dynamicMarks.push({ value: s.exam2_recitation || '-' }); }
-            if (showOral) { exam1_dynamicMarks.push({ value: s.exam1_oral || '-' }); exam2_dynamicMarks.push({ value: s.exam2_oral || '-' }); }
-            if (showWritten) { exam1_dynamicMarks.push({ value: s.exam1_written || '-' }); exam2_dynamicMarks.push({ value: s.exam2_written || '-' }); }
+            const exam1_dynamicMarks = dynamicColumns.map(col => {
+                let val = '-';
+                if (col.id === 'theory') val = s.exam1_theory || '-';
+                else if (col.id === 'written') val = s.exam1_written || '-';
+                else if (col.id === 'reading') val = s.exam1_reading || '-';
+                else if (col.id === 'writing_comp') val = s.exam1_writing_comp || '-';
+                else if (col.id === 'dictation') val = s.exam1_dictation || '-';
+                else if (col.id === 'recitation') val = s.exam1_recitation || '-';
+                else if (col.id === 'ia_pr') val = s.exam1_ia_pr || '-';
+                else if (col.id === 'oral') val = s.exam1_oral || '-';
+                else if (col.id === 'lab') val = s.exam1_lab || '-';
+                return { value: val };
+            });
+
+            const exam2_dynamicMarks = dynamicColumns.map(col => {
+                let val = '-';
+                if (col.id === 'theory') val = s.exam2_theory || '-';
+                else if (col.id === 'written') val = s.exam2_written || '-';
+                else if (col.id === 'reading') val = s.exam2_reading || '-';
+                else if (col.id === 'writing_comp') val = s.exam2_writing_comp || '-';
+                else if (col.id === 'dictation') val = s.exam2_dictation || '-';
+                else if (col.id === 'recitation') val = s.exam2_recitation || '-';
+                else if (col.id === 'ia_pr') val = s.exam2_ia_pr || '-';
+                else if (col.id === 'oral') val = s.exam2_oral || '-';
+                else if (col.id === 'lab') val = s.exam2_lab || '-';
+                return { value: val };
+            });
 
             return {
                 ...s,
