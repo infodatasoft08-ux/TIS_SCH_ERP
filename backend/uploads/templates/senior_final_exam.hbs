@@ -8,6 +8,8 @@
 
   <!-- Embedding CSS exactly where it belongs for Handlebars Puppeteer, avoiding external file loading issues -->
   <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&family=Montserrat:wght@400;600;700;800;900&family=Poppins:wght@400;600;700;800;900&family=Playfair+Display:wght@700;900&display=swap');
+
     @font-face {
       font-family: 'Luckiest Guy';
       src: url('data:font/truetype;charset=utf-8;base64,{{luckiestFontBase64}}') format('truetype');
@@ -121,7 +123,11 @@
 
     .table-marks {
       font-family: 'Inter', sans-serif;
-      font-weight: 500;
+      font-weight: 700;
+    }
+
+    .table-marks tbody td {
+      font-weight: 700;
     }
 
     /* Utilities */
@@ -162,7 +168,7 @@
     }
 
     .font-semibold {
-      font-weight: 600;
+      font-weight: 700;
     }
 
     .font-bold {
@@ -379,7 +385,7 @@
 
     .row-total td {
       background-color: rgba(241, 245, 249, 0.6);
-      font-weight: 600;
+      font-weight: 700;
       color: var(--dark-blue);
     }
 
@@ -604,11 +610,11 @@
         <!-- School Name in 2 Stacked Lines -->
         <div style="text-align: left; display: flex; flex-direction: column; justify-content: center;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 38px; color: #8B1E1E; line-height: 0.92; letter-spacing: 1px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 39px; color: #8B1E1E; line-height: 0.92; letter-spacing: 2px;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 30px; color: #8B1E1E; line-height: 1.0; letter-spacing: 0.7px; margin-top: 2px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 31px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px; margin-top: 2px;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -854,7 +860,7 @@
         <tbody>
           {{#each subjects}}
           <tr>
-            <td style="text-align: left; font-weight: 600; color: var(--dark-blue);">{{this.subject_name}}</td>
+            <td style="text-align: left; font-weight: 700; color: var(--dark-blue);">{{this.subject_name}}</td>
             <td>{{this.max}}</td>
             <!-- Term 1 marks -->
             {{#each this.exam1_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
@@ -947,7 +953,7 @@
 
       .att-title {
         color: #0e4ea6;
-        font-weight: 800;
+        font-weight: 700;
         font-size: 10px;
         text-transform: uppercase;
         margin-bottom: 3px;
@@ -986,7 +992,7 @@
         color: #475569;
         font-size: 9px;
         text-transform: uppercase;
-        font-weight: 800;
+        font-weight: 700;
         letter-spacing: 0.25px;
         line-height: 1.1;
         display: flex;
@@ -1005,7 +1011,7 @@
       .att-val {
         color: #0f172a;
         font-size: 13px;
-        font-weight: 800;
+        font-weight: 700;
         margin-top: 1px;
       }
 
@@ -1085,7 +1091,7 @@
 
       .tile-label {
         font-size: 9.5px;
-        font-weight: 800;
+        font-weight: 700;
         text-transform: uppercase;
         letter-spacing: 0.5px;
         margin-bottom: 2.5px;
@@ -1103,8 +1109,8 @@
       }
 
       .tile-val {
-        font-size: 15.5px;
-        font-weight: 900;
+        font-size: 16px;
+        font-weight: 700;
         line-height: 1.1;
       }
 
@@ -1114,7 +1120,7 @@
         padding: 2.5px 14px;
         border-radius: 9999px;
         font-size: 12.5px;
-        font-weight: 900;
+        font-weight: 700;
         letter-spacing: 0.4px;
         box-shadow: 0 1px 3px rgba(22, 163, 74, 0.25);
         display: inline-block;
@@ -1126,7 +1132,7 @@
         padding: 2.5px 14px;
         border-radius: 9999px;
         font-size: 12.5px;
-        font-weight: 900;
+        font-weight: 700;
         letter-spacing: 0.4px;
         box-shadow: 0 1px 3px rgba(220, 38, 38, 0.25);
         display: inline-block;
@@ -1221,9 +1227,9 @@
                 <circle cx="6.5" cy="6.5" r="2.5" fill="currentColor"></circle>
                 <circle cx="17.5" cy="17.5" r="2.5" fill="currentColor"></circle>
               </svg>
-              <span>Percentage</span>
+              <span><b>Percentage</b></span>
             </div>
-            <div class="tile-val">{{percentage}}%</div>
+            <div class="tile-val"><b>{{percentage}}%</b></div>
           </div>
 
           <!-- Final Result Tile -->
@@ -1244,11 +1250,11 @@
                 <line x1="9" y1="9" x2="15" y2="15"></line>
               </svg>
               {{/if}}
-              <span>Final Result</span>
+              <span><b>Final Result</b></span>
             </div>
             <div class="tile-val">
               <span class="{{#if (eq finalResult 'Pass')}}pill-badge-pass{{else}}pill-badge-fail{{/if}}">
-                {{finalResult}}
+                <b>{{finalResult}}</b>
               </span>
             </div>
           </div>
@@ -1261,17 +1267,19 @@
                   points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2">
                 </polygon>
               </svg>
-              <span>{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</span>
+              <span><b>{{#if showFinalResult}}Promotion Status{{else}}Overall Grade{{/if}}</b></span>
             </div>
             <div class="tile-val"
               style="color: {{#if showFinalResult}}#a16207{{else if grandGrade}}{{gradeColor grandGrade}}{{else}}#a16207{{/if}};">
-              {{#if showFinalResult}}
-              {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
-              {{else if grandGrade}}
-              {{grandGrade}}
-              {{else}}
-              {{finalResult}}
-              {{/if}}
+              <b>
+                {{#if showFinalResult}}
+                {{#if promotionStatus}}{{promotionStatus}}{{else}}{{finalResult}}{{/if}}
+                {{else if grandGrade}}
+                {{grandGrade}}
+                {{else}}
+                {{finalResult}}
+                {{/if}}
+              </b>
             </div>
           </div>
         </div>
@@ -1351,7 +1359,7 @@
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            <span>Attendance Record</span>
+            <span><b>Attendance Record</b></span>
           </div>
           <div class="att-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
             <div class="att-pill">
@@ -1363,7 +1371,7 @@
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                <span>Total Working Days</span>
+                <span><b>Total Working Days</b></span>
               </div>
               <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
@@ -1377,7 +1385,7 @@
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                   <path d="m9 16 2 2 4-4"></path>
                 </svg>
-                <span>Days Present</span>
+                <span><b>Days Present</b></span>
               </div>
               <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
@@ -1423,7 +1431,7 @@
               <line x1="8" y1="2" x2="8" y2="6"></line>
               <line x1="3" y1="10" x2="21" y2="10"></line>
             </svg>
-            <span>Attendance Record</span>
+            <span><b>Attendance Record</b></span>
           </div>
           <div class="att-grid" style="grid-template-columns: 1fr 1fr; gap: 6px;">
             <div class="att-pill">
@@ -1435,7 +1443,7 @@
                   <line x1="8" y1="2" x2="8" y2="6"></line>
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                 </svg>
-                <span>Total Working Days</span>
+                <span><b>Total Working Days</b></span>
               </div>
               <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
@@ -1449,7 +1457,7 @@
                   <line x1="3" y1="10" x2="21" y2="10"></line>
                   <path d="m9 16 2 2 4-4"></path>
                 </svg>
-                <span>Days Present</span>
+                <span><b>Days Present</b></span>
               </div>
               <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
