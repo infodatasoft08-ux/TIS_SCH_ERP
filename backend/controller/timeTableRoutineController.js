@@ -762,8 +762,14 @@ const getTimeTableWithSubjectClass = async(req, res) => {
     if (!studentId) return res.status(400).json({ error: 'Invalid student id' });
 
     try {
-        const [srows] = await pool.execute('SELECT class_id FROM students WHERE id = ?', [studentId]);
-        if (srows.length === 0) return res.status(404).json({ error: 'Student not found' });
+        const [srows] = await pool.execute(
+            `SELECT sar.class_id 
+             FROM student_academic_records sar
+             WHERE sar.student_id = ?
+             ORDER BY sar.academic_year_id DESC, sar.id DESC LIMIT 1`,
+            [studentId]
+        );
+        if (srows.length === 0) return res.status(404).json({ error: 'Student academic record not found' });
         const classId = srows[0].class_id;
         if (!classId) return res.status(400).json({ error: 'Student has no class assigned' });
 
@@ -772,7 +778,7 @@ const getTimeTableWithSubjectClass = async(req, res) => {
             FROM class_routines cr
             LEFT JOIN subjects s ON s.id = cr.subject_id
             LEFT JOIN teachers t ON t.id = cr.teacher_id
-            LEFT JOIN users u ON u.id = cr.teacher_id
+            LEFT JOIN users u ON u.id = t.user_id
             WHERE cr.class_id = ?
             ORDER BY FIELD(cr.day_of_week, 'MON','TUE','WED','THU','FRI','SAT','SUN'), cr.start_time`,
             [classId]

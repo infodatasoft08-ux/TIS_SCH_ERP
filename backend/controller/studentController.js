@@ -197,53 +197,84 @@ const GetStudent = async (req, res) => {
   const q = req.query.q ? `%${req.query.q}%` : '%';
   const gradeId = req.query.grade_id && req.query.grade_id !== '' ? Number(req.query.grade_id) : null;
   const classId = req.query.class_id && req.query.class_id !== '' ? Number(req.query.class_id) : null;
+  const academicYearId = req.query.academic_year_id && req.query.academic_year_id !== '' && req.query.academic_year_id !== 'all' ? Number(req.query.academic_year_id) : null;
   const limit = Math.min(Math.max(parseInt(req.query.limit) || 100, 1), 1000);
   const offset = Math.max(parseInt(req.query.offset) || 0, 0);
 
   try {
+    let sql;
+    let params;
 
-    let sql = `
-      SELECT 
-        s.*,
-        u.id AS user_id,
-        u.name AS user_name,
-        u.email AS user_email,
-        u.gender AS user_gender,
-        u.phone AS user_phone,
-        u.avatar_url AS user_avatar_url,
-        u.address AS user_address,
-        u.adhar_no AS user_adhar_no,
-        ar.id AS academic_id,
-        ar.academic_year_id,
-        ar.roll_no,
-        ar.grade_id,
-        ar.class_id,
-        g.name AS grade_name,
-        c.name AS class_name,
-        ay.name AS academic_year
-      FROM students s
-      JOIN users u ON u.id = s.user_id
-      JOIN student_academic_records ar ON ar.student_id = s.id
-      JOIN (
-        SELECT student_id, MAX(id) as latest_id
-        FROM student_academic_records
-        GROUP BY student_id
-      ) latest ON latest.student_id = s.id 
-                AND ar.id = latest.latest_id
-      LEFT JOIN grades g ON g.id = ar.grade_id
-      LEFT JOIN classes c ON c.id = ar.class_id
-      LEFT JOIN academic_years ay ON ay.id = ar.academic_year_id
-      WHERE (u.name LIKE ? OR u.email LIKE ? OR s.admission_no LIKE ? OR ar.roll_no LIKE ? OR g.name LIKE ? OR c.name LIKE ?)
-    `;
-
-    const params = [q, q, q, q, q, q];
+    if (academicYearId && !isNaN(academicYearId)) {
+      sql = `
+        SELECT 
+          s.*,
+          u.id AS user_id,
+          u.name AS user_name,
+          u.email AS user_email,
+          u.gender AS user_gender,
+          u.phone AS user_phone,
+          u.avatar_url AS user_avatar_url,
+          u.address AS user_address,
+          u.adhar_no AS user_adhar_no,
+          ar.id AS academic_id,
+          ar.academic_year_id,
+          ar.roll_no,
+          ar.grade_id,
+          ar.class_id,
+          g.name AS grade_name,
+          c.name AS class_name,
+          ay.name AS academic_year
+        FROM students s
+        JOIN users u ON u.id = s.user_id
+        JOIN student_academic_records ar ON ar.student_id = s.id AND ar.academic_year_id = ?
+        LEFT JOIN grades g ON g.id = ar.grade_id
+        LEFT JOIN classes c ON c.id = ar.class_id
+        LEFT JOIN academic_years ay ON ay.id = ar.academic_year_id
+        WHERE (u.name LIKE ? OR u.email LIKE ? OR s.admission_no LIKE ? OR ar.roll_no LIKE ? OR g.name LIKE ? OR c.name LIKE ?)
+      `;
+      params = [academicYearId, q, q, q, q, q, q];
+    } else {
+      sql = `
+        SELECT 
+          s.*,
+          u.id AS user_id,
+          u.name AS user_name,
+          u.email AS user_email,
+          u.gender AS user_gender,
+          u.phone AS user_phone,
+          u.avatar_url AS user_avatar_url,
+          u.address AS user_address,
+          u.adhar_no AS user_adhar_no,
+          ar.id AS academic_id,
+          ar.academic_year_id,
+          ar.roll_no,
+          ar.grade_id,
+          ar.class_id,
+          g.name AS grade_name,
+          c.name AS class_name,
+          ay.name AS academic_year
+        FROM students s
+        JOIN users u ON u.id = s.user_id
+        JOIN student_academic_records ar ON ar.student_id = s.id
+        JOIN (
+          SELECT student_id, MAX(id) as latest_id
+          FROM student_academic_records
+          GROUP BY student_id
+        ) latest ON latest.student_id = s.id 
+                  AND ar.id = latest.latest_id
+        LEFT JOIN grades g ON g.id = ar.grade_id
+        LEFT JOIN classes c ON c.id = ar.class_id
+        LEFT JOIN academic_years ay ON ay.id = ar.academic_year_id
+        WHERE (u.name LIKE ? OR u.email LIKE ? OR s.admission_no LIKE ? OR ar.roll_no LIKE ? OR g.name LIKE ? OR c.name LIKE ?)
+      `;
+      params = [q, q, q, q, q, q];
+    }
 
     if (gradeId) { sql += ' AND ar.grade_id = ?'; params.push(gradeId); }
     if (classId) { sql += ' AND ar.class_id = ?'; params.push(classId); }
 
     sql += ` ORDER BY s.id DESC LIMIT ${limit} OFFSET ${offset}`;
-    // sql += ' ORDER BY s.id DESC LIMIT ? OFFSET ?';
-    // params.push(limit, offset);
     const [rows] = await db.execute(sql, params);
 
     const formattedStudents = rows.map(student => ({
@@ -266,50 +297,88 @@ const GetStudent = async (req, res) => {
 
 
 const GetStudentsForInvoice = async (req, res) => {
-  const classId = req.query.class_id;
-  const gradeId = req.query.grade_id;
+  const classId = req.query.class_id && req.query.class_id !== '' ? Number(req.query.class_id) : null;
+  const gradeId = req.query.grade_id && req.query.grade_id !== '' ? Number(req.query.grade_id) : null;
+  let academicYearId = req.query.academic_year_id && req.query.academic_year_id !== '' && req.query.academic_year_id !== 'all' ? Number(req.query.academic_year_id) : null;
+  if (isNaN(academicYearId)) academicYearId = null;
 
   try {
-    let whereClause = "";
+    let targetAyId = academicYearId;
+    if (!targetAyId) {
+      try {
+        const activeAy = await getActiveAcademicYear(null, db);
+        targetAyId = activeAy.id;
+      } catch (_) {
+        targetAyId = null;
+      }
+    }
+
+    let whereClause = [];
     let queryParams = [];
 
+    if (targetAyId) {
+      whereClause.push("ar.academic_year_id = ?");
+      queryParams.push(targetAyId);
+    }
     if (gradeId) {
-      whereClause = "WHERE ar.grade_id = ?";
+      whereClause.push("ar.grade_id = ?");
       queryParams.push(gradeId);
     } else if (classId) {
-      whereClause = "WHERE ar.class_id = ?";
+      whereClause.push("ar.class_id = ?");
       queryParams.push(classId);
     }
 
-    const [students] = await db.execute(
-      `
-      SELECT
-        s.id,
-        u.name,
-        u.name AS user_name,
-        ar.roll_no,
-        s.admission_no
-      FROM students s
-      INNER JOIN users u ON u.id = s.user_id
-      INNER JOIN student_academic_records ar ON ar.student_id = s.id
-      INNER JOIN (
-        SELECT student_id, MAX(id) latest_id
-        FROM student_academic_records
-        GROUP BY student_id
-      ) latest
-        ON latest.student_id = s.id
-       AND latest.latest_id = ar.id
-      ${whereClause}
-      ORDER BY u.name
-      `,
-      queryParams
-    );
+    const whereSql = whereClause.length > 0 ? `WHERE ${whereClause.join(" AND ")}` : "";
+
+    let sql;
+    if (targetAyId) {
+      sql = `
+        SELECT
+          s.id,
+          u.name,
+          u.name AS user_name,
+          ar.roll_no,
+          s.admission_no,
+          ar.academic_year_id,
+          ar.id AS student_academic_id
+        FROM students s
+        INNER JOIN users u ON u.id = s.user_id
+        INNER JOIN student_academic_records ar ON ar.student_id = s.id
+        ${whereSql}
+        ORDER BY u.name
+      `;
+    } else {
+      sql = `
+        SELECT
+          s.id,
+          u.name,
+          u.name AS user_name,
+          ar.roll_no,
+          s.admission_no,
+          ar.academic_year_id,
+          ar.id AS student_academic_id
+        FROM students s
+        INNER JOIN users u ON u.id = s.user_id
+        INNER JOIN student_academic_records ar ON ar.student_id = s.id
+        INNER JOIN (
+          SELECT student_id, MAX(id) latest_id
+          FROM student_academic_records
+          GROUP BY student_id
+        ) latest
+          ON latest.student_id = s.id
+         AND latest.latest_id = ar.id
+        ${whereSql}
+        ORDER BY u.name
+      `;
+    }
+
+    const [students] = await db.execute(sql, queryParams);
 
     res.json({
       students
     });
   } catch (error) {
-    console.error(error);
+    console.error("GET /api/students/getstudents/invoice error:", error);
     res.status(500).json({
       error: "Internal server error"
     });

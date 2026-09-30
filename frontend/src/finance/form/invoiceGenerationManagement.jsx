@@ -362,9 +362,12 @@ export default function Invoices() {
     try {
       setLoadingStudents(true);
 
-      const res = await API.get(
-        `students/getstudents/invoice?grade_id=${classId}`
-      );
+      let url = `students/getstudents/invoice?grade_id=${classId}`;
+      if (filterAcademicYear && filterAcademicYear !== "all") {
+        url += `&academic_year_id=${filterAcademicYear}`;
+      }
+
+      const res = await API.get(url);
 
       setStudents(res.data.students || []);
     } catch (err) {

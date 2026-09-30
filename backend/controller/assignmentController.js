@@ -134,6 +134,8 @@ const GetAssignment = async (req, res) => {
         if (lessonId) { where.push('a.lesson_id = ?'); params.push(lessonId); }
         if (subjectId) { where.push('a.subject_id = ?'); params.push(subjectId); }
         if (classId) { where.push('COALESCE(a.class_id, l.class_id) = ?'); params.push(classId); }
+        const academicYearId = req.query.academic_year_id && req.query.academic_year_id !== 'all' ? toInt(req.query.academic_year_id) : null;
+        if (academicYearId) { where.push('a.academic_year_id = ?'); params.push(academicYearId); }
 
         if (from && to) {
             if (!isDateString(from) || !isDateString(to)) return res.status(400).json({ error: 'from/to must be YYYY-MM-DD' });
@@ -514,11 +516,15 @@ const GetStudentAssignments = async (req, res) => {
 
     try {
         // fetch assignments for student's class OR lesson-based assignments for their class
-        // find student's class
-        const [srows] = await db.execute('SELECT id, class_id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1', [studentId]);
-        if (srows.length === 0) return res.status(404).json({ error: 'Student not found' });
+        const reqAyId = req.query.academic_year_id && req.query.academic_year_id !== 'all' ? toInt(req.query.academic_year_id) : null;
+        let srows;
+        if (reqAyId) {
+            [srows] = await db.execute('SELECT id, class_id FROM student_academic_records WHERE student_id = ? AND academic_year_id = ? ORDER BY id DESC LIMIT 1', [studentId, reqAyId]);
+        } else {
+            [srows] = await db.execute('SELECT id, class_id FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC LIMIT 1', [studentId]);
+        }
+        if (srows.length === 0) return res.status(404).json({ error: 'Student academic record not found' });
         const studentClassId = srows[0].class_id || null;
-        // const academicYearId = srows[0].id || null;
 
         const baseSql = `
         FROM assignments a
@@ -532,7 +538,10 @@ const GetStudentAssignments = async (req, res) => {
         // filter assignments applicable to student's class (either assignment.class_id or lesson.class_id)
         let whereSql = ' WHERE (COALESCE(a.class_id, l.class_id) = ?)';
         params.push(studentClassId);
-        // params.push(academicYearId);
+        if (reqAyId) {
+            whereSql += ' AND a.academic_year_id = ?';
+            params.push(reqAyId);
+        }
 
         const countSql = `SELECT COUNT(*) AS total ${baseSql} ${whereSql}`;
         const [countRows] = await db.execute(countSql, params);

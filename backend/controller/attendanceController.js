@@ -861,7 +861,7 @@ const GetAttendanceSummery = async (req, res) => {
        FROM attendance a
        JOIN students s ON s.id = a.student_id
        JOIN users u ON u.id = s.user_id
-       LEFT JOIN student_academic_records sar ON sar.student_id = s.id AND sar.class_id = a.class_id
+       LEFT JOIN student_academic_records sar ON sar.id = COALESCE(a.student_academic_id, (SELECT MAX(id) FROM student_academic_records WHERE student_id = s.id AND class_id = a.class_id))
        LEFT JOIN users t ON t.id = a.recorded_by
        LEFT JOIN classes c ON c.id = a.class_id
        LEFT JOIN lessons l ON l.id = a.lesson_id

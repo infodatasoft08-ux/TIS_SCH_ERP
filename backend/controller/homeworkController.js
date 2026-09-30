@@ -242,6 +242,10 @@ const getHomeworks = async (req, res) => {
             sql += " AND h.homework_date = ?";
             params.push(date);
         }
+        if (req.query.academic_year_id && req.query.academic_year_id !== 'all') {
+            sql += " AND h.academic_year_id = ?";
+            params.push(req.query.academic_year_id);
+        }
 
         sql += " ORDER BY h.homework_date DESC, h.id DESC";
 

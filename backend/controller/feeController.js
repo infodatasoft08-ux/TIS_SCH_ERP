@@ -375,17 +375,28 @@ const CreateInvoice = async (req, res) => {
     await conn.beginTransaction();
 
     // Validate system has an active academic year
-    await getActiveAcademicYear(null, conn);
+    const activeAy = await getActiveAcademicYear(null, conn);
 
-    // fetch student and class (latest academic record)
-    const [arRows] = await conn.execute(
+    // fetch student and class (active academic year record preferred)
+    let [arRows] = await conn.execute(
       `SELECT ar.id AS academic_id, ar.class_id, ar.student_id, ar.grade_id
              FROM student_academic_records ar
-             WHERE ar.student_id = ?
-             ORDER BY ar.academic_year_id DESC, ar.id DESC LIMIT 1
+             WHERE ar.student_id = ? AND ar.academic_year_id = ?
+             ORDER BY ar.id DESC LIMIT 1
              FOR UPDATE`,
-      [student_id]
+      [student_id, activeAy.id]
     );
+
+    if (arRows.length === 0) {
+      [arRows] = await conn.execute(
+        `SELECT ar.id AS academic_id, ar.class_id, ar.student_id, ar.grade_id
+               FROM student_academic_records ar
+               WHERE ar.student_id = ?
+               ORDER BY ar.academic_year_id DESC, ar.id DESC LIMIT 1
+               FOR UPDATE`,
+        [student_id]
+      );
+    }
 
     if (arRows.length === 0) {
       // Check if student exists at all
@@ -626,17 +637,30 @@ const CreateBulkInvoices = async (req, res) => {
     await conn.beginTransaction();
 
     // Validate system has an active academic year
-    await getActiveAcademicYear(null, conn);
+    const activeAy = await getActiveAcademicYear(null, conn);
 
-    // Get students of class from academic records
-    // ...
+    // Get students of class from academic records for active academic year (fallback to latest if not present)
     const placeholders = student_ids.map(() => "?").join(",");
-    const [students] = await conn.execute(
-      `SELECT DISTINCT sar.student_id as id, sar.id as academic_id, sar.grade_id, sar.class_id
+    let [students] = await conn.execute(
+      `SELECT sar.student_id as id, sar.id as academic_id, sar.grade_id, sar.class_id
        FROM student_academic_records sar
-       WHERE sar.student_id IN (${placeholders})`,
-      [...student_ids]
+       WHERE sar.student_id IN (${placeholders}) AND sar.academic_year_id = ?`,
+      [...student_ids, activeAy.id]
     );
+
+    if (students.length === 0) {
+      [students] = await conn.execute(
+        `SELECT sar.student_id as id, sar.id as academic_id, sar.grade_id, sar.class_id
+         FROM student_academic_records sar
+         JOIN (
+           SELECT student_id, MAX(id) as latest_id
+           FROM student_academic_records
+           WHERE student_id IN (${placeholders})
+           GROUP BY student_id
+         ) latest ON latest.student_id = sar.student_id AND latest.latest_id = sar.id`,
+        [...student_ids]
+      );
+    }
 
     if (students.length === 0) {
       throw new Error("No valid students found");

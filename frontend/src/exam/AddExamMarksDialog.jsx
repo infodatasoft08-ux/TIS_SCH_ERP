@@ -121,6 +121,9 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             if (!exam.grade_id && exam.class_id) {
                fetchUrl = `/students/get/student?class_id=${exam.class_id}&limit=500`;
             }
+            if (exam.academic_year_id) {
+               fetchUrl += `&academic_year_id=${exam.academic_year_id}`;
+            }
 
             const [studentsRes, resultsRes] = await Promise.all([
                 API.get(fetchUrl),
