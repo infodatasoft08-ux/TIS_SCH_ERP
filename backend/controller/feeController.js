@@ -1372,6 +1372,110 @@ const ReverseInvoiceFine = async (req, res) => {
   }
 };
 
+const AddFeeTypesToInvoice = async (req, res) => {
+  const invoiceId = Number(req.params.id);
+  const { fee_types } = req.body;
+
+  if (!invoiceId) {
+    return res.status(400).json({ error: 'Valid invoice ID is required' });
+  }
+
+  if (!Array.isArray(fee_types) || fee_types.length === 0) {
+    return res.status(400).json({ error: 'At least one fee type is required' });
+  }
+
+  const conn = await pool.getConnection();
+  try {
+    await conn.beginTransaction();
+
+    const [[invoice]] = await conn.execute(
+      `SELECT id, student_id, grade_id, months_count, amount_due, amount_paid, status
+       FROM student_invoices
+       WHERE id = ?
+       FOR UPDATE`,
+      [invoiceId]
+    );
+
+    if (!invoice) {
+      await conn.rollback();
+      return res.status(404).json({ error: 'Invoice not found' });
+    }
+
+    if (invoice.status === 'carried_forward') {
+      await conn.rollback();
+      return res.status(400).json({ error: 'Cannot add fee types to a carried forward invoice' });
+    }
+
+    const [existingLines] = await conn.execute(
+      `SELECT fee_type_id FROM invoice_lines WHERE invoice_id = ?`,
+      [invoiceId]
+    );
+    const existingFeeTypeIds = new Set(existingLines.map(l => l.fee_type_id));
+
+    let additionalTotal = 0;
+    const itemsToInsert = [];
+
+    for (const item of fee_types) {
+      const feeTypeId = Number(item.fee_type_id);
+      const amount = Number(item.amount);
+
+      if (!feeTypeId || isNaN(amount) || amount <= 0) {
+        await conn.rollback();
+        return res.status(400).json({ error: 'Each fee type must have a valid fee_type_id and positive amount' });
+      }
+
+      if (existingFeeTypeIds.has(feeTypeId)) {
+        await conn.rollback();
+        return res.status(400).json({ error: `Fee type #${feeTypeId} is already added to this invoice` });
+      }
+
+      itemsToInsert.push({ feeTypeId, amount });
+      additionalTotal += amount;
+      existingFeeTypeIds.add(feeTypeId);
+    }
+
+    // Insert new invoice lines
+    for (const item of itemsToInsert) {
+      await conn.execute(
+        `INSERT INTO invoice_lines (invoice_id, fee_type_id, amount) VALUES (?, ?, ?)`,
+        [invoiceId, item.feeTypeId, item.amount]
+      );
+    }
+
+    const currentDue = Number(invoice.amount_due || 0);
+    const currentPaid = Number(invoice.amount_paid || 0);
+    const newAmountDue = Number((currentDue + additionalTotal).toFixed(2));
+
+    let newStatus = invoice.status;
+    if (newStatus === 'paid' && currentPaid < newAmountDue) {
+      newStatus = currentPaid > 0 ? 'partially_paid' : 'pending';
+    }
+
+    await conn.execute(
+      `UPDATE student_invoices
+       SET amount_due = ?, status = ?
+       WHERE id = ?`,
+      [newAmountDue, newStatus, invoiceId]
+    );
+
+    await conn.commit();
+
+    return res.json({
+      success: true,
+      message: `${itemsToInsert.length} fee type(s) added successfully`,
+      new_amount_due: newAmountDue,
+      status: newStatus
+    });
+
+  } catch (err) {
+    await conn.rollback();
+    console.error('AddFeeTypesToInvoice error:', err);
+    return res.status(500).json({ error: err.message || 'Internal server error' });
+  } finally {
+    conn.release();
+  }
+};
+
 
 
 /**
@@ -1494,6 +1598,9 @@ const GetInvoiceById = async (req, res) => {
     if (rows.length === 0) return res.status(404).json({ error: 'Invoice not found' });
     const invoice = rows[0];
     const [student_academic] = await pool.execute('SELECT grade_id, class_id, academic_year_id, roll_no FROM student_academic_records WHERE student_id = ? ORDER BY academic_year_id DESC, id DESC', [invoice.student_id]);
+    if (!invoice.grade_id && student_academic.length > 0) {
+      invoice.grade_id = student_academic[0].grade_id;
+    }
     const [lines] = await pool.execute(
       `SELECT il.*, ft.name AS fee_name, ft.code AS fee_code
             FROM invoice_lines il JOIN fee_types ft ON ft.id = il.fee_type_id
@@ -2810,6 +2917,7 @@ module.exports = {
   AddPreviousDues,
   AddInvoiceDiscount,
   ReverseInvoiceFine,
+  AddFeeTypesToInvoice,
   GetInvoices,
   GetFinesByInvoiceId,
   GetInvoiceById,

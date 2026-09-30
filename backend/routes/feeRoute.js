@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../middleware/auth');
 const { restrictRoles } = require('../middleware/admincheck');
-const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF, ExportDueInvoicesCSV, ExportPaymentHistoryCSV, RestoreInvoiceStatus } = require('../controller/feeController');
+const { createFeeType, GetFeeTypes, GetFeeTypeById, UpdateFeeType, CreateClassFeeStructure, GetClassFeeStructure, UpdateClassFeeStructure, DeleteClassFeeStructure, CreateInvoice, GetInvoices, GetInvoiceById, DownloadInvoicePDF, DownloadPaymentReceiptPDF, DeleteInvoice, AddPaymentToInvoice, GetPayments, GetStudentFeeSummary, CreateBulkInvoices, UpdateInvoiceWithFine, AddInvoiceFine, AddPreviousDues, AddInvoiceDiscount, ReverseInvoiceFine, AddFeeTypesToInvoice, GetFinesByInvoiceId, GetStudentFeeFullDetails, DownloadCombinedPDF, DeleteFeeType, DisableAutoGenerate, BulkDeleteInvoices, DownloadBulkInvoicePDF, ExportDueInvoicesCSV, ExportPaymentHistoryCSV, RestoreInvoiceStatus } = require('../controller/feeController');
 
 
 // Fee Type Routes
@@ -27,6 +27,7 @@ router.delete('/delete/class-structure/:id', auth, restrictRoles([1, 5]), Delete
  * ---------------------- */
 // router.post('/add/generate-invoice', auth, CreateInvoice);
 router.post('/add/generate-invoice', auth, restrictRoles([1, 5]), CreateBulkInvoices);
+router.post('/add/invoices/:id/add-fee-types', auth, restrictRoles([1, 5]), AddFeeTypesToInvoice);
 router.post('/add/invoices/:id/add-fine', auth, restrictRoles([1, 5]), AddInvoiceFine);
 router.post('/add/invoices/:id/add-previous-dues', auth, restrictRoles([1, 5]), AddPreviousDues);
 router.post('/add/invoices/:id/add-discount', auth, restrictRoles([1, 5]), AddInvoiceDiscount);

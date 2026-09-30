@@ -43,7 +43,11 @@ import {
   FileText,
   CheckCircle,
   AlertCircle,
-  AlertTriangle
+  AlertTriangle,
+  Plus,
+  Trash2,
+  ChevronsUpDown,
+  Check
 } from "lucide-react";
 import { toast } from "sonner";
 import { Label } from "@/components/ui/label";
@@ -51,6 +55,20 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAuth } from '@/auth/AuthContext';
 import { printPdfBlob } from '@/utils/fileHelper';
+import { cn } from "@/lib/utils";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 export default function InvoiceDetails() {
   const { invoiceId } = useParams();
@@ -83,6 +101,15 @@ export default function InvoiceDetails() {
   const [processingPdf, setProcessingPdf] = useState(false);
   const [printingReceiptId, setPrintingReceiptId] = useState(null);
 
+  // Add Fee Types dialog state
+  const [addFeeTypeDialogOpen, setAddFeeTypeDialogOpen] = useState(false);
+  const [loadingAvailableFees, setLoadingAvailableFees] = useState(false);
+  const [availableFeeOptions, setAvailableFeeOptions] = useState([]);
+  const [selectedFeeTypeIds, setSelectedFeeTypeIds] = useState([]);
+  const [feeTypeAmounts, setFeeTypeAmounts] = useState({});
+  const [addingFeeTypes, setAddingFeeTypes] = useState(false);
+  const [feeTypeSearchOpen, setFeeTypeSearchOpen] = useState(false);
+
   useEffect(() => {
     if (invoiceId) {
       loadInvoiceDetails();
@@ -102,6 +129,147 @@ export default function InvoiceDetails() {
       setLoading(false);
     }
   }
+
+  const handleOpenAddFeeTypeModal = async () => {
+    setAddFeeTypeDialogOpen(true);
+    setSelectedFeeTypeIds([]);
+    setFeeTypeAmounts({});
+    setLoadingAvailableFees(true);
+
+    try {
+      const gradeId = invoice?.grade_id;
+      let classStructureFees = [];
+      if (gradeId) {
+        try {
+          const res = await API.get('/fee/list/class-structure', {
+            params: { grade_id: gradeId, limit: 1000 }
+          });
+          classStructureFees = res.data.fee_structure || [];
+        } catch (e) {
+          console.error("Error fetching class fee structure", e);
+        }
+      }
+
+      let allFeeTypes = [];
+      try {
+        const resTypes = await API.get('/fee/list/feestype', { params: { limit: 1000 } });
+        allFeeTypes = resTypes.data.fee_types || [];
+      } catch (e) {
+        console.error("Error fetching all fee types", e);
+      }
+
+      // Existing fee types already present in this invoice
+      const existingFeeTypeIds = new Set((invoice?.lines || []).map(l => Number(l.fee_type_id)));
+
+      // Map class structure monthly amounts by fee_type_id
+      const structureMap = new Map();
+      classStructureFees.forEach(cs => {
+        structureMap.set(Number(cs.fee_type_id), cs);
+      });
+
+      const options = [];
+      const seenIds = new Set();
+
+      // First add from class structure (if not already in invoice lines)
+      classStructureFees.forEach(cs => {
+        const fId = Number(cs.fee_type_id);
+        if (!existingFeeTypeIds.has(fId) && !seenIds.has(fId)) {
+          seenIds.add(fId);
+          options.push({
+            fee_type_id: fId,
+            fee_name: cs.fee_name,
+            fee_code: cs.fee_code,
+            monthly_amount: Number(cs.monthly_amount || 0),
+            has_structure: true
+          });
+        }
+      });
+
+      // Then add any other fee types from allFeeTypes (if not already added)
+      allFeeTypes.forEach(ft => {
+        const fId = Number(ft.id);
+        if (!existingFeeTypeIds.has(fId) && !seenIds.has(fId)) {
+          seenIds.add(fId);
+          const struct = structureMap.get(fId);
+          options.push({
+            fee_type_id: fId,
+            fee_name: ft.name,
+            fee_code: ft.code,
+            monthly_amount: struct ? Number(struct.monthly_amount || 0) : 0,
+            has_structure: Boolean(struct)
+          });
+        }
+      });
+
+      setAvailableFeeOptions(options);
+    } catch (err) {
+      console.error("Failed to load fee types", err);
+      toast.error("Failed to load available fee types");
+    } finally {
+      setLoadingAvailableFees(false);
+    }
+  };
+
+  const toggleFeeTypeSelection = (fee) => {
+    const fId = fee.fee_type_id;
+    const isSelected = selectedFeeTypeIds.includes(fId);
+    if (isSelected) {
+      setSelectedFeeTypeIds(prev => prev.filter(id => id !== fId));
+      setFeeTypeAmounts(prev => {
+        const copy = { ...prev };
+        delete copy[fId];
+        return copy;
+      });
+    } else {
+      setSelectedFeeTypeIds(prev => [...prev, fId]);
+      const months = Math.max(1, Number(invoice?.months_count || 1));
+      const defaultAmount = Number((Number(fee.monthly_amount || 0) * months).toFixed(2));
+      setFeeTypeAmounts(prev => ({
+        ...prev,
+        [fId]: defaultAmount > 0 ? defaultAmount.toString() : ""
+      }));
+    }
+  };
+
+  const handleAddFeeTypesSubmit = async (e) => {
+    e.preventDefault();
+    if (selectedFeeTypeIds.length === 0) {
+      toast.error("Please select at least one fee type to add");
+      return;
+    }
+
+    const payloadItems = [];
+    for (const fId of selectedFeeTypeIds) {
+      const fee = availableFeeOptions.find(opt => opt.fee_type_id === fId);
+      const amtStr = feeTypeAmounts[fId];
+      const amt = parseFloat(amtStr);
+      if (isNaN(amt) || amt <= 0) {
+        toast.error(`Please enter a valid amount greater than 0 for ${fee?.fee_name || 'selected fee'}`);
+        return;
+      }
+      payloadItems.push({
+        fee_type_id: fId,
+        amount: amt
+      });
+    }
+
+    setAddingFeeTypes(true);
+    try {
+      const res = await API.post(`/fee/add/invoices/${invoiceId}/add-fee-types`, {
+        fee_types: payloadItems
+      });
+      toast.success(res.data.message || "Fee types added successfully");
+      setAddFeeTypeDialogOpen(false);
+      setSelectedFeeTypeIds([]);
+      setFeeTypeAmounts({});
+      loadInvoiceDetails();
+    } catch (err) {
+      console.error("Failed to add fee types", err);
+      toast.error(err.response?.data?.error || "Failed to add fee types to invoice");
+    } finally {
+      setAddingFeeTypes(false);
+    }
+  };
 
   const handlePaymentInputChange = (e) => {
     const { name, value } = e.target;
@@ -409,6 +577,16 @@ export default function InvoiceDetails() {
             )}
             {processingPdf ? "Generating..." : "Print Invoices"}
           </Button>
+          {invoice.status !== 'carried_forward' && (
+            <Button
+              variant="outline"
+              onClick={handleOpenAddFeeTypeModal}
+              className="w-full sm:w-auto text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Add Fee Type
+            </Button>
+          )}
           {invoice.status !== 'paid' && invoice.status !== 'carried_forward' && calculateBalance() > 0 && (
             <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
               <DialogTrigger asChild>
@@ -719,11 +897,24 @@ export default function InvoiceDetails() {
 
       {/* Invoice Lines */}
       <Card>
-        <CardHeader>
-          <CardTitle>Fee Breakdown</CardTitle>
-          <CardDescription>
-            Detailed breakdown of fees in this invoice
-          </CardDescription>
+        <CardHeader className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div>
+            <CardTitle>Fee Breakdown</CardTitle>
+            <CardDescription>
+              Detailed breakdown of fees in this invoice
+            </CardDescription>
+          </div>
+          {invoice.status !== 'carried_forward' && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleOpenAddFeeTypeModal}
+              className="h-9 font-semibold text-blue-600 border-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/30 w-full sm:w-auto"
+            >
+              <Plus className="h-4 w-4 mr-1.5" />
+              Add Fee Type
+            </Button>
+          )}
         </CardHeader>
         <CardContent>
           <>
@@ -1132,6 +1323,303 @@ export default function InvoiceDetails() {
               Confirm Reverse
             </Button>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add Fee Type Dialog */}
+      <Dialog open={addFeeTypeDialogOpen} onOpenChange={setAddFeeTypeDialogOpen}>
+        <DialogContent
+          className="w-full max-w-2xl rounded-2xl"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <Plus className="h-5 w-5 text-blue-600" />
+              Add Fee Types to Invoice
+            </DialogTitle>
+            <DialogDescription>
+              Select fee types that are not yet added to Invoice INV-{invoice.id.toString().padStart(4, '0')} ({invoice.months_count} {invoice.months_count === 1 ? 'month' : 'months'})
+            </DialogDescription>
+          </DialogHeader>
+
+          {loadingAvailableFees ? (
+            <div className="py-12 flex flex-col items-center justify-center">
+              <RefreshCw className="h-7 w-7 animate-spin text-blue-600 mb-2" />
+              <p className="text-sm text-muted-foreground">Loading available fee types...</p>
+            </div>
+          ) : (
+            <form onSubmit={handleAddFeeTypesSubmit} className="space-y-4">
+              <ScrollArea className="max-h-[70vh] pr-2">
+                <div className="space-y-4 py-1">
+                  {/* Multi-select Fee Types Popover */}
+                  <div className="space-y-2 flex flex-col">
+                    <label className="text-sm font-semibold flex items-center justify-between">
+                      <span>Available Fee Types to Add *</span>
+                      <span className="text-xs font-normal text-muted-foreground">
+                        {availableFeeOptions.length} available to add
+                      </span>
+                    </label>
+
+                    {availableFeeOptions.length === 0 ? (
+                      <div className="p-4 rounded-xl border border-dashed text-center bg-muted/30 text-sm text-muted-foreground">
+                        All fee types are already added to this invoice or no fee types configured for this class.
+                      </div>
+                    ) : (
+                      <Popover open={feeTypeSearchOpen} onOpenChange={setFeeTypeSearchOpen} modal={true}>
+                        <PopoverTrigger asChild>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            className="w-full justify-between h-10 px-3 font-normal"
+                          >
+                            <span className="truncate">
+                              {selectedFeeTypeIds.length > 0
+                                ? `${selectedFeeTypeIds.length} fee type${selectedFeeTypeIds.length > 1 ? 's' : ''} selected`
+                                : "Select fee types to add..."}
+                            </span>
+                            <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent
+                          className="p-0 w-[var(--radix-popover-trigger-width)] min-w-[320px]"
+                          align="start"
+                          onWheel={(e) => e.stopPropagation()}
+                          onTouchMove={(e) => e.stopPropagation()}
+                        >
+                          <Command>
+                            <CommandInput placeholder="Search fee type..." className="focus:outline-none" />
+                            <CommandList>
+                              <CommandEmpty>No matching fee type found.</CommandEmpty>
+                              <CommandGroup>
+                                {availableFeeOptions.map((fee) => {
+                                  const isChecked = selectedFeeTypeIds.includes(fee.fee_type_id);
+                                  const months = Math.max(1, Number(invoice.months_count || 1));
+                                  const calcAmt = (fee.monthly_amount * months).toFixed(2);
+                                  return (
+                                    <CommandItem
+                                      key={fee.fee_type_id}
+                                      value={`${fee.fee_name} ${fee.fee_code || ''} ${fee.fee_type_id}`}
+                                      onSelect={() => toggleFeeTypeSelection(fee)}
+                                      className="cursor-pointer py-2.5 flex items-center justify-between"
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <div
+                                          className={cn(
+                                            "flex h-4 w-4 items-center justify-center rounded-sm border",
+                                            isChecked
+                                              ? "bg-blue-600 border-blue-600 text-white"
+                                              : "border-muted-foreground/40 opacity-70"
+                                          )}
+                                        >
+                                          {isChecked && <Check className="h-3 w-3" />}
+                                        </div>
+                                        <div className="flex flex-col">
+                                          <span className="font-medium text-sm">{fee.fee_name}</span>
+                                          {fee.fee_code && (
+                                            <span className="text-xs text-muted-foreground font-mono">
+                                              Code: {fee.fee_code}
+                                            </span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="text-right text-xs">
+                                        {fee.monthly_amount > 0 ? (
+                                          <div>
+                                            <span className="font-semibold">{formatCurrency(calcAmt)}</span>
+                                            <span className="text-muted-foreground block">
+                                              ({formatCurrency(fee.monthly_amount)}/mo)
+                                            </span>
+                                          </div>
+                                        ) : (
+                                          <span className="text-muted-foreground italic">Custom Amount</span>
+                                        )}
+                                      </div>
+                                    </CommandItem>
+                                  );
+                                })}
+                              </CommandGroup>
+                            </CommandList>
+                          </Command>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </div>
+
+                  {/* Selected Fee Types List with Editable Amount */}
+                  {selectedFeeTypeIds.length > 0 && (() => {
+                    const totalAdditional = selectedFeeTypeIds.reduce((sum, fId) => {
+                      const val = parseFloat(feeTypeAmounts[fId]) || 0;
+                      return sum + val;
+                    }, 0);
+                    const currentNet = parseFloat(invoice?.amount_due || 0);
+                    const newNet = currentNet + totalAdditional;
+                    const currentBal = calculateBalance();
+                    const newBal = currentBal + totalAdditional;
+
+                    return (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label className="text-sm font-semibold">
+                            Configure Amount for Selected Fee Types ({selectedFeeTypeIds.length})
+                          </Label>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-7 text-xs text-red-600 hover:text-red-700"
+                            onClick={() => {
+                              setSelectedFeeTypeIds([]);
+                              setFeeTypeAmounts({});
+                            }}
+                          >
+                            Clear All
+                          </Button>
+                        </div>
+
+                        <div className="space-y-2 border rounded-xl p-3 bg-muted/20">
+                          {selectedFeeTypeIds.map((fId) => {
+                            const fee = availableFeeOptions.find((opt) => opt.fee_type_id === fId);
+                            const months = Math.max(1, Number(invoice.months_count || 1));
+                            const stdAmount = (Number(fee?.monthly_amount || 0) * months).toFixed(2);
+                            return (
+                              <div
+                                key={fId}
+                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-card border rounded-lg shadow-sm"
+                              >
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50 shrink-0"
+                                    onClick={() => toggleFeeTypeSelection(fee)}
+                                    title="Remove fee type"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </Button>
+                                  <div className="truncate">
+                                    <div className="font-semibold text-sm truncate">{fee?.fee_name || `Fee #${fId}`}</div>
+                                    <div className="text-xs text-muted-foreground flex flex-wrap items-center gap-1.5 mt-0.5">
+                                      {fee?.fee_code && <Badge variant="outline" className="text-[10px] py-0">{fee.fee_code}</Badge>}
+                                      {fee?.monthly_amount > 0 ? (
+                                        <span className="text-muted-foreground">Std: {formatCurrency(fee.monthly_amount)} × {months} mo = {formatCurrency(stdAmount)}</span>
+                                      ) : (
+                                        <Badge variant="secondary" className="bg-amber-100 dark:bg-amber-900/30 text-amber-800 dark:text-amber-300 text-[10px] py-0 font-normal">
+                                          No standard rate set for this class
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {fee?.monthly_amount === 0 && !feeTypeAmounts[fId] && (
+                                      <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1 font-medium">
+                                        👉 Please enter the amount in the box on the right.
+                                      </p>
+                                    )}
+                                  </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+                                  <span className="text-xs font-medium text-muted-foreground">Amount:</span>
+                                  <div className="relative w-36">
+                                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground font-mono">₹</span>
+                                    <Input
+                                      type="number"
+                                      step="0.01"
+                                      min="0.01"
+                                      placeholder={fee?.monthly_amount > 0 ? stdAmount : "Enter ₹ amount"}
+                                      className={cn(
+                                        "h-8 pl-6 text-right font-mono text-sm font-semibold",
+                                        !feeTypeAmounts[fId] && fee?.monthly_amount === 0 ? "border-amber-500 bg-amber-50/20" : ""
+                                      )}
+                                      value={feeTypeAmounts[fId] ?? ""}
+                                      onChange={(e) => {
+                                        const val = e.target.value;
+                                        setFeeTypeAmounts((prev) => ({
+                                          ...prev,
+                                          [fId]: val
+                                        }));
+                                      }}
+                                      required
+                                      autoFocus={fee?.monthly_amount === 0}
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+
+                        {/* Financial Impact Breakdown Card */}
+                        <div className="rounded-xl border bg-muted/40 p-4 space-y-2">
+                          <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">
+                            Invoice Summary Preview
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Additional Fees Total (+):</span>
+                            <span className="font-mono font-bold text-blue-600 dark:text-blue-400">
+                              +{formatCurrency(totalAdditional)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm">
+                            <span className="text-muted-foreground">Current Net Amount Due:</span>
+                            <span className="font-mono">{formatCurrency(invoice.amount_due)}</span>
+                          </div>
+                          <Separator />
+                          <div className="flex justify-between items-center text-sm font-bold">
+                            <span>Updated Net Amount Due:</span>
+                            <span className="font-mono text-base text-foreground">
+                              {formatCurrency(newNet)}
+                            </span>
+                          </div>
+                          <div className="flex justify-between items-center text-sm font-bold">
+                            <span>New Outstanding Balance:</span>
+                            <span className="font-mono text-base text-red-600 dark:text-red-400">
+                              {formatCurrency(newBal)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </ScrollArea>
+
+              <DialogFooter className="mt-4 pt-2 border-t">
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={addingFeeTypes}
+                  onClick={() => setAddFeeTypeDialogOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={
+                    addingFeeTypes ||
+                    selectedFeeTypeIds.length === 0 ||
+                    selectedFeeTypeIds.some(fId => {
+                      const val = parseFloat(feeTypeAmounts[fId]);
+                      return isNaN(val) || val <= 0;
+                    })
+                  }
+                  className="bg-blue-600 hover:bg-blue-700 text-white font-semibold"
+                >
+                  {addingFeeTypes ? (
+                    <>
+                      <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                      Adding Fee Types...
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Add Selected Fee Types
+                    </>
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          )}
         </DialogContent>
       </Dialog>
     </div>
