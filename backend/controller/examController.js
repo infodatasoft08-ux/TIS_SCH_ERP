@@ -2489,7 +2489,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
             if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
             if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
         }
 
         const formatWithMax = (val, colMax) => {
@@ -3564,7 +3564,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
             if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
             if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
         }
 
         const formatWithMax = (val, colMax) => {
