@@ -602,11 +602,11 @@
 
     /* Signatures */
     .signature-box {
-      border-top: 1px solid var(--border-color);
+      border-top: 1.2px solid var(--border-color);
       width: 35mm;
       text-align: center;
       padding-top: 2px;
-      margin-top: 5px;
+      margin-top: 0;
       /* space for signature */
       font-size: 8.5px;
       font-weight: 600;
@@ -614,9 +614,9 @@
     }
 
     .signature-img {
-      height: 25px;
-      max-width: 110px;
-      margin-bottom: 2px;
+      height: 50px;
+      max-width: 120px;
+      margin-bottom: -2px;
       object-fit: contain;
       display: block;
     }
@@ -742,13 +742,13 @@
         </div>
 
         <!-- School Name in 1 Line beside Logo -->
-        <div style="display: flex; align-items: last baseline; gap: 5px;">
+        <div style="display: flex; align-items: last baseline; gap: 7px;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 38px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 38px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1.5px;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1.5px;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -1640,7 +1640,7 @@
         {{#if signatures.teacher}}
         <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
         {{else}}
-        <div style="height: 34px;"></div>
+        <div style="height: 44px;"></div>
         {{/if}}
         <div class="signature-box">Class Teacher</div>
       </div>
@@ -1649,7 +1649,7 @@
         {{#if signatures.controller}}
         <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
         {{else}}
-        <div style="height: 34px;"></div>
+        <div style="height: 44px;"></div>
         {{/if}}
         <div class="signature-box">Exam Controller</div>
       </div>
@@ -1660,7 +1660,7 @@
         {{else if principalSignature}}
         <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
         {{else}}
-        <div style="height: 34px;"></div>
+        <div style="height: 44px;"></div>
         {{/if}}
         <div class="signature-box">Principal</div>
       </div>
