@@ -28,10 +28,27 @@ handlebars.registerHelper('gradeColor', function (grade) {
   if (!grade) return '#cbd5e1';
   const gStr = String(grade).toUpperCase();
   if (gStr.includes('A')) return '#65a30d';
-  if (gStr.includes('B')) return '#eab308';
+  if (gStr.includes('B')) return '#ca8a04';
   if (gStr.includes('C')) return '#f97316';
   if (gStr.includes('D') || gStr.includes('E') || gStr.includes('F')) return '#ef4444';
   return '#3b82f6';
+});
+
+handlebars.registerHelper('add', function (a, b) {
+  return Number(a || 0) + Number(b || 0);
+});
+
+handlebars.registerHelper('count', function (arr) {
+  return Array.isArray(arr) ? arr.length : 0;
+});
+
+handlebars.registerHelper('cleanMarks', function (val) {
+  if (val === undefined || val === null || val === '') return '-';
+  const str = String(val);
+  if (str.includes('/')) {
+    return str.split('/')[0];
+  }
+  return str;
 });
 
 class PdfService {

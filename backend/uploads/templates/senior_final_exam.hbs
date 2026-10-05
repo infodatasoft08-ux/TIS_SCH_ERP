@@ -54,7 +54,7 @@
 
     /* Page Margins */
     .page-container {
-      padding: 2mm 8mm;
+      padding: 2mm 5mm;
       width: 100%;
       height: 100%;
       position: relative;
@@ -312,81 +312,216 @@
     table {
       width: 100%;
       border-collapse: collapse;
-
-      border: 1px solid var(--border-color);
-      border-radius: 6px;
+      border: 1px solid #94a3b8;
+      border-radius: 4px;
       overflow: hidden;
     }
 
     th,
     td {
-      padding: 2.2px 3.5px;
-      border: 1px solid var(--border-color);
-      font-size: 13.5px;
-      text-align: center;
-    }
-
-    th {
-      background: #0e4da6be;
-      font-family: 'Poppins', sans-serif;
-      font-weight: 700;
-      color: #ffffff;
+      padding: 2.5px 3.5px;
+      border: 1px solid #94a3b8;
+      font-size: 11px;
       text-align: center;
       vertical-align: middle;
-      border: 1px solid #1d4fd8ba;
     }
 
-    th small {
+    /* Scholastic Area Marks Table Styling - matching reference image */
+    /* Scholastic Area Marks Table Styling - Unified Single Logo Blue Theme */
+    .table-marks {
+      border: 0.75px solid #bfdbfe;
+      border-collapse: collapse;
+      width: 100%;
+      margin-bottom: 0;
+    }
+
+    .table-marks th,
+    .table-marks td {
+      border: 0.5px solid #bfdbfe;
+      padding: 3px 4px;
+      font-size: 11.5px;
+      text-align: center;
+      vertical-align: middle;
+    }
+
+    /* Row 1 & Row 2: Single Unified Logo Blue Color for All Header Cells */
+    .table-marks tr.th-main-row th,
+    .table-marks tr.th-sub-row th,
+    .table-marks th.th-scholastic,
+    .table-marks th.th-term,
+    .table-marks th.th-subjects,
+    .table-marks th.th-full-marks,
+    .table-marks th.th-comp-name,
+    .table-marks th.th-total-col,
+    .table-marks th.th-grade,
+    .table-marks th.th-final-total {
+      font-family: 'Poppins', sans-serif;
+      color: #ffffff !important;
+      text-transform: uppercase;
+      background: #103c9be3 !important;
+      border: 0.5px solid rgba(255, 255, 255, 0.3) !important;
+    }
+
+    /* Row 1: Group Headers */
+    .table-marks tr.th-main-row th {
+      font-size: 11.5px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+      padding: 4.5px 6px;
+    }
+
+    /* Row 2: Sub-headers */
+    .table-marks tr.th-sub-row th {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.3px;
+      line-height: 1.15;
+      padding: 4px 4px;
+    }
+
+    .table-marks th.th-subjects {
+      text-align: left;
+      padding-left: 8px;
+      font-size: 11.5px;
+    }
+
+    .table-marks th.th-full-marks {
+      font-size: 11px;
+      line-height: 1.1;
+    }
+
+    .table-marks th.th-comp-name {
+      font-size: 10.5px;
+      font-weight: 700;
+    }
+
+    .table-marks th.th-total-col {
+      font-size: 11px;
+      font-weight: 800;
+    }
+
+    .table-marks th.th-grade,
+    .table-marks th.th-final-total {
+      font-size: 12px;
+      font-weight: 800;
+      vertical-align: middle;
+      padding: 4.5px 6px;
+    }
+
+    /* Row 3: Max Marks row */
+    .table-marks tr.th-max-row th {
+      font-family: 'Poppins', sans-serif;
+      font-size: 11px;
+      font-weight: 800;
+      color: #103c9be5 !important;
+      background: #dbeafe !important;
+      padding: 3px 4px;
+      border: 0.5px solid #bfdbfe !important;
+      border-bottom: 1px solid #bfdbfe !important;
+    }
+
+    /* Table body */
+    .table-marks tbody td {
+      border: 0.5px solid #bfdbfe;
+      font-size: 12px;
+      font-weight: 600;
+      color: #1e293b;
+      padding: 3px 4px;
+    }
+
+    .table-marks tbody td.td-subject {
+      text-align: left;
+      font-weight: 700;
+      color: #0f172a;
+      padding-left: 8px;
+      text-transform: uppercase;
+      font-size: 12px;
+    }
+
+    .table-marks tbody td.td-full-marks {
+      font-weight: 700;
+      color: #334155;
+      font-size: 12px;
+    }
+
+    .table-marks tbody tr:nth-child(even) {
+      background-color: #f8fafc;
+    }
+
+    .table-marks .row-total td {
+      background-color: #f1f5f9;
+      font-weight: 800;
+      color: #0f172a;
+      font-size: 12px;
+      border-top: 1px solid #bfdbfe;
+      border-bottom: 0.5px solid #bfdbfe;
+      padding: 3.5px 4px;
+    }
+
+    /* 8 Point Grading Scale Strip - Marksheet Blue Theme */
+    .grading-scale-strip {
+      border: 1.5px solid #103c9bd8;
+      border-left: 4.5px solid #103c9bdb;
+      border-radius: 6px;
+      background: linear-gradient(135deg, rgba(240, 247, 255, 0.75) 0%, rgba(224, 239, 254, 0.75) 100%);
+      padding: 3.5px 8px;
+      margin-top: 4px;
+      margin-bottom: 5px;
+      text-align: center;
+      box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
+    }
+
+    .grading-scale-strip .scale-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 10.5px;
+      font-weight: 800;
+      color: #103c9bc9;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
+      margin-bottom: 1.5px;
+    }
+
+    .grading-scale-strip .scale-row {
+      font-family: 'Poppins', sans-serif;
       font-size: 9.5px;
-      font-weight: 500;
-      opacity: 0.95;
-      display: block;
+      color: #103c9bda;
+      font-weight: 600;
+      line-height: 1.25;
+      letter-spacing: 0.2px;
+    }
+
+    .grading-scale-strip .scale-row strong {
+      color: #103c9bce;
+      font-weight: 800;
+    }
+
+    /* Co-Scholastic Header Box with 3 Point Grading Scale */
+    .co-scholastic-header-banner {
+      background: #e2e8f0;
+      border: 1px solid #94a3b8;
+      border-bottom: 1.5px solid #64748b;
+      padding: 3px 6px;
       text-align: center;
     }
 
-    .table-marks thead tr:first-child th:first-child,
-    .table-marks tbody td:first-child,
-    .table-marks .row-total td:first-child {
-      text-align: left;
-      white-space: nowrap;
-      padding-left: 8px;
-      padding-right: 8px;
+    .co-scholastic-header-banner .co-title {
+      font-family: 'Poppins', sans-serif;
+      font-size: 10px;
+      font-weight: 800;
+      color: #0f172a;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      line-height: 1.2;
     }
 
-    .table-marks thead tr:not(:first-child) th {
-      text-align: center !important;
-      padding-left: 4px;
-      padding-right: 4px;
-    }
-
-    .table-marks th:not(:first-child),
-    .table-marks td:not(:first-child) {
-      white-space: nowrap;
-    }
-
-
-    thead tr:nth-child(2) th:last-child {
-      border-right: 1px solid var(--border-color);
-    }
-
-
-    tbody tr:nth-child(even) {
-      background-color: rgba(248, 250, 252, 0.4);
-    }
-
-    .table-header-group {
-      background: transparent;
-      border-bottom: 2px solid #0a397cc3;
-    }
-
-    .table-header-group th {
-      border-bottom: 1px solid rgba(255, 255, 255, 0.25);
-    }
-
-    .row-total td {
-      background-color: rgba(241, 245, 249, 0.6);
-      font-weight: 700;
-      color: var(--dark-blue);
+    .co-scholastic-header-banner .co-scale {
+      font-family: 'Poppins', sans-serif;
+      font-size: 8.5px;
+      color: #334155;
+      font-weight: 600;
+      line-height: 1.2;
+      margin-top: 1px;
     }
 
     /* Specific elements */
@@ -479,9 +614,11 @@
     }
 
     .signature-img {
-      height: 25px;
-      margin-bottom: 5px;
+      height: 34px;
+      max-width: 120px;
+      margin-bottom: 2px;
       object-fit: contain;
+      display: block;
     }
 
     .qr-code {
@@ -592,51 +729,55 @@
 
     <!-- 1. HEADER (Structured HTML/CSS Layout based on Official Branding) -->
     <div class="mb-1" style="width: 100%; overflow: hidden; background: #fff; text-align: center;">
-      <!-- Logo + Divider + School Name Block centered horizontally -->
+      <!-- Row 1: Logo + School Name together (Logo strictly paired with TIMES INTERNATIONAL SCHOOL) -->
       <div
-        style="display: flex; align-items: center; justify-content: center; width: 100%; margin: 0 auto 1px auto; padding: 0;">
+        style="display: flex; align-items: center; justify-content: center; width: 100%; margin: 0 auto 1px auto; padding: 0; gap: 12px;">
         <!-- Left Logo -->
-        <div style="display: flex; align-items: center; justify-content: center; padding-right: 14px; flex-shrink: 0;">
+        <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
+          <img src="{{logoData}}" alt="School Logo" style="width: 24mm; height: 24mm; object-fit: contain;">
           {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 25mm; height: 25mm; object-fit: contain;">
+          <img src="{{school.logo}}" alt="School Logo" style="width: 24mm; height: 24mm; object-fit: contain;">
           {{/if}}
         </div>
 
-        <!-- Vertical Maroon Divider Line -->
-        <div style="width: 2.5px; height: 18mm; background-color: #8B1E1E; margin-right: 16px; flex-shrink: 0;"></div>
+        <!-- School Name in 1 Line beside Logo -->
+        {{!-- <div style="margin-top: 40px"> --}}
+          <div style="display: flex; align-items: last baseline; gap: 8px;">
+            <div
+              style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 39px; color: #8B1E1E; line-height: 0.95; letter-spacing: 2px;">
+              TIMES
+            </div>
+            <div
+              style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px;">
+              INTERNATIONAL SCHOOL
+            </div>
+          </div>
 
-        <!-- School Name in 2 Stacked Lines -->
-        <div style="text-align: left; display: flex; flex-direction: column; justify-content: center;">
-          <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 39px; color: #8B1E1E; line-height: 0.92; letter-spacing: 2px;">
-            TIMES
-          </div>
-          <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 31px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px; margin-top: 2px;">
-            INTERNATIONAL SCHOOL
-          </div>
-        </div>
+          {{!--
+        </div> --}}
+
       </div>
 
-      <!-- Address, Contact, and Web details -->
+      <!-- Row 2: Address, Contact, and Web details (Neatly centered underneath) -->
       <div
-        style="text-align: center; color: #1e293b; font-size: 11px; line-height: 1.25; margin-top: 1px; padding: 0 4px;">
+        style="text-align: center; color: #1e293b; font-size: 11px; line-height: 1.25; margin-top: 1px; margin-bottom: 4px; padding: 0 4px; ">
         <p style="margin-bottom: 1px; font-weight: 700;">
           <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
             Mahendru, Patna - 800006{{/if}}</span>
         </p>
         <p style="margin-bottom: 1px; font-weight: 700;">
-          <span>Cont.: {{#if school.phone}}{{school.phone}}{{else}}0612-4089151 | 8700186374 | 8102657225{{/if}}</span>
+          <span>Cont.: {{#if school.phone}}{{school.phone}}{{else}}0612-4089151 | 8700186374 |
+            8102657225{{/if}}</span>
         </p>
         <p style="font-weight: 600;">
           <span>Email: {{#if school.email}}{{school.email}}{{else}}timesschoolpatna@gmail.com{{/if}}</span>
           <span style="margin: 0 6px; color: #94a3b8;">|</span>
-          <span>Website: <span style="font-weight: 700; color: #0f4c92;">{{#if
+          <span>Website: <span style="font-weight: 700; color: #1e293b;">{{#if
               school.website}}{{school.website}}{{else}}www.timesinternationalschool.com{{/if}}</span></span>
         </p>
       </div>
+
 
       {{#if school.tagline}}
       <div class="tagline-banner">
@@ -677,43 +818,48 @@
         <div class="flex-1 grid grid-cols-3 gap-x-3 gap-y-1">
           <div>
             <div class="info-label">Admission No</div>
-            <div class="info-value">{{student.admission_no}}</div>
+            <div class="info-value">{{#if student.admission_no}}{{student.admission_no}}{{else}}-{{/if}}</div>
           </div>
           <div>
             <div class="info-label">Roll No</div>
-            <div class="info-value">{{student.roll_no}}</div>
+            <div class="info-value">{{#if student.roll_no}}{{student.roll_no}}{{else}}-{{/if}}</div>
           </div>
           <div>
             <div class="info-label">Class</div>
-            <div class="info-value">{{student.class_name}}</div>
+            <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else if
+              student.class_name}}{{student.class_name}}{{else if
+              student.grade_name}}{{student.grade_name}}{{else}}-{{/if}}</div>
           </div>
 
           <div>
             <div class="info-label">Student Name</div>
-            <div class="info-value">{{student.name}}</div>
+            <div class="info-value">{{#if student.name}}{{student.name}}{{else}}-{{/if}}</div>
           </div>
           <div>
             <div class="info-label">Date of Birth</div>
-            <div class="info-value">{{student.dob}}</div>
+            <div class="info-value">{{#if student.dob}}{{student.dob}}{{else}}-{{/if}}</div>
           </div>
           <div>
             <div class="info-label">Gender / Blood Group</div>
-            <div class="info-value">{{student.gender}} / {{student.blood_group}}</div>
+            <div class="info-value">{{#if student.gender}}{{student.gender}}{{else}}-{{/if}} / {{#if
+              student.blood_group}}{{student.blood_group}}{{else}}-{{/if}}</div>
           </div>
 
           <div>
             <div class="info-label">Father's Name</div>
             <div class="info-value">{{#if
-              student.father_name}}{{student.father_name}}{{else}}{{student.fathers_name}}{{/if}}</div>
+              student.father_name}}{{student.father_name}}{{else if
+              student.fathers_name}}{{student.fathers_name}}{{else}}-{{/if}}</div>
           </div>
           <div>
             <div class="info-label">Mother's Name</div>
             <div class="info-value">{{#if
-              student.mother_name}}{{student.mother_name}}{{else}}{{student.mothers_name}}{{/if}}</div>
+              student.mother_name}}{{student.mother_name}}{{else if
+              student.mothers_name}}{{student.mothers_name}}{{else}}-{{/if}}</div>
           </div>
           <div class="grid-col-span-2" style="grid-column: span 3;">
             <div class="info-label">Address</div>
-            <div class="info-value">{{student.address}}</div>
+            <div class="info-value">{{#if student.address}}{{student.address}}{{else}}-{{/if}}</div>
           </div>
         </div>
 
@@ -740,135 +886,66 @@
       <table class="table-marks data-table" style="margin-bottom: 0;">
         <thead>
           {{#if showFinalResult}}
-          {{#if hasIaSubSubjects}}
-          <tr class="table-header-group">
-            <th rowspan="3" style="text-align: left;">Subjects</th>
-            <th rowspan="3">Max Marks</th>
-            <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
-            <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
-            <th rowspan="3">Final Total</th>
-            <th rowspan="3">Grade</th>
+          <tr class="th-main-row">
+            <th colspan="2" class="th-scholastic">SCHOLASTIC AREA</th>
+            <th colspan="{{add (count dynamicColumns) 1}}" class="th-term">{{#if exam1Name}}{{exam1Name}}{{else}}TERM -
+              I{{/if}} (100 Marks)</th>
+            <th colspan="{{add (count dynamicColumns) 1}}" class="th-term">{{#if exam2Name}}{{exam2Name}}{{else}}TERM -
+              II{{/if}} (100 Marks)</th>
+            <th rowspan="3" class="th-final-total">Final Total</th>
+            <th rowspan="3" class="th-grade">Grade</th>
           </tr>
-          <tr>
+          <tr class="th-sub-row">
+            <th rowspan="2" class="th-subjects">SUBJECTS</th>
+            <th rowspan="2" class="th-full-marks">FULL<br>MARKS</th>
             <!-- Term 1 columns -->
-            {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
-            {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showIaPr}}<th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>{{/if}}
-            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
-            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
-            <th rowspan="2">Total</th>
+            {{#each dynamicColumns}}<th class="th-comp-name">{{this.name}}</th>{{/each}}
+            <th class="th-total-col">Total</th>
 
             <!-- Term 2 columns -->
-            {{#if showTheory}}<th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>{{/if}}
-            {{#if showLab}}<th rowspan="2">Lab <br><small>({{maxLab}})</small></th>{{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showIaPr}}<th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>{{/if}}
-            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
-            {{#if showWritten}}<th rowspan="2">Written <br><small>({{maxWritten}})</small></th>{{/if}}
-            <th rowspan="2">Total</th>
+            {{#each dynamicColumns}}<th class="th-comp-name">{{this.name}}</th>{{/each}}
+            <th class="th-total-col">Total</th>
           </tr>
-          <tr>
-            <!-- Term 1 IA columns -->
-            {{#if showReading}}<th style="text-align: center;">Reading <br><small>({{maxReading}})</small></th>{{/if}}
-            {{#if showWritingComp}}<th style="text-align: center;">Writing <br><small>({{maxWritingComp}})</small></th>
-            {{/if}}
-            {{#if showDictation}}<th style="text-align: center;">Dictation <br><small>({{maxDictation}})</small></th>
-            {{/if}}
-            {{#if showRecitation}}<th style="text-align: center;">Recitation <br><small>({{maxRecitation}})</small></th>
-            {{/if}}
+          <tr class="th-max-row">
+            <!-- Term 1 max marks -->
+            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
+            <th class="th-comp-max">100</th>
 
-            <!-- Term 2 IA columns -->
-            {{#if showReading}}<th style="text-align: center;">Reading <br><small>({{maxReading}})</small></th>{{/if}}
-            {{#if showWritingComp}}<th style="text-align: center;">Writing <br><small>({{maxWritingComp}})</small></th>
-            {{/if}}
-            {{#if showDictation}}<th style="text-align: center;">Dictation <br><small>({{maxDictation}})</small></th>
-            {{/if}}
-            {{#if showRecitation}}<th style="text-align: center;">Recitation <br><small>({{maxRecitation}})</small></th>
-            {{/if}}
+            <!-- Term 2 max marks -->
+            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
+            <th class="th-comp-max">100</th>
           </tr>
           {{else}}
-          <tr class="table-header-group">
-            <th rowspan="2" style="text-align: left;">Subjects</th>
-            <th rowspan="2">Max Marks</th>
-            <th colspan="{{exam1ColSpan}}">{{exam1Name}}</th>
-            <th colspan="{{exam2ColSpan}}">{{exam2Name}}</th>
-            <th rowspan="2">Final Total</th>
-            <th rowspan="2">Grade</th>
+          <tr class="th-main-row">
+            <th colspan="2" class="th-scholastic">SCHOLASTIC AREA</th>
+            <th colspan="{{add (count dynamicColumns) 1}}" class="th-term">{{#if exam1Name}}{{exam1Name}}{{else}}TERM -
+              I{{/if}} (100 Marks)</th>
+            <th rowspan="3" class="th-grade">Grade</th>
           </tr>
-          <tr>
-            <!-- Term 1 columns -->
-            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-            <th>Total</th>
-
-            <!-- Term 2 columns -->
-            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-            <th>Total</th>
+          <tr class="th-sub-row">
+            <th rowspan="2" class="th-subjects">SUBJECTS</th>
+            <th rowspan="2" class="th-full-marks">FULL<br>MARKS</th>
+            {{#each dynamicColumns}}<th class="th-comp-name">{{this.name}}</th>{{/each}}
+            <th class="th-total-col">Total</th>
           </tr>
-          {{/if}}
-          {{else}}
-          {{#if hasIaSubSubjects}}
-          <tr class="table-header-group">
-            <th rowspan="2" style="text-align: left;">Subjects</th>
-            <th rowspan="2">Max Marks</th>
-            {{#if showTheory}}
-            <th rowspan="2">Theory <br><small>({{maxTheory}})</small></th>
-            {{/if}}
-            {{#if showLab}}
-            <th rowspan="2">Lab <br><small>({{maxLab}})</small></th>
-            {{/if}}
-            <th colspan="{{iaColSpan}}">I.A({{iaTotalMax}})</th>
-            {{#if showIaPr}}
-            <th rowspan="2">Practical <br><small>({{maxIaPr}})</small></th>
-            {{/if}}
-            {{#if showOral}}<th rowspan="2">Oral <br><small>({{maxOral}})</small></th>{{/if}}
-            {{#if showWritten}}
-            <th rowspan="2">Written <br><small>({{maxWritten}})</small></th>
-            {{/if}}
-            <th rowspan="2">Total</th>
-            <th rowspan="2">Grade</th>
+          <tr class="th-max-row">
+            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
+            <th class="th-comp-max">100</th>
           </tr>
-          <tr>
-            <!-- Term 1 sub-subject columns under I.A({{iaTotalMax}}) -->
-            {{#if showReading}}<th style="text-align: center; font-size: 10.5px;">Reading
-              <br><small>({{maxReading}})</small>
-            </th>{{/if}}
-            {{#if showWritingComp}}<th style="text-align: center; font-size: 10.5px;">Writing
-              <br><small>({{maxWritingComp}})</small>
-            </th>
-            {{/if}}
-            {{#if showDictation}}<th style="text-align: center; font-size: 10.5px;">Dictation
-              <br><small>({{maxDictation}})</small>
-            </th>
-            {{/if}}
-            {{#if showRecitation}}<th style="text-align: center; font-size: 10.5px;">Recitation
-              <br><small>({{maxRecitation}})</small>
-            </th>
-            {{/if}}
-          </tr>
-          {{else}}
-          <tr class="table-header-group">
-            <th style="text-align: left;">Subjects</th>
-            <th>Max Marks</th>
-            {{#each dynamicColumns}}<th>{{this.name}} <br><small>({{this.max}})</small></th>{{/each}}
-            <th>Total</th>
-            <th>Grade</th>
-          </tr>
-          {{/if}}
           {{/if}}
         </thead>
         <tbody>
           {{#each subjects}}
           <tr>
-            <td style="text-align: left; font-weight: 700; color: var(--dark-blue);">{{this.subject_name}}</td>
-            <td>{{this.max}}</td>
+            <td class="td-subject">{{this.subject_name}}</td>
+            <td class="td-full-marks">{{this.max}}</td>
             <!-- Term 1 marks -->
-            {{#each this.exam1_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
+            {{#each this.exam1_dynamicMarks}}<td>{{cleanMarks this.value}}</td>{{/each}}
             <td class="font-semibold">{{this.exam1_marks}}</td>
 
             <!-- Term 2 marks -->
             {{#if ../showFinalResult}}
-            {{#each this.exam2_dynamicMarks}}<td>{{this.value}}</td>{{/each}}
+            {{#each this.exam2_dynamicMarks}}<td>{{cleanMarks this.value}}</td>{{/each}}
             <td class="font-semibold">{{this.exam2_marks}}</td>
 
             <!-- Final Total -->
@@ -880,15 +957,17 @@
 
           <!-- Totals Row -->
           <tr class="row-total">
-            <td style="text-align: left;">Grand Total</td>
-            <td>{{totalMax}}</td>
+            <td class="td-subject"></td>
+            <td class="td-full-marks">{{totalMax}}</td>
             {{#if showFinalResult}}
-            <td colspan="{{exam1ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
-            <td colspan="{{exam2ColSpan}}" class="text-right" style="padding-right: 15px;">-</td>
+            <td colspan="{{add (count dynamicColumns) 1}}" class="text-right" style="padding-right: 15px;">-</td>
+            <td colspan="{{add (count dynamicColumns) 1}}" class="text-right" style="padding-right: 15px;">-</td>
             <td class="text-primary font-bold">{{totalObtained}} / {{totalMax}}</td>
+            <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if
+              grandGrade}}{{grandGrade}}{{else}}-{{/if}}</td>
             {{else}}
-            {{#if baseNewFields}}
-            <td colspan="{{baseNewFields}}"></td>
+            {{#if (count dynamicColumns)}}
+            <td colspan="{{count dynamicColumns}}"></td>
             {{/if}}
             <td class="text-primary font-bold">{{totalObtained}}</td>
             <td class="font-bold" style="color: {{gradeColor grandGrade}};">{{#if
@@ -1030,6 +1109,12 @@
         gap: 8px;
       }
 
+      .result-grid-4 {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+
       .result-tile {
         border-radius: 6px;
         padding: 4px 6px;
@@ -1053,6 +1138,20 @@
 
       .result-tile-percentage .tile-val {
         color: #1d4ed8;
+      }
+
+      .result-tile-rank {
+        background: linear-gradient(135deg, #f5f3ff 0%, #ede9fe 100%);
+        border: 1.5px solid #c4b5fd;
+        box-shadow: 0 1px 2px rgba(124, 58, 237, 0.08);
+      }
+
+      .result-tile-rank .tile-label {
+        color: #6d28d9;
+      }
+
+      .result-tile-rank .tile-val {
+        color: #5b21b6;
       }
 
       .result-tile-result-pass {
@@ -1169,6 +1268,21 @@
       }
     </style>
 
+    <!-- 8 POINT GRADING SCALE -->
+    <div class="grading-scale-strip">
+      <div class="scale-title">8 Point Grading Scale:</div>
+      <div class="scale-row">
+        <span><strong>A1</strong> (91% - 100%)</span>,
+        <span><strong>A2</strong> (81% - 90%)</span>,
+        <span><strong>B1</strong> (71% - 80%)</span>,
+        <span><strong>B2</strong> (61% - 70%)</span>,
+        <span><strong>C1</strong> (51% - 60%)</span>,
+        <span><strong>C2</strong> (41% - 50%)</span>,
+        <span><strong>D</strong> (33% - 40%)</span>,
+        <span><strong>E</strong> (32% &amp; Below)</span>
+      </div>
+    </div>
+
     <!-- 4. SUBJECT PERFORMANCE GRAPH (FULL WIDTH) -->
     {{#if (hasItems performanceChart)}}
     <div class="perf-chart-card" style="margin-top: 4px; margin-bottom: 6px;">
@@ -1217,7 +1331,7 @@
     <div style="margin-bottom: 5px;">
       <div class="section-heading">Result Summary</div>
       <div class="result-summary-container">
-        <div class="result-grid-3">
+        <div class="result-grid-4">
           <!-- Percentage Tile -->
           <div class="result-tile result-tile-percentage">
             <div class="tile-label">
@@ -1230,6 +1344,27 @@
               <span><b>Percentage</b></span>
             </div>
             <div class="tile-val"><b>{{percentage}}%</b></div>
+          </div>
+
+          <!-- Rank Tile (Fillable for Teacher) -->
+          <div class="result-tile result-tile-rank">
+            <div class="tile-label">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"
+                stroke-linejoin="round">
+                <circle cx="12" cy="8" r="6"></circle>
+                <path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"></path>
+              </svg>
+              <span><b>Rank</b></span>
+            </div>
+            <div class="tile-val"
+              style="min-height: 20px; display: flex; align-items: center; justify-content: center;">
+              {{#if rank}}
+              <b>{{rank}}</b>
+              {{else}}
+              <span
+                style="display: inline-block; width: 45px; border-bottom: 2px solid #6d28d9; height: 16px; margin-bottom: 2px;">&nbsp;</span>
+              {{/if}}
+            </div>
           </div>
 
           <!-- Final Result Tile -->
@@ -1303,7 +1438,12 @@
     <div class="grid grid-cols-2 gap-3" style="align-items: start;">
       <!-- Left Column: Co-Scholastic & Skill-Based Areas -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
-        <div class="section-heading">Part 2: Co-Scholastic & Skill-Based Areas</div>
+        <div class="section-heading" style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
+          <span>Part 2: Co-Scholastic &amp; Skill-Based Areas</span>
+          <span
+            style="font-size: 8.5px; font-weight: 700; text-transform: none; color: #1e3a8a; letter-spacing: 0.2px;">(3
+            Point Grading Scale: A - Outstanding, B - Very Good, C - Fair)</span>
+        </div>
         <table class="co-scholastic-table">
           <thead>
             <tr>
@@ -1504,7 +1644,7 @@
         {{#if signatures.teacher}}
         <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
         {{else}}
-        <div style="height: 30px;"></div>
+        <div style="height: 34px;"></div>
         {{/if}}
         <div class="signature-box">Class Teacher</div>
       </div>
@@ -1513,7 +1653,7 @@
         {{#if signatures.controller}}
         <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
         {{else}}
-        <div style="height: 30px;"></div>
+        <div style="height: 34px;"></div>
         {{/if}}
         <div class="signature-box">Exam Controller</div>
       </div>
@@ -1521,8 +1661,10 @@
       <div class="flex-col items-center">
         {{#if signatures.principal}}
         <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
+        {{else if principalSignature}}
+        <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
         {{else}}
-        <div style="height: 30px;"></div>
+        <div style="height: 34px;"></div>
         {{/if}}
         <div class="signature-box">Principal</div>
       </div>
