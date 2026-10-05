@@ -735,20 +735,20 @@
         <!-- Left Logo -->
         <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 22mm; height: 22mm; object-fit: contain;">
+          <img src="{{logoData}}" alt="School Logo" style="width: 19.5mm; height: 19.5mm; object-fit: contain;">
           {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 22mm; height: 22mm; object-fit: contain;">
+          <img src="{{school.logo}}" alt="School Logo" style="width: 19.5mm; height: 19.5mm; object-fit: contain;">
           {{/if}}
         </div>
 
         <!-- School Name in 1 Line beside Logo -->
         <div style="display: flex; align-items: last baseline; gap: 7px;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 38px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1.5px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 49.5px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1.5px;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1.5px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 36px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1.5px;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -822,9 +822,10 @@
           </div>
           <div>
             <div class="info-label">Class</div>
-            <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else if
+            {{!-- <div class="info-value">{{#if student.class_section}}{{student.class_section}}{{else if
               student.class_name}}{{student.class_name}}{{else if
-              student.grade_name}}{{student.grade_name}}{{else}}-{{/if}}</div>
+              student.grade_name}}{{student.grade_name}}{{else}}-{{/if}}</div> --}}
+            <div class="info-value">{{#if student.class_name}}{{student.class_name}}{{else}}-{{/if}}</div>
           </div>
 
           <div>
@@ -953,7 +954,7 @@
 
           <!-- Totals Row -->
           <tr class="row-total">
-            <td class="td-subject"></td>
+            <td class="td-subject">Grand Total</td>
             <td class="td-full-marks">{{totalMax}}</td>
             {{#if showFinalResult}}
             <td colspan="{{add (count dynamicColumns) 1}}" class="text-right" style="padding-right: 15px;">-</td>
@@ -989,7 +990,7 @@
 
       .co-scholastic-table {
         margin-bottom: 0;
-        border: 1px solid #0e4ea6;
+        border: 1px solid #103c9be3;
         border-collapse: collapse;
         width: 100%;
       }
@@ -1003,7 +1004,7 @@
       }
 
       .co-scholastic-table th {
-        background: #0e4da6c1 !important;
+        background: #103c9be3 !important;
         color: #ffffff !important;
         font-weight: 700 !important;
         text-align: center;
@@ -1435,7 +1436,7 @@
       <!-- Left Column: Co-Scholastic & Skill-Based Areas -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
         <div class="section-heading" style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
-          <span>Part 2: Co-Scholastic &amp; Skill-Based Areas</span>
+          <span>Co-Scholastic &amp; Skill-Based Areas</span>
           <span
             style="font-size: 8.5px; font-weight: 700; text-transform: none; color: #1e3a8a; letter-spacing: 0.2px;">(3
             Point Grading Scale: A - Outstanding, B - Very Good, C - Fair)</span>
