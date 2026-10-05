@@ -364,7 +364,7 @@
 
     /* Row 1: Group Headers */
     .table-marks tr.th-main-row th {
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 800;
       letter-spacing: 0.5px;
       padding: 3px 5px;
@@ -372,7 +372,7 @@
 
     /* Row 2: Sub-headers */
     .table-marks tr.th-sub-row th {
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 800;
       letter-spacing: 0.3px;
       line-height: 1.15;
@@ -386,7 +386,7 @@
     }
 
     .table-marks th.th-full-marks {
-      font-size: 11px;
+      font-size: 10.5px;
       line-height: 1.1;
     }
 
@@ -402,16 +402,16 @@
 
     .table-marks th.th-grade,
     .table-marks th.th-final-total {
-      font-size: 12px;
+      font-size: 11.5px;
       font-weight: 800;
       vertical-align: middle;
-      padding: 4.5px 6px;
+      padding: 3px 5px;
     }
 
     /* Row 3: Max Marks row */
     .table-marks tr.th-max-row th {
       font-family: 'Poppins', sans-serif;
-      font-size: 10px;
+      font-size: 10.5px;
       font-weight: 800;
       color: #103c9be5 !important;
       background: #dbeafe !important;
@@ -423,7 +423,7 @@
     /* Table body */
     .table-marks tbody td {
       border: 0.5px solid #bfdbfe;
-      font-size: 11px;
+      font-size: 11.5px;
       font-weight: 600;
       color: #1e293b;
       padding: 2px 3.5px;
@@ -435,13 +435,13 @@
       color: #0f172a;
       padding-left: 8px;
       text-transform: uppercase;
-      font-size: 11px;
+      font-size: 11.8px;
     }
 
     .table-marks tbody td.td-full-marks {
       font-weight: 700;
       color: #334155;
-      font-size: 11px;
+      font-size: 11.5px;
     }
 
     .table-marks tbody tr:nth-child(even) {
@@ -452,7 +452,7 @@
       background-color: #f1f5f9;
       font-weight: 800;
       color: #0f172a;
-      font-size: 11px;
+      font-size: 11.8px;
       border-top: 1px solid #bfdbfe;
       border-bottom: 0.5px solid #bfdbfe;
       padding: 2.5px 3.5px;
@@ -744,11 +744,11 @@
         <!-- School Name in 1 Line beside Logo -->
         <div style="display: flex; align-items: last baseline; gap: 5px;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 38px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 38px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1px;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: 1000; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 33px; color: #8B1E1E; line-height: 1.0; letter-spacing: 1px;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -757,7 +757,7 @@
 
       <!-- Row 2: Address, Contact, and Web details (Neatly centered underneath) -->
       <div
-        style="text-align: center; color: #1e293b; font-size: 10.5px; line-height: 1.2; margin-top: 1px; margin-bottom: -10px; padding: 0 4px;">
+        style="text-align: center; color: #1e293b; font-size: 10.5px; line-height: 1.2; margin-top: -10px; margin-bottom: 4px; padding: 0 4px;">
         <p style="margin-bottom: 1px; font-weight: 700;">
           <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
             Mahendru, Patna - 800006{{/if}}</span>
@@ -1283,7 +1283,7 @@
     {{#if (hasItems performanceChart)}}
     <div class="perf-chart-card" style="margin-top: 2px; margin-bottom: 2px;">
       <div class="section-heading" style="margin-bottom: 1.5px;">Subject Performance</div>
-      <svg viewBox="0 0 680 102" style="width: 100%; height: 60px; display: block; overflow: visible;"
+      <svg viewBox="0 0 680 102" style="width: 100%; height: auto; max-height: 95px; display: block;"
         xmlns="http://www.w3.org/2000/svg">
         <!-- Background Grid Lines -->
         <line x1="36" y1="12" x2="675" y2="12" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
