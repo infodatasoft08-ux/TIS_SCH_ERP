@@ -735,16 +735,16 @@
         <!-- Left Logo -->
         <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 19.5mm; height: 19.5mm; object-fit: contain;">
+          <img src="{{logoData}}" alt="School Logo" style="width: 18.5mm; height: 18.5mm; object-fit: contain;">
           {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 19.5mm; height: 19.5mm; object-fit: contain;">
+          <img src="{{school.logo}}" alt="School Logo" style="width: 18.5mm; height: 18.5mm; object-fit: contain;">
           {{/if}}
         </div>
 
         <!-- School Name in 1 Line beside Logo -->
         <div style="display: flex; align-items: last baseline; gap: 7px;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 49.5px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1.5px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 49px; color: #8B1E1E; line-height: 0.95; letter-spacing: 1.5px;">
             TIMES
           </div>
           <div
@@ -757,7 +757,7 @@
 
       <!-- Row 2: Address, Contact, and Web details (Neatly centered underneath) -->
       <div
-        style="text-align: center; color: #1e293b; font-size: 10.5px; line-height: 1.2; margin-top: -10px; margin-bottom: 4px; padding: 0 4px;">
+        style="text-align: center; color: #1e293b; font-size: 10.5px; line-height: 1.2; margin-top: -4px; margin-bottom: 4px; padding: 0 4px;">
         <p style="margin-bottom: 1px; font-weight: 700;">
           <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
             Mahendru, Patna - 800006{{/if}}</span>
