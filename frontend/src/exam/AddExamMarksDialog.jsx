@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import API from "@/api";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
+import { Search, X } from "lucide-react";
 
 // Helper: render a single number input for a mark sub-field
 function MarkInput({ label, fieldKey, maxVal, value, disabled, onChange }) {
@@ -52,6 +53,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const [marksData, setMarksData] = useState({});
     const [remarksData, setRemarksData] = useState({});
     const [principalRemarksData, setPrincipalRemarksData] = useState({});
+    const [ranksData, setRanksData] = useState({});
+    const [searchQuery, setSearchQuery] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [mode, setMode] = useState(initialMode);
@@ -101,6 +104,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setMarksData({});
             setRemarksData({});
             setPrincipalRemarksData({});
+            setRanksData({});
+            setSearchQuery("");
             setStudentsWithExistingMarks(new Set());
             setMode("add");
         }
@@ -145,6 +150,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             const initialMarks = {};
             const initialRemarks = {};
             const initialPrincipalRemarks = {};
+            const initialRanks = {};
             fetchedStudents.forEach(student => {
                 const sId = String(student.id);
                 initialMarks[sId] = {};
@@ -167,6 +173,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
                 if (res.teacher_remark) initialRemarks[sId] = res.teacher_remark;
                 if (res.principal_remark) initialPrincipalRemarks[sId] = res.principal_remark;
+                if (res.rank) initialRanks[sId] = res.rank;
 
                 if (initialMarks[sId] && initialMarks[sId][subId]) {
                     const toStr = (v) => (v !== null && v !== undefined) ? v : '';
@@ -199,6 +206,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setMarksData(initialMarks);
             setRemarksData(initialRemarks);
             setPrincipalRemarksData(initialPrincipalRemarks);
+            setRanksData(initialRanks);
         } catch (error) {
             console.error(error);
             toast.error("Failed to fetch students or results");
@@ -323,6 +331,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                         grade: d.grade === 'none' ? null : (d.grade || null),
                         teacher_remark: remarksData[studentId] || null,
                         principal_remark: principalRemarksData[studentId] || null,
+                        rank: ranksData[studentId] || null,
                         next_class: globalNextClass || null
                     });
                 }
@@ -528,19 +537,87 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                 </div>
                             </div>
 
-                            {/* Student Rows */}
+                            {/* Student Rows & Search Filter */}
                             {(() => {
-                                const displayedStudents = mode === 'update'
+                                const q = searchQuery.trim().toLowerCase();
+                                const baseStudents = mode === 'update'
                                     ? students.filter(st => studentsWithExistingMarks.has(String(st.id)))
                                     : students;
 
-                                if (displayedStudents.length === 0) {
-                                    return (
-                                        <div className="text-center py-12 border rounded-2xl bg-slate-50 dark:bg-slate-900/20">
-                                            <p className="text-muted-foreground font-semibold">No students in this view</p>
+                                const displayedStudents = q
+                                    ? baseStudents.filter(st => {
+                                        const name = (st.user_name || st.name || st.student_name || '').toLowerCase();
+                                        const roll = String(st.roll_no || '').toLowerCase();
+                                        const adm = String(st.admission_no || st.admission_number || '').toLowerCase();
+                                        return name.includes(q) || roll.includes(q) || adm.includes(q);
+                                    })
+                                    : baseStudents;
+
+                                return (
+                                    <>
+                                        {/* Search Bar */}
+                                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
+                                            <div className="relative flex-1">
+                                                <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                                                <Input
+                                                    type="text"
+                                                    placeholder="Search student by name, roll no, or admission no..."
+                                                    value={searchQuery}
+                                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                                    className="pl-9 pr-9 h-9 text-xs sm:text-sm bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 rounded-lg shadow-sm"
+                                                />
+                                                {searchQuery && (
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => setSearchQuery("")}
+                                                        className="absolute right-2.5 top-2.5 p-0.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                    </button>
+                                                )}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground whitespace-nowrap self-end sm:self-center font-medium">
+                                                {searchQuery ? (
+                                                    <span>Found <strong className="text-indigo-600 dark:text-indigo-400">{displayedStudents.length}</strong> of {baseStudents.length} students</span>
+                                                ) : (
+                                                    <span>Total Students: <strong className="text-slate-700 dark:text-slate-300">{baseStudents.length}</strong></span>
+                                                )}
+                                            </div>
                                         </div>
-                                    );
-                                }
+
+                                        {displayedStudents.length === 0 ? (
+                                            <div className="text-center py-12 border rounded-2xl bg-slate-50 dark:bg-slate-900/20">
+                                                <p className="text-muted-foreground font-semibold">
+                                                    {searchQuery ? `No students found matching "${searchQuery}"` : "No students in this view"}
+                                                </p>
+                                                {searchQuery && (
+                                                    <Button variant="ghost" size="sm" onClick={() => setSearchQuery("")} className="mt-2 text-indigo-600 text-xs">
+                                                        Clear Search
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        ) : null}
+                                    </>
+                                );
+                            })()}
+
+                            {/* Render Students List */}
+                            {(() => {
+                                const q = searchQuery.trim().toLowerCase();
+                                const baseStudents = mode === 'update'
+                                    ? students.filter(st => studentsWithExistingMarks.has(String(st.id)))
+                                    : students;
+
+                                const displayedStudents = q
+                                    ? baseStudents.filter(st => {
+                                        const name = (st.user_name || st.name || st.student_name || '').toLowerCase();
+                                        const roll = String(st.roll_no || '').toLowerCase();
+                                        const adm = String(st.admission_no || st.admission_number || '').toLowerCase();
+                                        return name.includes(q) || roll.includes(q) || adm.includes(q);
+                                    })
+                                    : baseStudents;
+
+                                if (displayedStudents.length === 0) return null;
 
                                 return (
                                     <div className="space-y-8">
@@ -659,17 +736,27 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                         })}
                                                     </div>
 
-                                                    {/* Teacher and Principal Remark */}
+                                                    {/* Teacher Remark, Student Rank, and Principal Remark */}
                                                     <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
-                                                        <div>
-                                                            <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Teacher's Remark</label>
-                                                            <Input
-                                                                placeholder="Enter remark for this student's overall performance..."
-                                                                value={remarksData[String(student.id)] || ''}
-                                                                disabled={isDisabled}
-                                                                onChange={(e) => setRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
-                                                                className="max-w-2xl"
-                                                            />
+                                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl">
+                                                            <div className="md:col-span-2">
+                                                                <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Teacher's Remark</label>
+                                                                <Input
+                                                                    placeholder="Enter remark for this student's overall performance..."
+                                                                    value={remarksData[String(student.id)] || ''}
+                                                                    disabled={isDisabled}
+                                                                    onChange={(e) => setRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                                />
+                                                            </div>
+                                                            <div>
+                                                                <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Student Rank</label>
+                                                                <Input
+                                                                    placeholder="e.g. 1st, 2nd, 3rd, etc."
+                                                                    value={ranksData[String(student.id)] || ''}
+                                                                    disabled={isDisabled}
+                                                                    onChange={(e) => setRanksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                                />
+                                                            </div>
                                                         </div>
                                                         <div>
                                                             <label className="block text-sm font-semibold mb-2 text-slate-700 dark:text-slate-300">Principal's Remark</label>
