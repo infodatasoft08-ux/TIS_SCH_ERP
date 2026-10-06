@@ -42,6 +42,13 @@ handlebars.registerHelper('count', function (arr) {
   return Array.isArray(arr) ? arr.length : 0;
 });
 
+handlebars.registerHelper('isJuniorComp', function (col) {
+  if (!col) return false;
+  const val = typeof col === 'object' ? (col.id || col.name || '') : String(col);
+  const s = String(val).toLowerCase();
+  return s.includes('reading') || s.includes('writing') || s.includes('dictation') || s.includes('recitation');
+});
+
 handlebars.registerHelper('cleanMarks', function (val) {
   if (val === undefined || val === null || val === '') return '-';
   const str = String(val);

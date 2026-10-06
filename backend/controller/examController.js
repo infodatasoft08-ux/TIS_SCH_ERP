@@ -2489,8 +2489,13 @@ const GenerateMarksheetPDF = async (req, res) => {
             if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
             if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
             if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
         }
+
+        const juniorIds = ['reading', 'writing_comp', 'writing', 'dictation', 'recitation'];
+        dynamicColumns.forEach(col => {
+            col.showMax = juniorIds.some(j => (col.id && col.id.toLowerCase().includes(j)) || (col.name && col.name.toLowerCase().includes(j)));
+        });
 
         const formatWithMax = (val, colMax) => {
             if (val !== '-' && val !== '' && val !== null && val !== undefined && val !== 'AB') {
@@ -3564,8 +3569,13 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
             if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
             if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'I.A', max: maxOral });
+            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
         }
+
+        const juniorIdsCombined = ['reading', 'writing_comp', 'writing', 'dictation', 'recitation'];
+        dynamicColumns.forEach(col => {
+            col.showMax = juniorIdsCombined.some(j => (col.id && col.id.toLowerCase().includes(j)) || (col.name && col.name.toLowerCase().includes(j)));
+        });
 
         const formatWithMax = (val, colMax) => {
             if (val !== '-' && val !== '' && val !== null && val !== undefined && val !== 'AB') {

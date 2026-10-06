@@ -354,12 +354,22 @@
     .table-marks th.th-comp-name,
     .table-marks th.th-total-col,
     .table-marks th.th-grade,
-    .table-marks th.th-final-total {
+    .table-marks th.th-final-total,
+    .table-marks th.th-header-blank {
       font-family: 'Poppins', sans-serif;
       color: #ffffff !important;
       text-transform: uppercase;
       background: #103c9be3 !important;
       border: 0.5px solid rgba(255, 255, 255, 0.3) !important;
+    }
+
+    .table-marks th.th-header-blank {
+      background: #103c9be3 !important;
+      border: 0.5px solid rgba(255, 255, 255, 0.3) !important;
+      border-top: none !important;
+      color: transparent !important;
+      padding: 0 !important;
+      height: 14px;
     }
 
     /* Row 1: Group Headers */
@@ -409,7 +419,7 @@
     }
 
     /* Row 3: Max Marks row */
-    .table-marks tr.th-max-row th {
+    .table-marks tr.th-max-row th.th-comp-max {
       font-family: 'Poppins', sans-serif;
       font-size: 10.5px;
       font-weight: 800;
@@ -418,6 +428,14 @@
       padding: 2px 3px;
       border: 0.5px solid #bfdbfe !important;
       border-bottom: 1px solid #bfdbfe !important;
+    }
+
+    .table-marks tr.th-max-row th.th-header-blank {
+      background: #103c9be3 !important;
+      border: 0.5px solid rgba(255, 255, 255, 0.3) !important;
+      color: transparent !important;
+      padding: 0 !important;
+      height: 14px;
     }
 
     /* Table body */
@@ -731,24 +749,24 @@
     <div class="mb-1" style="width: 100%; background: #fff; text-align: center;">
       <!-- Row 1: Logo + School Name together (Logo strictly paired with TIMES INTERNATIONAL SCHOOL) -->
       <div
-        style="display: flex; align-items: center; justify-content: center; width: 100%; margin: 0 auto; padding: 0; gap: 10px;">
+        style="display: flex; align-items: center; justify-content: center; width: 100%; max-width: 100%; margin: 0 auto; padding: 0; gap: 8px;">
         <!-- Left Logo -->
         <div style="display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
           {{#if logoData}}
-          <img src="{{logoData}}" alt="School Logo" style="width: 19mm; height: 19mm; object-fit: contain;">
+          <img src="{{logoData}}" alt="School Logo" style="width: 18.5mm; height: 18.5mm; object-fit: contain;">
           {{else if school.logo}}
-          <img src="{{school.logo}}" alt="School Logo" style="width: 19mm; height: 19mm; object-fit: contain;">
+          <img src="{{school.logo}}" alt="School Logo" style="width: 18.5mm; height: 18.5mm; object-fit: contain;">
           {{/if}}
         </div>
 
         <!-- School Name in 1 Line beside Logo -->
-        <div style="display: flex; align-items: last baseline; gap: 7px;">
+        <div style="display: flex; align-items: last baseline; gap: 6px; flex-shrink: 0;">
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 48px; color: #8B1E1E; letter-spacing: 1.5px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 44px; color: #8B1E1E; letter-spacing: 1px; line-height: 1;">
             TIMES
           </div>
           <div
-            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 36px; color: #8B1E1E; letter-spacing: 1.5px;">
+            style="font-family: 'Times New Roman', 'Playfair Display', Georgia, serif; font-weight: bold; font-size: 33px; color: #8B1E1E; letter-spacing: 1px; line-height: 1;">
             INTERNATIONAL SCHOOL
           </div>
         </div>
@@ -905,12 +923,24 @@
           </tr>
           <tr class="th-max-row">
             <!-- Term 1 max marks -->
-            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
-            <th class="th-comp-max">100</th>
+            {{#each dynamicColumns}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>
+            {{else}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
+            {{/if}}
+            {{/each}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
 
             <!-- Term 2 max marks -->
-            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
-            <th class="th-comp-max">100</th>
+            {{#each dynamicColumns}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>
+            {{else}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
+            {{/if}}
+            {{/each}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
           </tr>
           {{else}}
           <tr class="th-main-row">
@@ -926,8 +956,14 @@
             <th class="th-total-col">Total</th>
           </tr>
           <tr class="th-max-row">
-            {{#each dynamicColumns}}<th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>{{/each}}
-            <th class="th-comp-max">-</th>
+            {{#each dynamicColumns}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-max">{{#if this.max}}{{this.max}}{{else}}-{{/if}}</th>
+            {{else}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
+            {{/if}}
+            {{/each}}
+            <th class="th-header-blank" style="background: #103c9be3 !important; border: 0.5px solid rgba(255, 255, 255, 0.3) !important;">&nbsp;</th>
           </tr>
           {{/if}}
         </thead>
