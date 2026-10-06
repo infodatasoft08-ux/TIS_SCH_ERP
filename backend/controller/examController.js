@@ -1570,8 +1570,8 @@ const AddExamGroupMarks = async (req, res) => {
                  theory_marks_obtained, lab_marks_obtained, oral_marks_obtained,
                  written_marks_obtained, reading_marks_obtained, writing_comp_marks_obtained,
                  dictation_marks_obtained, recitation_marks_obtained, ia_pr_marks_obtained,
-                 grade, teacher_remark, principal_remark, next_class, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                 grade, teacher_remark, principal_remark, next_class, \`rank\`, recorded_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
                 ON DUPLICATE KEY UPDATE
                     attendance_status = VALUES(attendance_status),
                     marks_obtained = VALUES(marks_obtained),
@@ -1588,12 +1588,13 @@ const AddExamGroupMarks = async (req, res) => {
                     teacher_remark = VALUES(teacher_remark),
                     principal_remark = VALUES(principal_remark),
                     next_class = VALUES(next_class),
+                    \`rank\` = VALUES(\`rank\`),
                     recorded_at = NOW()
             `, [
                 groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained,
                 thMarks, lbMarks, orMarks,
                 wrMarks, rdMarks, wcMarks, dcMarks, rcMarks, iaMarks,
-                grade, m.teacher_remark || null, m.principal_remark || null, m.next_class || null
+                grade, m.teacher_remark || null, m.principal_remark || null, m.next_class || null, m.rank || null
             ]);
         }
 
@@ -2243,7 +2244,7 @@ const GenerateMarksheetPDF = async (req, res) => {
                    egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
                    egr.written_marks_obtained, egr.reading_marks_obtained, egr.writing_comp_marks_obtained,
                    egr.dictation_marks_obtained, egr.recitation_marks_obtained, egr.ia_pr_marks_obtained,
-                   egr.teacher_remark, egr.principal_remark, egr.next_class, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
+                   egr.teacher_remark, egr.principal_remark, egr.next_class, egr.rank, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
                    st.admission_no, st.blood_group, u.gender, u.address, c.name as section_name
             FROM exam_group_results egr
             JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
@@ -2347,6 +2348,7 @@ const GenerateMarksheetPDF = async (req, res) => {
         let hasFailed = false;
         let dynamicTeacherRemark = null;
         let dynamicPrincipalRemark = null;
+        let dynamicRank = null;
 
         const academicRows = rows.filter(r => r.subject_type === 'academic' || !r.subject_type);
         const coScholasticRows = rows.filter(r => r.subject_type === 'co-scholastic');
@@ -2356,6 +2358,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             if (row.grade === 'F' || row.attendance_status === 'Absent') hasFailed = true;
             if (row.teacher_remark) dynamicTeacherRemark = row.teacher_remark;
             if (row.principal_remark) dynamicPrincipalRemark = row.principal_remark;
+            if (row.rank) dynamicRank = row.rank;
 
             const obtained = (row.attendance_status !== 'Absent' && row.marks_obtained !== null) ? Number(row.marks_obtained) : 0;
             totalMax += Number(row.max_marks || 0);
@@ -2728,7 +2731,7 @@ const GenerateMarksheetPDF = async (req, res) => {
             exam1ColSpan, exam2ColSpan, examColSpan,
             totalMax, totalObtained, percentage,
             grandGrade,
-            rank: rows[0].rank || student.rank || '',
+            rank: dynamicRank || rows[0].rank || student.rank || '',
             currentDate, finalResult, promotionStatus: null,
             nextGrade, ptmStats,
             logoData, headerImageData, luckiestFontBase64, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
@@ -3046,7 +3049,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
                    egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
                    egr.written_marks_obtained, egr.reading_marks_obtained, egr.writing_comp_marks_obtained,
                    egr.dictation_marks_obtained, egr.recitation_marks_obtained, egr.ia_pr_marks_obtained,
-                   egr.next_class, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
+                   egr.next_class, egr.rank, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
                    st.admission_no, st.blood_group, u.gender, u.address, c.name as section_name
             FROM exam_group_results egr
             JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
@@ -3460,10 +3463,12 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         let term2Attended = 0;
         let teacherRemark = null;
         let principalRemark = null;
+        let dynamicRank = null;
 
         rows.forEach(r => {
             if (r.teacher_remark) teacherRemark = r.teacher_remark;
             if (r.principal_remark) principalRemark = r.principal_remark;
+            if (r.rank) dynamicRank = r.rank;
             if (r.exam_type === examTypes[0]) {
                 if (r.end_date) term1End = new Date(r.end_date);
                 if (r.total_working_days !== null && r.total_working_days !== undefined) term1Working = r.total_working_days;
@@ -3689,7 +3694,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             exam1ColSpan, exam2ColSpan, examColSpan,
             totalMax, totalObtained, percentage,
             grandGrade,
-            rank: rows[0].rank || student.rank || '',
+            rank: dynamicRank || rows[0].rank || student.rank || '',
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
             logoData, headerImageData, luckiestFontBase64, chartData, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,

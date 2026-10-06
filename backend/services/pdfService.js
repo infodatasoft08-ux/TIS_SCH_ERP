@@ -49,6 +49,16 @@ handlebars.registerHelper('isJuniorComp', function (col) {
   return s.includes('reading') || s.includes('writing') || s.includes('dictation') || s.includes('recitation');
 });
 
+handlebars.registerHelper('hasJuniorCols', function (cols) {
+  if (!Array.isArray(cols)) return false;
+  const juniorKeys = ['reading', 'writing', 'dictation', 'recitation'];
+  return cols.some(col => {
+    const val = typeof col === 'object' ? (col.id || col.name || '') : String(col);
+    const s = String(val).toLowerCase();
+    return juniorKeys.some(k => s.includes(k));
+  });
+});
+
 handlebars.registerHelper('cleanMarks', function (val) {
   if (val === undefined || val === null || val === '') return '-';
   const str = String(val);
