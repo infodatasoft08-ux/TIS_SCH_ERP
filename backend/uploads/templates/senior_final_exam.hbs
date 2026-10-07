@@ -115,6 +115,23 @@
       gap: 5px;
     }
 
+    .co-scholastic-section-heading {
+      font-family: 'Poppins', sans-serif;
+      font-weight: 700;
+      font-size: 11px;
+      color: #ffffff;
+      background: #103c9be3;
+      padding: 2px 8px;
+      border-radius: 4px;
+      margin-bottom: 3.5px;
+      border-left: 3.5px solid #0e4ea6;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
     .section-heading svg {
       width: 12px;
       height: 12px;
@@ -1054,8 +1071,8 @@
       }
 
       .co-scholastic-table th {
-        background: #103c9be3 !important;
-        color: #ffffff !important;
+        background: linear-gradient(90deg, #dbeafe 0%, #eff6ff 100%);
+        color: #103c9be3 !important;
         font-weight: 700 !important;
         text-align: center;
         border-bottom: 2px solid #0a3a7c !important;
@@ -1484,10 +1501,11 @@
     <div class="grid grid-cols-2 gap-3" style="align-items: start;">
       <!-- Left Column: Co-Scholastic & Skill-Based Areas -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
-        <div class="section-heading" style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
+        <div class="co-scholastic-section-heading"
+          style="justify-content: space-between; align-items: center; flex-wrap: wrap;">
           <span>Co-Scholastic &amp; Skill-Based Areas</span>
           <span
-            style="font-size: 8.5px; font-weight: 700; text-transform: none; color: #1e3a8a; letter-spacing: 0.2px;">(3
+            style="font-size: 8.5px; font-weight: 700; text-transform: none; color: #f3f4f6; letter-spacing: 0.2px;">(3
             Point Grading Scale: A - Outstanding, B - Very Good, C - Fair)</span>
         </div>
         <table class="co-scholastic-table">
@@ -1719,7 +1737,7 @@
 
     <!-- 8. FOOTER -->
     <div
-      style="margin-top: 6px; padding-top: 4px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
+      style="margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
       <div style="text-align: left; line-height: 1.4;">
         <div><strong>Report Card No:</strong> {{#if
           meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
