@@ -54,7 +54,7 @@
 
     /* Page Margins */
     .page-container {
-      padding: 1.2mm 5mm;
+      padding: 1.2mm 8mm;
       width: 100%;
       height: 100%;
       position: relative;
@@ -907,31 +907,32 @@
               I{{/if}} (100 Marks)</th>
             <th colspan="{{add (count dynamicColumns) 1}}" class="th-term">{{#if exam2Name}}{{exam2Name}}{{else}}TERM -
               II{{/if}} (100 Marks)</th>
-            <th rowspan="{{#if (hasJuniorCols dynamicColumns)}}3{{else}}2{{/if}}" class="th-final-total">Final Total</th>
+            <th rowspan="{{#if (hasJuniorCols dynamicColumns)}}3{{else}}2{{/if}}" class="th-final-total">Final Total
+            </th>
             <th rowspan="{{#if (hasJuniorCols dynamicColumns)}}3{{else}}2{{/if}}" class="th-grade">Grade</th>
           </tr>
           <tr class="th-sub-row">
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-subjects">SUBJECTS</th>
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-full-marks">FULL<br>MARKS</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-subjects">SUBJECTS</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-full-marks">FULL<br>MARKS</th>
             <!-- Term 1 columns -->
             {{#each dynamicColumns}}
-              {{#if (or this.showMax (isJuniorComp this))}}
-              <th class="th-comp-name">{{this.name}}</th>
-              {{else}}
-              <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2"{{/if}} class="th-comp-name">{{this.name}}</th>
-              {{/if}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-name">{{this.name}}</th>
+            {{else}}
+            <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2" {{/if}} class="th-comp-name">{{this.name}}</th>
+            {{/if}}
             {{/each}}
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-total-col">Total</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-total-col">Total</th>
 
             <!-- Term 2 columns -->
             {{#each dynamicColumns}}
-              {{#if (or this.showMax (isJuniorComp this))}}
-              <th class="th-comp-name">{{this.name}}</th>
-              {{else}}
-              <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2"{{/if}} class="th-comp-name">{{this.name}}</th>
-              {{/if}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-name">{{this.name}}</th>
+            {{else}}
+            <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2" {{/if}} class="th-comp-name">{{this.name}}</th>
+            {{/if}}
             {{/each}}
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-total-col">Total</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-total-col">Total</th>
           </tr>
           {{#if (hasJuniorCols dynamicColumns)}}
           <tr class="th-max-row">
@@ -958,16 +959,16 @@
             <th rowspan="{{#if (hasJuniorCols dynamicColumns)}}3{{else}}2{{/if}}" class="th-grade">Grade</th>
           </tr>
           <tr class="th-sub-row">
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-subjects">SUBJECTS</th>
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-full-marks">FULL<br>MARKS</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-subjects">SUBJECTS</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-full-marks">FULL<br>MARKS</th>
             {{#each dynamicColumns}}
-              {{#if (or this.showMax (isJuniorComp this))}}
-              <th class="th-comp-name">{{this.name}}</th>
-              {{else}}
-              <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2"{{/if}} class="th-comp-name">{{this.name}}</th>
-              {{/if}}
+            {{#if (or this.showMax (isJuniorComp this))}}
+            <th class="th-comp-name">{{this.name}}</th>
+            {{else}}
+            <th {{#if (hasJuniorCols ../dynamicColumns)}}rowspan="2" {{/if}} class="th-comp-name">{{this.name}}</th>
+            {{/if}}
             {{/each}}
-            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2"{{/if}} class="th-total-col">Total</th>
+            <th {{#if (hasJuniorCols dynamicColumns)}}rowspan="2" {{/if}} class="th-total-col">Total</th>
           </tr>
           {{#if (hasJuniorCols dynamicColumns)}}
           <tr class="th-max-row">
