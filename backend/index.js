@@ -63,9 +63,9 @@ app.use(cors({
   exposedHeaders: ['x-refreshed-token'],
   maxAge: 86400 // Cache CORS Preflight (204 OPTIONS) for 24 hours in browser
 }));
-app.use(express.json());
-app.use(bodyParser.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '50mb' }));
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Serve uploads and assets statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
