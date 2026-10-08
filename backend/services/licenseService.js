@@ -8,16 +8,23 @@ const crypto = require('crypto');
 
 class LicenseService {
   constructor() {
+    this.enabled = process.env.LICENSE_CHECK_ENABLED !== 'false';
     this.licenseServerUrl = process.env.LICENSE_SERVER_URL || 'http://localhost:5500';
     this.apiKey = process.env.LICENSE_API_KEY;
     this.apiSecret = process.env.LICENSE_API_SECRET;
     this.installationId = process.env.LICENSE_INSTALLATION_ID;
     this.cache = new Map();
-    this.cacheTimeout = 15 * 1000; // 15 seconds for quick sync
+    // Cache valid status for 1 hour by default (can be overridden via env) to avoid hammering the license server
+    this.cacheTimeout = parseInt(process.env.LICENSE_CACHE_TIMEOUT_MS) || (60 * 60 * 1000); 
+    // Wait 10 minutes before retrying if license server is offline / timing out
+    this.failureRetryTimeout = parseInt(process.env.LICENSE_FAILURE_RETRY_MS) || (10 * 60 * 1000); 
 
-    // Validate required config
-    if (!this.apiKey || !this.apiSecret || !this.installationId) {
-      console.warn('⚠️  License service not fully configured. Check .env file.');
+    // Check if fully configured
+    this.isConfigured = Boolean(this.apiKey && this.apiSecret && this.installationId);
+    if (!this.enabled) {
+      console.log('ℹ️ License verification is disabled via LICENSE_CHECK_ENABLED=false');
+    } else if (!this.isConfigured) {
+      console.warn('⚠️  License service not fully configured (missing API key/secret/installationId). Running in unverified bypass mode.');
     }
   }
 
@@ -54,21 +61,37 @@ class LicenseService {
    * Returns: { is_valid, license_status, subscription_status, days_until_expiry, ... }
    */
   async verifyLicense() {
+    // If license checking is disabled or not configured, bypass check immediately
+    if (!this.enabled || !this.isConfigured) {
+      return {
+        is_valid: true,
+        license_status: 'ACTIVE',
+        subscription_status: 'ACTIVE',
+        days_until_expiry: 999,
+        grace_period_active: false,
+        status_message: this.enabled ? 'Unconfigured license mode (bypass)' : 'License check disabled',
+        offline_mode: true,
+      };
+    }
+
     try {
       // Check cache first
       const cached = this.cache.get('license_status');
       if (cached && Date.now() - cached.timestamp < this.cacheTimeout) {
-        console.log('✓ License status from cache');
         return cached.data;
+      }
+
+      // Check if we are in a failure cooldown window to prevent blocking every request
+      const failedCache = this.cache.get('license_failed_cooldown');
+      if (failedCache && Date.now() - failedCache.timestamp < this.failureRetryTimeout) {
+        return failedCache.data;
       }
 
       // Call License Server
       const url = `${this.licenseServerUrl}/api/v1/license/status`;
-      console.log(`📞 Calling license server: ${url}`);
-
       const response = await axios.get(url, {
         headers: this.getHeaders(),
-        timeout: 5000, // 5 second timeout
+        timeout: 3000, // 3 second timeout
       });
 
       const licenseData = response.data.data;
@@ -81,24 +104,18 @@ class LicenseService {
         data: licenseData,
         timestamp: Date.now(),
       });
+      // Clear failure cooldown if previous call succeeded
+      this.cache.delete('license_failed_cooldown');
 
-      console.log('✓ License verified:', licenseData.status_message);
       return licenseData;
     } catch (error) {
       console.error('❌ License verification failed:', error.message);
 
-      // If we previously fetched a valid/invalid status, preserve last known status during connection drops
-      if (this.lastKnownStatus) {
-        console.log('⚠️ Preserving last known license status during connection drop:', this.lastKnownStatus.status_message);
-        return {
-          ...this.lastKnownStatus,
-          offline_mode: true,
-          status_message: `Offline mode - ${this.lastKnownStatus.status_message || ''}`,
-        };
-      }
-
-      // Default fallback if no prior check was ever made
-      return {
+      const fallbackData = this.lastKnownStatus ? {
+        ...this.lastKnownStatus,
+        offline_mode: true,
+        status_message: `Offline mode - ${this.lastKnownStatus.status_message || ''}`,
+      } : {
         is_valid: true,
         license_status: 'UNKNOWN',
         subscription_status: 'UNKNOWN',
@@ -107,6 +124,14 @@ class LicenseService {
         status_message: 'Offline mode - license check unavailable',
         offline_mode: true,
       };
+
+      // Crucial: Cache the fallback status during failure so requests don't hang for 3000-5000ms repeatedly
+      this.cache.set('license_failed_cooldown', {
+        data: fallbackData,
+        timestamp: Date.now(),
+      });
+
+      return fallbackData;
     }
   }
 

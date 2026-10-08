@@ -9,6 +9,11 @@ const licenseService = require('../services/licenseService');
 
 async function licenseCheckMiddleware(req, res, next) {
   try {
+    // If license checking is explicitly disabled
+    if (process.env.LICENSE_CHECK_ENABLED === 'false') {
+      return next();
+    }
+
     // Skip license check for health, auth, and public endpoints
     const publicPaths = [
       '/health',
