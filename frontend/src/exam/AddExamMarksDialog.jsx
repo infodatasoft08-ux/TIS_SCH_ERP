@@ -63,6 +63,16 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const [ptmDate, setPtmDate] = useState(exam?.ptm_date ? exam.ptm_date.split('T')[0] : '');
     const [globalNextClass, setGlobalNextClass] = useState('');
     const [studentsWithExistingMarks, setStudentsWithExistingMarks] = useState(new Set());
+    const [dirtyStudentIds, setDirtyStudentIds] = useState(new Set());
+
+    const markStudentDirty = (studentId) => {
+        if (!studentId) return;
+        setDirtyStudentIds(prev => {
+            const next = new Set(prev);
+            next.add(String(studentId));
+            return next;
+        });
+    };
 
     const availableSections = useMemo(() => {
         const map = new Map();
@@ -112,6 +122,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setSelectedSection("all");
             setTotalWorkingDays(exam.total_working_days || 102);
             setPtmDate(exam.ptm_date ? exam.ptm_date.split('T')[0] : '');
+            setDirtyStudentIds(new Set());
             fetchStudentsAndExistingMarks();
         } else {
             setStudents([]);
@@ -122,6 +133,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setSearchQuery("");
             setSelectedSection("all");
             setStudentsWithExistingMarks(new Set());
+            setDirtyStudentIds(new Set());
             setMode("add");
         }
     }, [open, exam, initialMode]);
@@ -222,6 +234,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setRemarksData(initialRemarks);
             setPrincipalRemarksData(initialPrincipalRemarks);
             setRanksData(initialRanks);
+            setDirtyStudentIds(new Set());
         } catch (error) {
             console.error(error);
             toast.error("Failed to fetch students or results");
@@ -253,6 +266,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     
 
     const handleMarkChange = (studentId, subjectId, field, value) => {
+        markStudentDirty(studentId);
         const sId = String(studentId);
         const subId = String(subjectId);
         const groupSub = uniqueSubjects.find(s => String(s.subject_id) === subId);
@@ -325,8 +339,19 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     };
 
     const handleSubmit = async () => {
+        const initialWorkingDays = exam?.total_working_days || 102;
+        const initialPtmDate = exam?.ptm_date ? exam.ptm_date.split('T')[0] : '';
+        const isMetaChanged = (parseInt(totalWorkingDays || 0) !== parseInt(initialWorkingDays || 0)) ||
+                              ((ptmDate || '') !== initialPtmDate);
+
+        if (dirtyStudentIds.size === 0 && !isMetaChanged) {
+            toast.info("No changes detected to save");
+            return;
+        }
+
         const payloadMarks = [];
-        Object.keys(marksData).forEach(studentId => {
+        dirtyStudentIds.forEach(studentId => {
+            if (!marksData[studentId]) return;
             Object.keys(marksData[studentId]).forEach(subjectId => {
                 const d = marksData[studentId][subjectId];
                 const groupSub = uniqueSubjects.find(s => s.subject_id.toString() === subjectId.toString());
@@ -353,8 +378,8 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             });
         });
 
-        if (payloadMarks.length === 0) {
-            toast.error("No marks entered");
+        if (payloadMarks.length === 0 && !isMetaChanged) {
+            toast.info("No changes detected to save");
             return;
         }
 
@@ -367,6 +392,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                 marks: payloadMarks
             });
             toast.success("Marks saved successfully");
+            setDirtyStudentIds(new Set());
             onOpenChange(false);
             if (onSuccess) onSuccess();
         } catch (err) {
@@ -784,7 +810,10 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                     placeholder="Enter remark for this student's overall performance..."
                                                                     value={remarksData[String(student.id)] || ''}
                                                                     disabled={isDisabled}
-                                                                    onChange={(e) => setRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                                    onChange={(e) => {
+                                                                        markStudentDirty(student.id);
+                                                                        setRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }));
+                                                                    }}
                                                                 />
                                                             </div>
                                                             <div>
@@ -793,7 +822,10 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                     placeholder="e.g. 1st, 2nd, 3rd, etc."
                                                                     value={ranksData[String(student.id)] || ''}
                                                                     disabled={isDisabled}
-                                                                    onChange={(e) => setRanksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                                    onChange={(e) => {
+                                                                        markStudentDirty(student.id);
+                                                                        setRanksData(prev => ({ ...prev, [String(student.id)]: e.target.value }));
+                                                                    }}
                                                                 />
                                                             </div>
                                                         </div>
@@ -803,7 +835,10 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                                 placeholder="Enter principal's remark for this student..."
                                                                 value={principalRemarksData[String(student.id)] || ''}
                                                                 disabled={isDisabled}
-                                                                onChange={(e) => setPrincipalRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }))}
+                                                                onChange={(e) => {
+                                                                    markStudentDirty(student.id);
+                                                                    setPrincipalRemarksData(prev => ({ ...prev, [String(student.id)]: e.target.value }));
+                                                                }}
                                                                 className="max-w-2xl"
                                                             />
                                                         </div>

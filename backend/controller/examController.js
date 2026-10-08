@@ -1466,8 +1466,8 @@ const AddExamGroupMarks = async (req, res) => {
     try {
         await conn.beginTransaction();
 
-        // 1. Verify results are not published
-        const [[examGroup]] = await conn.execute(`SELECT is_results_published FROM exam_groups WHERE id = ?`, [exam_group_id]);
+        // 1. Verify results are not published & get existing settings for lock optimization
+        const [[examGroup]] = await conn.execute(`SELECT is_results_published, total_working_days, ptm_date FROM exam_groups WHERE id = ?`, [exam_group_id]);
         if (examGroup && examGroup.is_results_published) {
             conn.release();
             return res.status(400).json({ error: 'Cannot add or update marks after results are published' });
@@ -1609,10 +1609,19 @@ const AddExamGroupMarks = async (req, res) => {
             `, flatValues);
         }
 
-        if (total_working_days !== undefined || ptm_date !== undefined) {
+        // Lock Optimization: Only execute UPDATE exam_groups if total_working_days or ptm_date actually changed!
+        const newWorkingDays = total_working_days !== undefined && total_working_days !== null && total_working_days !== '' ? toInt(total_working_days) : null;
+        const newPtmDate = ptm_date ? String(ptm_date).split('T')[0] : null;
+        const existingPtmDate = examGroup?.ptm_date ? new Date(examGroup.ptm_date).toISOString().split('T')[0] : null;
+        const existingWorkingDays = examGroup?.total_working_days !== null && examGroup?.total_working_days !== undefined ? toInt(examGroup.total_working_days) : null;
+
+        const workingDaysChanged = newWorkingDays !== null && newWorkingDays !== existingWorkingDays;
+        const ptmDateChanged = ptm_date !== undefined && newPtmDate !== existingPtmDate;
+
+        if (workingDaysChanged || ptmDateChanged) {
             await conn.execute(
                 `UPDATE exam_groups SET total_working_days = COALESCE(?, total_working_days), ptm_date = COALESCE(?, ptm_date) WHERE id = ?`,
-                [toInt(total_working_days), ptm_date || null, exam_group_id]
+                [newWorkingDays, newPtmDate, exam_group_id]
             );
         }
 
@@ -1968,7 +1977,18 @@ const GetAllStudentExamSummaries = async (req, res) => {
             ) latest ON latest.student_id = st.id AND latest.latest_id = sar.id
             LEFT JOIN grades g ON g.id = sar.grade_id
             LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
-            JOIN exam_groups eg ON (eg.class_id = sar.class_id OR eg.grade_id = sar.grade_id OR JSON_CONTAINS(COALESCE(eg.section_ids, "[]"), CAST(sar.class_id AS CHAR))) AND (sar.academic_year_id = eg.academic_year_id OR eg.academic_year_id IS NULL)
+            LEFT JOIN exam_groups eg ON (
+                eg.id IN (
+                    SELECT egs_sub.exam_group_id 
+                    FROM exam_group_subjects egs_sub 
+                    JOIN exam_group_results egr_sub ON egr_sub.exam_group_subject_id = egs_sub.id 
+                    WHERE egr_sub.student_id = st.id
+                )
+                OR (
+                    (eg.class_id = sar.class_id OR eg.grade_id = sar.grade_id OR JSON_CONTAINS(COALESCE(eg.section_ids, "[]"), CAST(sar.class_id AS CHAR)))
+                    AND (eg.academic_year_id = sar.academic_year_id OR eg.academic_year_id IS NULL)
+                )
+            )
             LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
             LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
             LEFT JOIN exam_group_subjects egs ON egs.exam_group_id = eg.id
