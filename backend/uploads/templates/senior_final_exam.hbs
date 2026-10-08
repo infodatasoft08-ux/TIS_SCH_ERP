@@ -52,6 +52,32 @@
       print-color-adjust: exact !important;
     }
 
+    @page {
+      size: A4 portrait;
+      margin: 0;
+    }
+
+    .marksheet-page-wrapper {
+      width: 210mm;
+      height: 297mm;
+      max-height: 297mm;
+      page-break-after: always;
+      break-after: page;
+      page-break-inside: avoid;
+      break-inside: avoid;
+      position: relative;
+      overflow: hidden;
+      box-sizing: border-box;
+      background: var(--bg-color);
+      margin: 0;
+      padding: 0;
+    }
+
+    .marksheet-page-wrapper:last-child {
+      page-break-after: auto;
+      break-after: auto;
+    }
+
     /* Page Margins */
     .page-container {
       padding: 6mm 8mm 3mm 8mm;
@@ -748,8 +774,7 @@
   </style>
 </head>
 
-<body>
-
+{{#*inline "marksheetBody"}}
   {{#if logoData}}
   <div class="watermark-container">
     <img src="{{logoData}}" alt="Watermark">
@@ -1374,9 +1399,8 @@
         <text x="30" y="85" font-size="10" font-weight="700" fill="#475569" text-anchor="end"
           font-family="'Poppins', sans-serif">0</text>
 
-        <!-- Y-Axis & X-Axis Lines -->
+        <!-- Y-Axis Line -->
         <line x1="35" y1="10" x2="35" y2="82" stroke="#64748b" stroke-width="1.2" />
-        <line x1="35" y1="82" x2="675" y2="82" stroke="#64748b" stroke-width="1.2" />
 
         <!-- Bars & Labels -->
         {{#each performanceChart}}
@@ -1387,6 +1411,9 @@
         <text x="{{this.labelX}}" y="97" font-size="11" font-weight="700" fill="#1e293b" text-anchor="middle"
           font-family="'Poppins', sans-serif">{{this.shortName}}</text>
         {{/each}}
+
+        <!-- X-Axis Baseline -->
+        <line x1="35" y1="82" x2="675" y2="82" stroke="#64748b" stroke-width="1.2" />
       </svg>
     </div>
     {{/if}}
@@ -1755,6 +1782,18 @@
 
 
   </div>
+{{/inline}}
+
+<body>
+  {{#if marksheets}}
+    {{#each marksheets}}
+    <div class="marksheet-page-wrapper">
+      {{> marksheetBody}}
+    </div>
+    {{/each}}
+  {{else}}
+    {{> marksheetBody}}
+  {{/if}}
 </body>
 
 </html>

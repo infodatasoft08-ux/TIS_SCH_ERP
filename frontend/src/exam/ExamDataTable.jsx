@@ -1724,7 +1724,7 @@ export default function ExamDataTable() {
                     onOpenChange={handleAddMarksDialogClose}
                     exam={selectedExam}
                     initialMode={marksDialogMode}
-                    onSuccess={() => { loadExams(true); loadStudentSummaries(true); }}
+                    onSuccess={() => { loadExams(false); loadStudentSummaries(true); }}
                 />
 
                 <CreateRoutineDialog

@@ -1487,6 +1487,7 @@ const AddExamGroupMarks = async (req, res) => {
         const subjectMap = {};
         subRows.forEach(s => subjectMap[s.subject_id] = s);
 
+        const rowsToInsert = [];
         for (const m of marks) {
             const groupSub = subjectMap[m.subject_id];
             if (!groupSub) continue;
@@ -1564,6 +1565,21 @@ const AddExamGroupMarks = async (req, res) => {
                 }
             }
 
+            rowsToInsert.push([
+                groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained,
+                thMarks, lbMarks, orMarks,
+                wrMarks, rdMarks, wcMarks, dcMarks, rcMarks, iaMarks,
+                grade, m.teacher_remark || null, m.principal_remark || null, m.next_class || null, m.rank || null
+            ]);
+        }
+
+        // Chunked Bulk Upsert (100 rows per batch) for high performance and low server load
+        const BATCH_SIZE = 100;
+        for (let i = 0; i < rowsToInsert.length; i += BATCH_SIZE) {
+            const batch = rowsToInsert.slice(i, i + BATCH_SIZE);
+            const placeholders = batch.map(() => '(?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())').join(', ');
+            const flatValues = batch.flatMap(row => row);
+
             await conn.execute(`
                 INSERT INTO exam_group_results 
                 (exam_group_subject_id, student_id, student_academic_id, attendance_status, marks_obtained,
@@ -1571,7 +1587,7 @@ const AddExamGroupMarks = async (req, res) => {
                  written_marks_obtained, reading_marks_obtained, writing_comp_marks_obtained,
                  dictation_marks_obtained, recitation_marks_obtained, ia_pr_marks_obtained,
                  grade, teacher_remark, principal_remark, next_class, \`rank\`, recorded_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+                VALUES ${placeholders}
                 ON DUPLICATE KEY UPDATE
                     attendance_status = VALUES(attendance_status),
                     marks_obtained = VALUES(marks_obtained),
@@ -1590,12 +1606,7 @@ const AddExamGroupMarks = async (req, res) => {
                     next_class = VALUES(next_class),
                     \`rank\` = VALUES(\`rank\`),
                     recorded_at = NOW()
-            `, [
-                groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained,
-                thMarks, lbMarks, orMarks,
-                wrMarks, rdMarks, wcMarks, dcMarks, rcMarks, iaMarks,
-                grade, m.teacher_remark || null, m.principal_remark || null, m.next_class || null, m.rank || null
-            ]);
+            `, flatValues);
         }
 
         if (total_working_days !== undefined || ptm_date !== undefined) {
@@ -2202,6 +2213,527 @@ const GetSupervisedClassExamTrends = async (req, res) => {
 };
 
 
+function loadSharedMarksheetAssets() {
+    let logoData = null;
+    let headerImageData = null;
+    let luckiestFontBase64 = null;
+    let principalSignatureData = null;
+    try {
+        const logoPath = path.join(__dirname, '../assets/Times_Internation_School_logo.png');
+        const headerImgPath = path.join(__dirname, '../assets/times_international_sch_marksheet-header.png');
+        const fontPath = path.join(__dirname, '../assets/fonts/LuckiestGuy-Regular.ttf');
+        const principalSigPath = path.join(__dirname, '../assets/principal_signature.png');
+        if (fs.existsSync(logoPath)) logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+        if (fs.existsSync(headerImgPath)) headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
+        if (fs.existsSync(fontPath)) luckiestFontBase64 = fs.readFileSync(fontPath).toString('base64');
+        if (fs.existsSync(principalSigPath)) principalSignatureData = `data:image/png;base64,${fs.readFileSync(principalSigPath).toString('base64')}`;
+    } catch (e) { }
+
+    let school = {};
+    try {
+        const schoolPath = path.join(__dirname, '../school-info.json');
+        if (fs.existsSync(schoolPath)) {
+            school = JSON.parse(fs.readFileSync(schoolPath, 'utf8'));
+        }
+    } catch (e) { }
+
+    return { logoData, headerImageData, luckiestFontBase64, principalSignatureData, school };
+}
+
+const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null, reqUser = null) => {
+    const assets = sharedAssets || loadSharedMarksheetAssets();
+    const { logoData, headerImageData, luckiestFontBase64, principalSignatureData, school } = assets;
+
+    const [rows] = await db.execute(`
+        SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
+               COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
+               COALESCE(g.name, eg_g.name) as grade_name, 
+               COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
+               COALESCE(ay.name, eg_ay.name) as academic_year_name,
+               eg.id as exam_id, eg.name as exam_name, eg.exam_type, eg.start_date, eg.is_results_published,
+               egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
+               egs.has_theory, egs.has_lab, egs.has_oral,
+               egs.has_written, egs.has_reading, egs.has_writing_comp,
+               egs.has_dictation, egs.has_recitation, egs.has_ia_pr,
+               COALESCE(egs.theory_max_marks, egs_orig.theory_max_marks) as theory_max_marks,
+               COALESCE(egs.lab_max_marks, egs_orig.lab_max_marks) as lab_max_marks,
+               COALESCE(egs.oral_max_marks, egs_orig.oral_max_marks) as oral_max_marks,
+               COALESCE(egs.written_max_marks, egs_orig.written_max_marks) as written_max_marks,
+               COALESCE(egs.reading_max_marks, egs_orig.reading_max_marks) as reading_max_marks,
+               COALESCE(egs.writing_comp_max_marks, egs_orig.writing_comp_max_marks) as writing_comp_max_marks,
+               COALESCE(egs.dictation_max_marks, egs_orig.dictation_max_marks) as dictation_max_marks,
+               COALESCE(egs.recitation_max_marks, egs_orig.recitation_max_marks) as recitation_max_marks,
+               COALESCE(egs.ia_pr_max_marks, egs_orig.ia_pr_max_marks) as ia_pr_max_marks,
+               egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
+               egr.written_marks_obtained, egr.reading_marks_obtained, egr.writing_comp_marks_obtained,
+               egr.dictation_marks_obtained, egr.recitation_marks_obtained, egr.ia_pr_marks_obtained,
+               egr.teacher_remark, egr.principal_remark, egr.next_class, egr.rank, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
+               st.admission_no, st.blood_group, u.gender, u.address, c.name as section_name
+        FROM exam_group_results egr
+        JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
+        JOIN exam_groups eg ON eg.id = egs.exam_group_id
+        JOIN students st ON st.id = egr.student_id
+        JOIN users u ON u.id = st.user_id
+        LEFT JOIN (
+            SELECT exam_group_id, subject_id, 
+                   MAX(theory_max_marks) as theory_max_marks,
+                   MAX(lab_max_marks) as lab_max_marks,
+                   MAX(oral_max_marks) as oral_max_marks,
+                   MAX(written_max_marks) as written_max_marks,
+                   MAX(reading_max_marks) as reading_max_marks,
+                   MAX(writing_comp_max_marks) as writing_comp_max_marks,
+                   MAX(dictation_max_marks) as dictation_max_marks,
+                   MAX(recitation_max_marks) as recitation_max_marks,
+                   MAX(ia_pr_max_marks) as ia_pr_max_marks
+            FROM exam_group_subjects
+            GROUP BY exam_group_id, subject_id
+        ) egs_orig ON egs_orig.exam_group_id = egs.exam_group_id AND egs_orig.subject_id = egs.subject_id
+        LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
+        LEFT JOIN grades g ON g.id = sar.grade_id
+        LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
+        LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
+        LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
+        LEFT JOIN subjects s ON s.id = egs.subject_id
+        LEFT JOIN classes c ON c.id = sar.class_id
+        WHERE st.id = ? AND eg.id = ?
+    `, [student_id, exam_id]);
+
+    if (!rows || rows.length === 0) return null;
+
+    const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
+    const formatMarks = (obtained, has, attendance) => {
+        if (attendance === 'Absent') return '-';
+        if (!checkTrue(has)) return '-';
+        if (obtained !== null && obtained !== undefined && obtained !== '') {
+            return `${Math.round(Number(obtained))}`;
+        }
+        return '0';
+    };
+    const calculateGrade = (pct) => {
+        const val = Number(pct) || 0;
+        if (val >= 91) return 'A1';
+        if (val >= 81) return 'A2';
+        if (val >= 71) return 'B1';
+        if (val >= 61) return 'B2';
+        if (val >= 51) return 'C1';
+        if (val >= 41) return 'C2';
+        if (val >= 33) return 'D';
+        return 'E';
+    };
+
+    let className = rows[0].grade_name || rows[0].class_name || 'N/A';
+    let rawSec = rows[0].section_name || '';
+    let sectionName = rawSec;
+
+    if (sectionName.includes('-')) {
+        const parts = sectionName.split('-');
+        sectionName = parts[parts.length - 1].trim();
+    } else if (sectionName.toLowerCase().trim() === className.toLowerCase().trim()) {
+        sectionName = '';
+    }
+
+    let classSectionDisplay = className;
+    if (sectionName && sectionName.toLowerCase() !== className.toLowerCase()) {
+        classSectionDisplay = `${className} - ${sectionName}`;
+    }
+
+    const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
+    const student = {
+        id: rows[0].student_id,
+        name: rows[0].student_name,
+        avatar_url: studentPhoto,
+        photo: studentPhoto,
+        status: rows[0].status || 'Active',
+        roll_no: rows[0].roll_no || 'N/A',
+        class: classSectionDisplay,
+        class_name: className,
+        grade_name: classSectionDisplay,
+        section: sectionName,
+        class_section: classSectionDisplay,
+        admission_no: rows[0].admission_no || '',
+        gender: rows[0].gender || '',
+        blood_group: rows[0].blood_group || '',
+        address: rows[0].address || '',
+        academic_year_name: rows[0].academic_year_name || 'N/A',
+        fathers_name: rows[0].fathers_name || '',
+        mothers_name: rows[0].mothers_name || '',
+        father_name: rows[0].fathers_name || '',
+        mother_name: rows[0].mothers_name || '',
+        dob: rows[0].dob ? new Date(rows[0].dob).toLocaleDateString('en-IN') : ''
+    };
+
+    let totalMax = 0;
+    let totalObtained = 0;
+    let hasFailed = false;
+    let dynamicTeacherRemark = null;
+    let dynamicPrincipalRemark = null;
+    let dynamicRank = null;
+
+    const academicRows = rows.filter(r => r.subject_type === 'academic' || !r.subject_type);
+    const coScholasticRows = rows.filter(r => r.subject_type === 'co-scholastic');
+    const skillBasedRows = rows.filter(r => r.subject_type === 'skill-based');
+
+    const subjects = academicRows.map((row, idx) => {
+        if (row.grade === 'F' || row.attendance_status === 'Absent') hasFailed = true;
+        if (row.teacher_remark) dynamicTeacherRemark = row.teacher_remark;
+        if (row.principal_remark) dynamicPrincipalRemark = row.principal_remark;
+        if (row.rank) dynamicRank = row.rank;
+
+        const obtained = (row.attendance_status !== 'Absent' && row.marks_obtained !== null) ? Number(row.marks_obtained) : 0;
+        totalMax += Number(row.max_marks || 0);
+        if (row.attendance_status !== 'Absent') totalObtained += obtained;
+
+        const subMax = Number(row.max_marks || 0);
+        const percentageVal = subMax > 0 ? (obtained / subMax) * 100 : 0;
+
+        const compFlags = [row.has_written, row.has_reading, row.has_writing_comp, row.has_dictation, row.has_recitation, row.has_ia_pr, row.has_oral, row.has_lab, row.has_theory];
+        const activeFlagsCount = compFlags.filter(f => checkTrue(f)).length;
+
+        const components = [];
+        const addComp = (name, flag, mmKey, t1Val, t2Val) => {
+            const flagActive = checkTrue(row[flag]);
+            const t1Has = t1Val !== null && t1Val !== undefined && t1Val !== '' && t1Val !== '-';
+            const t2Has = t2Val !== null && t2Val !== undefined && t2Val !== '' && t2Val !== '-';
+            if (flagActive || t1Has || t2Has) {
+                const rawMM = row[mmKey];
+                let mmVal = (rawMM !== null && rawMM !== undefined && rawMM !== '' && Number(rawMM) > 0)
+                    ? Math.round(Number(rawMM))
+                    : (activeFlagsCount <= 1 && subMax > 0 ? Math.round(subMax) : '-');
+
+                components.push({
+                    name,
+                    mm: mmVal,
+                    term1: t1Val,
+                    term2: t2Val
+                });
+            }
+        };
+
+        const t1Theory = formatMarks(row.theory_marks_obtained, row.has_theory, row.attendance_status);
+        const t1Lab = formatMarks(row.lab_marks_obtained, row.has_lab, row.attendance_status);
+        const t1Oral = formatMarks(row.oral_marks_obtained, row.has_oral, row.attendance_status);
+        const t1Written = formatMarks(row.written_marks_obtained, row.has_written, row.attendance_status);
+        const t1Reading = formatMarks(row.reading_marks_obtained, row.has_reading, row.attendance_status);
+        const t1WritingComp = formatMarks(row.writing_comp_marks_obtained, row.has_writing_comp, row.attendance_status);
+        const t1Dictation = formatMarks(row.dictation_marks_obtained, row.has_dictation, row.attendance_status);
+        const t1Recitation = formatMarks(row.recitation_marks_obtained, row.has_recitation, row.attendance_status);
+        const t1IaPr = formatMarks(row.ia_pr_marks_obtained, row.has_ia_pr, row.attendance_status);
+
+        addComp('Written', 'has_written', 'written_max_marks', t1Written, '-');
+        addComp('Reading', 'has_reading', 'reading_max_marks', t1Reading, '-');
+        addComp('Writing', 'has_writing_comp', 'writing_comp_max_marks', t1WritingComp, '-');
+        addComp('Dictation', 'has_dictation', 'dictation_max_marks', t1Dictation, '-');
+        addComp('Recitation', 'has_recitation', 'recitation_max_marks', t1Recitation, '-');
+        addComp('I.A./PR', 'has_ia_pr', 'ia_pr_max_marks', t1IaPr, '-');
+        addComp('Oral', 'has_oral', 'oral_max_marks', t1Oral, '-');
+        addComp('Lab', 'has_lab', 'lab_max_marks', t1Lab, '-');
+        addComp('Theory', 'has_theory', 'theory_max_marks', t1Theory, '-');
+
+        return {
+            serial_no: idx + 1,
+            subject_name: row.subject_name,
+            subject_type: row.subject_type || 'academic',
+            exam1_marks: row.attendance_status === 'Absent' ? 'AB' : (row.marks_obtained !== null ? Math.round(obtained) : '-'),
+            exam2_marks: '-',
+            total: row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained),
+            max: Math.round(subMax),
+            grade: row.attendance_status === 'Absent' ? 'AB' : (row.grade || calculateGrade(percentageVal)),
+            overall_grade: row.attendance_status === 'Absent' ? 'AB' : (row.grade || calculateGrade(percentageVal)),
+            yearly_avg: row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained),
+            exam1_theory: t1Theory,
+            exam1_lab: t1Lab,
+            exam1_oral: t1Oral,
+            exam1_written: t1Written,
+            exam1_reading: t1Reading,
+            exam1_writing_comp: t1WritingComp,
+            exam1_dictation: t1Dictation,
+            exam1_recitation: t1Recitation,
+            exam1_ia_pr: t1IaPr,
+            theory_max_marks: row.theory_max_marks,
+            lab_max_marks: row.lab_max_marks,
+            oral_max_marks: row.oral_max_marks,
+            written_max_marks: row.written_max_marks,
+            reading_max_marks: row.reading_max_marks,
+            writing_comp_max_marks: row.writing_comp_max_marks,
+            dictation_max_marks: row.dictation_max_marks,
+            recitation_max_marks: row.recitation_max_marks,
+            ia_pr_max_marks: row.ia_pr_max_marks,
+            components,
+            compRowSpan: components.length + 1
+        };
+    });
+
+    totalObtained = Math.round(totalObtained);
+    const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
+    const grandGrade = calculateGrade(percentage);
+    const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+    const finalResult = hasFailed ? 'Essential Repeat' : 'Pass';
+    const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Needs to improve academic consistency.' : 'Good performance. Keep it up!');
+    const principalRemark = dynamicPrincipalRemark || (hasFailed ? 'Can do better with sincere effort.' : 'Promoted to higher class.');
+
+    const showTheory = academicRows.some(s => checkTrue(s.has_theory) || (s.theory_marks_obtained !== null && s.theory_marks_obtained !== undefined && s.theory_marks_obtained !== '' && s.theory_marks_obtained !== '-'));
+    const showLab = academicRows.some(s => checkTrue(s.has_lab) || (s.lab_marks_obtained !== null && s.lab_marks_obtained !== undefined && s.lab_marks_obtained !== '' && s.lab_marks_obtained !== '-'));
+    const showOral = academicRows.some(s => checkTrue(s.has_oral) || (s.oral_marks_obtained !== null && s.oral_marks_obtained !== undefined && s.oral_marks_obtained !== '' && s.oral_marks_obtained !== '-'));
+    const showWritten = academicRows.some(s => checkTrue(s.has_written));
+    const showReading = academicRows.some(s => checkTrue(s.has_reading));
+    const showWritingComp = academicRows.some(s => checkTrue(s.has_writing_comp));
+    const showDictation = academicRows.some(s => checkTrue(s.has_dictation));
+    const showRecitation = academicRows.some(s => checkTrue(s.has_recitation));
+    const showIaPr = academicRows.some(s => checkTrue(s.has_ia_pr));
+
+    const maxTheory = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_theory) && s.theory_max_marks ? parseInt(s.theory_max_marks) : null), null) || '';
+    const maxLab = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_lab) && s.lab_max_marks ? parseInt(s.lab_max_marks) : null), null) || '';
+    const maxOral = academicRows.reduce((acc, s) => acc || (s.oral_max_marks ? parseInt(s.oral_max_marks) : null), null) || '';
+    const maxWritten = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_written) && s.written_max_marks ? parseInt(s.written_max_marks) : null), null) || '';
+    const maxReading = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_reading) && s.reading_max_marks ? parseInt(s.reading_max_marks) : null), null) || '';
+    const maxWritingComp = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_writing_comp) && s.writing_comp_max_marks ? parseInt(s.writing_comp_max_marks) : null), null) || '';
+    const maxDictation = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_dictation) && s.dictation_max_marks ? parseInt(s.dictation_max_marks) : null), null) || '';
+    const maxRecitation = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_recitation) && s.recitation_max_marks ? parseInt(s.recitation_max_marks) : null), null) || '';
+    const maxIaPr = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_ia_pr) && s.ia_pr_max_marks ? parseInt(s.ia_pr_max_marks) : null), null) || '';
+
+    const baseNewFields = [showTheory, showWritten, showReading, showWritingComp, showDictation, showRecitation, showIaPr, showOral, showLab].filter(Boolean).length;
+    const exam1ColSpan = baseNewFields + 1;
+    const exam2ColSpan = baseNewFields + 1;
+    const examColSpan = exam1ColSpan;
+
+    const hasIaSubSubjects = Boolean(showReading || showWritingComp || showDictation || showRecitation);
+    const iaColSpan = [showReading, showWritingComp, showDictation, showRecitation].filter(Boolean).length;
+    const iaTotalMax = (showReading ? (parseInt(maxReading) || 0) : 0) +
+        (showWritingComp ? (parseInt(maxWritingComp) || 0) : 0) +
+        (showDictation ? (parseInt(maxDictation) || 0) : 0) +
+        (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
+
+    const dynamicColumns = [];
+    if (hasIaSubSubjects) {
+        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+        if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
+        if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
+        if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
+        if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
+        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+    } else {
+        if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
+        if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
+        if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
+        if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
+        if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
+    }
+
+    const juniorIds = ['reading', 'writing_comp', 'writing', 'dictation', 'recitation'];
+    dynamicColumns.forEach(col => {
+        col.showMax = juniorIds.some(j => (col.id && col.id.toLowerCase().includes(j)) || (col.name && col.name.toLowerCase().includes(j)));
+    });
+
+    const formatWithMax = (val, colMax) => {
+        if (val !== '-' && val !== '' && val !== null && val !== undefined && val !== 'AB') {
+            const parsedMax = Number(colMax);
+            if (!isNaN(parsedMax) && parsedMax > 0) {
+                return `${val}/${Math.round(parsedMax)}`;
+            }
+        }
+        return val;
+    };
+
+    subjects.forEach(sub => {
+        sub.exam1_dynamicMarks = dynamicColumns.map(col => {
+            let val = '-';
+            let colMax = null;
+            if (col.id === 'theory') { val = sub.exam1_theory; colMax = sub.theory_max_marks; }
+            else if (col.id === 'written') { val = sub.exam1_written; colMax = sub.written_max_marks; }
+            else if (col.id === 'reading') { val = sub.exam1_reading; colMax = sub.reading_max_marks; }
+            else if (col.id === 'writing_comp') { val = sub.exam1_writing_comp; colMax = sub.writing_comp_max_marks; }
+            else if (col.id === 'dictation') { val = sub.exam1_dictation; colMax = sub.dictation_max_marks; }
+            else if (col.id === 'recitation') { val = sub.exam1_recitation; colMax = sub.recitation_max_marks; }
+            else if (col.id === 'ia_pr') { val = sub.exam1_ia_pr; colMax = sub.ia_pr_max_marks; }
+            else if (col.id === 'oral') { val = sub.exam1_oral; colMax = sub.oral_max_marks; }
+            else if (col.id === 'lab') { val = sub.exam1_lab; colMax = sub.lab_max_marks; }
+            return { value: formatWithMax(val, colMax) };
+        });
+    });
+
+    const coScholastic = coScholasticRows.map(s => ({
+        name: s.subject_name,
+        term1: s.grade || '-',
+        term2: '-'
+    }));
+
+    const skillBased = skillBasedRows.map(s => ({
+        name: s.subject_name,
+        term1: s.grade || '-',
+        term2: '-'
+    }));
+
+    const hasCoScholastic = Boolean((coScholastic && coScholastic.length > 0) || (skillBased && skillBased.length > 0));
+
+    const barPalette = [
+        '#3b82f6', '#f97316', '#22c55e', '#ef4444', '#a855f7', '#eab308',
+        '#14b8a6', '#ec4899', '#6366f1', '#06b6d4', '#84cc16', '#f43f5e'
+    ];
+
+    const getShortSubjectName = (name) => {
+        if (!name) return '';
+        const n = name.trim();
+        if (/^math/i.test(n)) return 'Maths';
+        if (/^islamic/i.test(n)) return 'Islamic';
+        if (/^e\.?[vV]\.?s/i.test(n) || /environmental/i.test(n)) return 'E.V.S';
+        if (/^s\.?[sS]\.?[pP]\.?[dD]/i.test(n)) return 'S.S.P.D';
+        if (/^drawing|^art/i.test(n)) return 'Drawing';
+        if (/^social/i.test(n)) return 'S.St';
+        if (/^science/i.test(n)) return 'Science';
+        if (/^computer/i.test(n)) return 'Comp';
+        if (/^general knowledge|^g\.?[kK]/i.test(n)) return 'G.K';
+        if (n.length > 8) {
+            const first = n.split(/[\s(&]+/)[0];
+            return first.length <= 8 ? first : first.substring(0, 7) + '.';
+        }
+        return n;
+    };
+
+    const chartAcademic = subjects.filter(s => !s.subject_type || s.subject_type === 'academic');
+    const numSubjects = chartAcademic.length || 1;
+    const plotWidth = 630;
+    const step = plotWidth / numSubjects;
+    const barWidth = Math.min(38, Math.max(16, Math.floor(step * 0.45)));
+
+    const performanceChart = chartAcademic.map((sub, i) => {
+        const rawScore = (sub.exam1_marks !== '-' && sub.exam1_marks !== undefined && sub.exam1_marks !== null)
+            ? Number(sub.exam1_marks)
+            : 0;
+        const subMax = Number(sub.max) || 100;
+        const score = isNaN(rawScore) ? 0 : Math.min(100, Math.max(0, Math.round((rawScore / subMax) * 100)));
+        const heightPct = score;
+
+        // SVG coordinates: Top (100%) = 12, Bottom (0%) = 82. Available height = 70px
+        const maxGraphHeight = 70;
+        const barHeight = Math.max(2, Math.round((score / 100) * maxGraphHeight));
+        const barX = Math.round(38 + (i * step) + ((step - barWidth) / 2));
+        const barY = 82 - barHeight;
+        const scoreY = Math.max(10, barY - 4);
+        const labelX = barX + Math.round(barWidth / 2);
+
+        return {
+            name: sub.subject_name,
+            shortName: getShortSubjectName(sub.subject_name),
+            score,
+            heightPct,
+            barHeight,
+            barWidth,
+            barX,
+            barY,
+            scoreY,
+            labelX,
+            color: barPalette[i % barPalette.length]
+        };
+    });
+
+    const getNextGrade = (currentGradeName, customNextClass) => {
+        if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
+        if (!currentGradeName) return 'Next Class';
+        const g = String(currentGradeName).trim().toLowerCase();
+        if (g.includes('play')) return 'Nursery';
+        if (g.includes('nursery')) return 'LKG';
+        if (g.includes('lkg')) return 'UKG';
+        if (g.includes('ukg') || g.includes('prep') || g.includes('kg')) return 'I';
+        if (g.includes('class - i') || g.includes('class i') || g.includes('grade 1') || g.includes('class 1') || g === 'i' || g === '1') return 'II';
+        if (g.includes('class - ii') || g.includes('class ii') || g.includes('grade 2') || g.includes('class 2') || g === 'ii' || g === '2') return 'III';
+        if (g.includes('class - iii') || g.includes('class iii') || g.includes('grade 3') || g.includes('class 3') || g === 'iii' || g === '3') return 'IV';
+        if (g.includes('class - iv') || g.includes('class iv') || g.includes('grade 4') || g.includes('class 4') || g === 'iv' || g === '4') return 'V';
+        if (g.includes('class - v') || g.includes('class v') || g.includes('grade 5') || g.includes('class 5') || g === 'v' || g === '5') return 'VI';
+        if (g.includes('class - vi') || g.includes('class vi') || g.includes('grade 6') || g.includes('class 6') || g === 'vi' || g === '6') return 'VII';
+        if (g.includes('class - vii') || g.includes('class vii') || g.includes('grade 7') || g.includes('class 7') || g === 'vii' || g === '7') return 'VIII';
+        if (g.includes('class - viii') || g.includes('class viii') || g.includes('grade 8') || g.includes('class 8') || g === 'viii' || g === '8') return 'IX';
+        if (g.includes('class - ix') || g.includes('class ix') || g.includes('grade 9') || g.includes('class 9') || g === 'ix' || g === '9') return 'X';
+        if (g.includes('class - x') || g.includes('class x') || g.includes('grade 10') || g.includes('class 10') || g === 'x' || g === '10') return 'XI';
+        if (g.includes('class - xi') || g.includes('class xi') || g.includes('grade 11') || g.includes('class 11') || g === 'xi' || g === '11') return 'XII';
+        return 'Next Class';
+    };
+
+    let attendedCount = 0;
+    try {
+        const [attRows] = await db.execute(`
+            SELECT COUNT(DISTINCT attendance_date) as attended_days
+            FROM attendance
+            WHERE student_id = ? AND status IN ('Present', 'Late', 'present', 'late')
+        `, [student_id]);
+        attendedCount = attRows[0]?.attended_days || 0;
+    } catch (e) { }
+
+    const workingDays = rows[0].total_working_days || 102;
+    const nextGrade = getNextGrade(rows[0].grade_name, rows[0].next_class);
+
+    const attendanceStats = {
+        hasTerm1: true,
+        term1Working: workingDays,
+        term1Attended: attendedCount,
+        term1Absent: Math.max(0, workingDays - attendedCount),
+        term1Percentage: workingDays ? Math.round((attendedCount / workingDays) * 100) : 0,
+        hasTerm2: false,
+        totalWorking: workingDays,
+        totalAttended: attendedCount,
+        totalAbsent: Math.max(0, workingDays - attendedCount),
+        totalPercentage: workingDays ? Math.round((attendedCount / workingDays) * 100) : 0
+    };
+
+    const physicalStats = {
+        term1Working: workingDays,
+        term1Attended: attendedCount,
+        attendance: `${attendedCount}/${workingDays}`,
+        sports: '', behaviour: '', cleanliness: ''
+    };
+
+    const ptmStats = {
+        term1Date: rows[0].ptm_date ? new Date(rows[0].ptm_date).toLocaleDateString('en-IN') : '',
+        term2Date: ''
+    };
+
+    const meta = {
+        report_id: `TIS-${exam_id}-${student_id}`,
+        generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+        generated_by: reqUser?.name || 'School Office',
+        erp_name: 'TIS ERP',
+        erp_version: '2.0',
+        year: new Date().getFullYear()
+    };
+
+    return {
+        school,
+        student,
+        reportTitle: rows[0].exam_name,
+        exam1Name: rows[0].exam_name,
+        exam2Name: 'Term II',
+        subjects,
+        showTheory, showLab, showOral,
+        showWritten, showReading, showWritingComp,
+        showDictation, showRecitation, showIaPr,
+        maxTheory, maxLab, maxOral,
+        maxWritten, maxReading, maxWritingComp,
+        maxDictation, maxRecitation, maxIaPr,
+        hasIaSubSubjects,
+        iaColSpan,
+        iaTotalMax,
+        baseNewFields,
+        exam1ColSpan, exam2ColSpan, examColSpan,
+        totalMax, totalObtained, percentage,
+        grandGrade,
+        rank: dynamicRank || rows[0].rank || student.rank || '',
+        currentDate, finalResult, promotionStatus: null,
+        nextGrade, ptmStats,
+        logoData, headerImageData, luckiestFontBase64, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
+        teacherRemark, principalRemark,
+        dynamicColumns,
+        signatures: {
+            principal: principalSignatureData,
+            teacher: null,
+            controller: null
+        },
+        principalSignature: principalSignatureData,
+        meta
+    };
+};
+
 const GenerateMarksheetPDF = async (req, res) => {
     let { student_id, exam_id } = req.body;
 
@@ -2221,533 +2753,14 @@ const GenerateMarksheetPDF = async (req, res) => {
     }
 
     try {
-        const [rows] = await db.execute(`
-            SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
-                   COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
-                   COALESCE(g.name, eg_g.name) as grade_name, 
-                   COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
-                   COALESCE(ay.name, eg_ay.name) as academic_year_name,
-                   eg.id as exam_id, eg.name as exam_name, eg.exam_type, eg.start_date, eg.is_results_published,
-                   egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
-                   egs.has_theory, egs.has_lab, egs.has_oral,
-                   egs.has_written, egs.has_reading, egs.has_writing_comp,
-                   egs.has_dictation, egs.has_recitation, egs.has_ia_pr,
-                   COALESCE(egs.theory_max_marks, egs_orig.theory_max_marks) as theory_max_marks,
-                   COALESCE(egs.lab_max_marks, egs_orig.lab_max_marks) as lab_max_marks,
-                   COALESCE(egs.oral_max_marks, egs_orig.oral_max_marks) as oral_max_marks,
-                   COALESCE(egs.written_max_marks, egs_orig.written_max_marks) as written_max_marks,
-                   COALESCE(egs.reading_max_marks, egs_orig.reading_max_marks) as reading_max_marks,
-                   COALESCE(egs.writing_comp_max_marks, egs_orig.writing_comp_max_marks) as writing_comp_max_marks,
-                   COALESCE(egs.dictation_max_marks, egs_orig.dictation_max_marks) as dictation_max_marks,
-                   COALESCE(egs.recitation_max_marks, egs_orig.recitation_max_marks) as recitation_max_marks,
-                   COALESCE(egs.ia_pr_max_marks, egs_orig.ia_pr_max_marks) as ia_pr_max_marks,
-                   egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained,
-                   egr.written_marks_obtained, egr.reading_marks_obtained, egr.writing_comp_marks_obtained,
-                   egr.dictation_marks_obtained, egr.recitation_marks_obtained, egr.ia_pr_marks_obtained,
-                   egr.teacher_remark, egr.principal_remark, egr.next_class, egr.rank, eg.total_working_days, eg.ptm_date, s.subject_type, st.fathers_name, st.mothers_name, st.date_of_birth as dob,
-                   st.admission_no, st.blood_group, u.gender, u.address, c.name as section_name
-            FROM exam_group_results egr
-            JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
-            JOIN exam_groups eg ON eg.id = egs.exam_group_id
-            JOIN students st ON st.id = egr.student_id
-            JOIN users u ON u.id = st.user_id
-            LEFT JOIN (
-                SELECT exam_group_id, subject_id, 
-                       MAX(theory_max_marks) as theory_max_marks,
-                       MAX(lab_max_marks) as lab_max_marks,
-                       MAX(oral_max_marks) as oral_max_marks,
-                       MAX(written_max_marks) as written_max_marks,
-                       MAX(reading_max_marks) as reading_max_marks,
-                       MAX(writing_comp_max_marks) as writing_comp_max_marks,
-                       MAX(dictation_max_marks) as dictation_max_marks,
-                       MAX(recitation_max_marks) as recitation_max_marks,
-                       MAX(ia_pr_max_marks) as ia_pr_max_marks
-                FROM exam_group_subjects
-                GROUP BY exam_group_id, subject_id
-            ) egs_orig ON egs_orig.exam_group_id = egs.exam_group_id AND egs_orig.subject_id = egs.subject_id
-            LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
-            LEFT JOIN grades g ON g.id = sar.grade_id
-            LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
-            LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
-            LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
-            LEFT JOIN subjects s ON s.id = egs.subject_id
-            LEFT JOIN classes c ON c.id = sar.class_id
-            WHERE st.id = ? AND eg.id = ?
-        `, [student_id, exam_id]);
+        const sharedAssets = loadSharedMarksheetAssets();
+        const templateData = await buildSeniorMarksheetData(student_id, exam_id, sharedAssets, req.user);
 
-        if (rows.length === 0) {
+        if (!templateData) {
             return res.status(404).json({ error: 'Marksheet data not found' });
         }
 
-        const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
-        const formatMarks = (obtained, has, attendance) => {
-            if (attendance === 'Absent') return '-';
-            if (!checkTrue(has)) return '-';
-            if (obtained !== null && obtained !== undefined && obtained !== '') {
-                return `${Math.round(Number(obtained))}`;
-            }
-            // if (checkTrue(has)) return '0';
-            // return '-';
-            return '0';
-        };
-        const calculateGrade = (pct) => {
-            const val = Number(pct) || 0;
-            if (val >= 91) return 'A1';
-            if (val >= 81) return 'A2';
-            if (val >= 71) return 'B1';
-            if (val >= 61) return 'B2';
-            if (val >= 51) return 'C1';
-            if (val >= 41) return 'C2';
-            if (val >= 33) return 'D';
-            return 'E';
-        };
-
-        let className = rows[0].grade_name || rows[0].class_name || 'N/A';
-        let rawSec = rows[0].section_name || '';
-        let sectionName = rawSec;
-
-        if (sectionName.includes('-')) {
-            const parts = sectionName.split('-');
-            sectionName = parts[parts.length - 1].trim();
-        } else if (sectionName.toLowerCase().trim() === className.toLowerCase().trim()) {
-            sectionName = '';
-        }
-
-        let classSectionDisplay = className;
-        if (sectionName && sectionName.toLowerCase() !== className.toLowerCase()) {
-            classSectionDisplay = `${className} - ${sectionName}`;
-        }
-
-        const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
-        const student = {
-            id: rows[0].student_id,
-            name: rows[0].student_name,
-            avatar_url: studentPhoto,
-            photo: studentPhoto,
-            status: rows[0].status || 'Active',
-            roll_no: rows[0].roll_no || 'N/A',
-            class: classSectionDisplay,
-            class_name: className,
-            grade_name: classSectionDisplay,
-            section: sectionName,
-            class_section: classSectionDisplay,
-            admission_no: rows[0].admission_no || '',
-            gender: rows[0].gender || '',
-            blood_group: rows[0].blood_group || '',
-            address: rows[0].address || '',
-            academic_year_name: rows[0].academic_year_name || 'N/A',
-            fathers_name: rows[0].fathers_name || '',
-            mothers_name: rows[0].mothers_name || '',
-            father_name: rows[0].fathers_name || '',
-            mother_name: rows[0].mothers_name || '',
-            dob: rows[0].dob ? new Date(rows[0].dob).toLocaleDateString('en-IN') : ''
-        };
-
-        let totalMax = 0;
-        let totalObtained = 0;
-        let hasFailed = false;
-        let dynamicTeacherRemark = null;
-        let dynamicPrincipalRemark = null;
-        let dynamicRank = null;
-
-        const academicRows = rows.filter(r => r.subject_type === 'academic' || !r.subject_type);
-        const coScholasticRows = rows.filter(r => r.subject_type === 'co-scholastic');
-        const skillBasedRows = rows.filter(r => r.subject_type === 'skill-based');
-
-        const subjects = academicRows.map((row, idx) => {
-            if (row.grade === 'F' || row.attendance_status === 'Absent') hasFailed = true;
-            if (row.teacher_remark) dynamicTeacherRemark = row.teacher_remark;
-            if (row.principal_remark) dynamicPrincipalRemark = row.principal_remark;
-            if (row.rank) dynamicRank = row.rank;
-
-            const obtained = (row.attendance_status !== 'Absent' && row.marks_obtained !== null) ? Number(row.marks_obtained) : 0;
-            totalMax += Number(row.max_marks || 0);
-            if (row.attendance_status !== 'Absent') totalObtained += obtained;
-
-            const subMax = Number(row.max_marks || 0);
-            const percentageVal = subMax > 0 ? (obtained / subMax) * 100 : 0;
-
-            // Count total active components for this subject row
-            const compFlags = [row.has_written, row.has_reading, row.has_writing_comp, row.has_dictation, row.has_recitation, row.has_ia_pr, row.has_oral, row.has_lab, row.has_theory];
-            const activeFlagsCount = compFlags.filter(f => checkTrue(f)).length;
-
-            const components = [];
-            const addComp = (name, flag, mmKey, t1Val, t2Val) => {
-                const flagActive = checkTrue(row[flag]);
-                const t1Has = t1Val !== null && t1Val !== undefined && t1Val !== '' && t1Val !== '-';
-                const t2Has = t2Val !== null && t2Val !== undefined && t2Val !== '' && t2Val !== '-';
-                if (flagActive || t1Has || t2Has) {
-                    const rawMM = row[mmKey];
-                    let mmVal = (rawMM !== null && rawMM !== undefined && rawMM !== '' && Number(rawMM) > 0)
-                        ? Math.round(Number(rawMM))
-                        : (activeFlagsCount <= 1 && subMax > 0 ? Math.round(subMax) : '-');
-
-                    components.push({
-                        name,
-                        mm: mmVal,
-                        term1: t1Val,
-                        term2: t2Val
-                    });
-                }
-            };
-
-            addComp('Written', 'has_written', 'written_max_marks', formatMarks(row.written_marks_obtained, row.has_written, row.attendance_status), '-');
-            addComp('Reading', 'has_reading', 'reading_max_marks', formatMarks(row.reading_marks_obtained, row.has_reading, row.attendance_status), '-');
-            addComp('Writing', 'has_writing_comp', 'writing_comp_max_marks', formatMarks(row.writing_comp_marks_obtained, row.has_writing_comp, row.attendance_status), '-');
-            addComp('Dictation', 'has_dictation', 'dictation_max_marks', formatMarks(row.dictation_marks_obtained, row.has_dictation, row.attendance_status), '-');
-            addComp('Recitation', 'has_recitation', 'recitation_max_marks', formatMarks(row.recitation_marks_obtained, row.has_recitation, row.attendance_status), '-');
-            addComp('I.A./PR', 'has_ia_pr', 'ia_pr_max_marks', formatMarks(row.ia_pr_marks_obtained, row.has_ia_pr, row.attendance_status), '-');
-            addComp('Oral', 'has_oral', 'oral_max_marks', formatMarks(row.oral_marks_obtained, row.has_oral, row.attendance_status), '-');
-            addComp('Lab', 'has_lab', 'lab_max_marks', formatMarks(row.lab_marks_obtained, row.has_lab, row.attendance_status), '-');
-            addComp('Theory', 'has_theory', 'theory_max_marks', formatMarks(row.theory_marks_obtained, row.has_theory, row.attendance_status), '-');
-
-            return {
-                serial_no: idx + 1,
-                subject_name: row.subject_name,
-                max: subMax,
-                components,
-                compRowSpan: components.length + 1,
-                exam1_marks: row.attendance_status === 'Absent' ? '-' : Math.round(obtained),
-                exam1_grade: row.grade || '-',
-                exam1_theory: formatMarks(row.theory_marks_obtained, row.has_theory, row.attendance_status),
-                exam1_lab: formatMarks(row.lab_marks_obtained, row.has_lab, row.attendance_status),
-                exam1_oral: formatMarks(row.oral_marks_obtained, row.has_oral, row.attendance_status),
-                exam1_written: formatMarks(row.written_marks_obtained, row.has_written, row.attendance_status),
-                exam1_reading: formatMarks(row.reading_marks_obtained, row.has_reading, row.attendance_status),
-                exam1_writing_comp: formatMarks(row.writing_comp_marks_obtained, row.has_writing_comp, row.attendance_status),
-                exam1_dictation: formatMarks(row.dictation_marks_obtained, row.has_dictation, row.attendance_status),
-                exam1_recitation: formatMarks(row.recitation_marks_obtained, row.has_recitation, row.attendance_status),
-                exam1_ia_pr: formatMarks(row.ia_pr_marks_obtained, row.has_ia_pr, row.attendance_status),
-                theory_max_marks: row.theory_max_marks,
-                lab_max_marks: row.lab_max_marks,
-                oral_max_marks: row.oral_max_marks,
-                written_max_marks: row.written_max_marks,
-                reading_max_marks: row.reading_max_marks,
-                writing_comp_max_marks: row.writing_comp_max_marks,
-                dictation_max_marks: row.dictation_max_marks,
-                recitation_max_marks: row.recitation_max_marks,
-                ia_pr_max_marks: row.ia_pr_max_marks,
-                exam2_marks: '-', exam2_grade: '-', exam2_theory: '-', exam2_lab: '-', exam2_oral: '-',
-                exam2_written: '-', exam2_reading: '-', exam2_writing_comp: '-', exam2_dictation: '-', exam2_recitation: '-', exam2_ia_pr: '-',
-                total: Math.round(obtained),
-                yearly_avg: subMax > 0 ? Math.round(percentageVal) : '-',
-                overall_grade: subMax > 0 ? calculateGrade(percentageVal) : (row.grade || '-'),
-                grade: subMax > 0 ? calculateGrade(percentageVal) : (row.grade || '-')
-            };
-        });
-
-        totalObtained = Math.round(totalObtained);
-        const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
-        const grandGrade = calculateGrade(percentage);
-        const currentDate = new Date().toLocaleDateString();
-        const finalResult = hasFailed ? 'Fail' : 'Pass';
-        const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
-        const principalRemark = dynamicPrincipalRemark || '';
-
-        const showTheory = academicRows.some(s => checkTrue(s.has_theory));
-        const showLab = academicRows.some(s => checkTrue(s.has_lab));
-        const showOral = academicRows.some(s => checkTrue(s.has_oral) || (s.oral_marks_obtained !== null && s.oral_marks_obtained !== undefined && s.oral_marks_obtained !== '' && s.oral_marks_obtained !== '-'));
-        const showWritten = academicRows.some(s => checkTrue(s.has_written));
-        const showReading = academicRows.some(s => checkTrue(s.has_reading));
-        const showWritingComp = academicRows.some(s => checkTrue(s.has_writing_comp));
-        const showDictation = academicRows.some(s => checkTrue(s.has_dictation));
-        const showRecitation = academicRows.some(s => checkTrue(s.has_recitation));
-        const showIaPr = academicRows.some(s => checkTrue(s.has_ia_pr));
-
-        const maxTheory = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_theory) && s.theory_max_marks ? parseInt(s.theory_max_marks) : null), null) || '';
-        const maxLab = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_lab) && s.lab_max_marks ? parseInt(s.lab_max_marks) : null), null) || '';
-        const maxOral = academicRows.reduce((acc, s) => acc || (s.oral_max_marks ? parseInt(s.oral_max_marks) : null), null) || '';
-        const maxWritten = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_written) && s.written_max_marks ? parseInt(s.written_max_marks) : null), null) || '';
-        const maxReading = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_reading) && s.reading_max_marks ? parseInt(s.reading_max_marks) : null), null) || '';
-        const maxWritingComp = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_writing_comp) && s.writing_comp_max_marks ? parseInt(s.writing_comp_max_marks) : null), null) || '';
-        const maxDictation = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_dictation) && s.dictation_max_marks ? parseInt(s.dictation_max_marks) : null), null) || '';
-        const maxRecitation = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_recitation) && s.recitation_max_marks ? parseInt(s.recitation_max_marks) : null), null) || '';
-        const maxIaPr = academicRows.reduce((acc, s) => acc || (checkTrue(s.has_ia_pr) && s.ia_pr_max_marks ? parseInt(s.ia_pr_max_marks) : null), null) || '';
-
-        const baseNewFields = [showTheory, showWritten, showReading, showWritingComp, showDictation, showRecitation, showIaPr, showOral, showLab].filter(Boolean).length;
-        const exam1ColSpan = baseNewFields + 1;
-        const exam2ColSpan = baseNewFields + 1;
-        const examColSpan = exam1ColSpan;
-
-        const hasIaSubSubjects = Boolean(showReading || showWritingComp || showDictation || showRecitation);
-        const iaColSpan = [showReading, showWritingComp, showDictation, showRecitation].filter(Boolean).length;
-        const iaTotalMax = (showReading ? (parseInt(maxReading) || 0) : 0) +
-            (showWritingComp ? (parseInt(maxWritingComp) || 0) : 0) +
-            (showDictation ? (parseInt(maxDictation) || 0) : 0) +
-            (showRecitation ? (parseInt(maxRecitation) || 0) : 0) || 20;
-
-        const dynamicColumns = [];
-        if (hasIaSubSubjects) {
-            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-            if (showReading) dynamicColumns.push({ id: 'reading', name: 'Reading', max: maxReading });
-            if (showWritingComp) dynamicColumns.push({ id: 'writing_comp', name: 'Writing', max: maxWritingComp });
-            if (showDictation) dynamicColumns.push({ id: 'dictation', name: 'Dictation', max: maxDictation });
-            if (showRecitation) dynamicColumns.push({ id: 'recitation', name: 'Recitation', max: maxRecitation });
-            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
-        } else {
-            if (showWritten) dynamicColumns.push({ id: 'written', name: 'Written', max: maxWritten });
-            if (showTheory) dynamicColumns.push({ id: 'theory', name: 'Theory', max: maxTheory });
-            if (showLab) dynamicColumns.push({ id: 'lab', name: 'Lab', max: maxLab });
-            if (showIaPr) dynamicColumns.push({ id: 'ia_pr', name: 'Practical', max: maxIaPr });
-            if (showOral) dynamicColumns.push({ id: 'oral', name: 'Oral', max: maxOral });
-        }
-
-        const juniorIds = ['reading', 'writing_comp', 'writing', 'dictation', 'recitation'];
-        dynamicColumns.forEach(col => {
-            col.showMax = juniorIds.some(j => (col.id && col.id.toLowerCase().includes(j)) || (col.name && col.name.toLowerCase().includes(j)));
-        });
-
-        const formatWithMax = (val, colMax) => {
-            if (val !== '-' && val !== '' && val !== null && val !== undefined && val !== 'AB') {
-                const parsedMax = Number(colMax);
-                if (!isNaN(parsedMax) && parsedMax > 0) {
-                    return `${val}/${Math.round(parsedMax)}`;
-                }
-            }
-            return val;
-        };
-
-        subjects.forEach(sub => {
-            sub.exam1_dynamicMarks = dynamicColumns.map(col => {
-                let val = '-';
-                let colMax = null;
-                if (col.id === 'theory') { val = sub.exam1_theory; colMax = sub.theory_max_marks; }
-                else if (col.id === 'written') { val = sub.exam1_written; colMax = sub.written_max_marks; }
-                else if (col.id === 'reading') { val = sub.exam1_reading; colMax = sub.reading_max_marks; }
-                else if (col.id === 'writing_comp') { val = sub.exam1_writing_comp; colMax = sub.writing_comp_max_marks; }
-                else if (col.id === 'dictation') { val = sub.exam1_dictation; colMax = sub.dictation_max_marks; }
-                else if (col.id === 'recitation') { val = sub.exam1_recitation; colMax = sub.recitation_max_marks; }
-                else if (col.id === 'ia_pr') { val = sub.exam1_ia_pr; colMax = sub.ia_pr_max_marks; }
-                else if (col.id === 'oral') { val = sub.exam1_oral; colMax = sub.oral_max_marks; }
-                else if (col.id === 'lab') { val = sub.exam1_lab; colMax = sub.lab_max_marks; }
-                return { value: formatWithMax(val, colMax) };
-            });
-        });
-
-        let logoData = null;
-        let headerImageData = null;
-        let luckiestFontBase64 = null;
-        try {
-            const logoPath = require('path').join(__dirname, '../assets/Times_Internation_School_logo.png');
-            const headerImgPath = require('path').join(__dirname, '../assets/times_international_sch_marksheet-header.png');
-            const fontPath = require('path').join(__dirname, '../assets/fonts/LuckiestGuy-Regular.ttf');
-            const principalSigPath = require('path').join(__dirname, '../assets/principal_signature.png');
-            const fs = require('fs');
-            if (fs.existsSync(logoPath)) {
-                logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
-            }
-            if (fs.existsSync(headerImgPath)) {
-                headerImageData = `data:image/png;base64,${fs.readFileSync(headerImgPath).toString('base64')}`;
-            }
-            if (fs.existsSync(fontPath)) {
-                luckiestFontBase64 = fs.readFileSync(fontPath).toString('base64');
-            }
-            if (fs.existsSync(principalSigPath)) {
-                principalSignatureData = `data:image/png;base64,${fs.readFileSync(principalSigPath).toString('base64')}`;
-            }
-        } catch (e) { }
-
-        const coScholastic = coScholasticRows.map(s => ({
-            name: s.subject_name,
-            term1: s.grade || '-',
-            term2: '-'
-        }));
-
-        const skillBased = skillBasedRows.map(s => ({
-            name: s.subject_name,
-            term1: s.grade || '-',
-            term2: '-'
-        }));
-
-        const hasCoScholastic = Boolean((coScholastic && coScholastic.length > 0) || (skillBased && skillBased.length > 0));
-
-        const barPalette = [
-            '#3b82f6', // Blue (Maths)
-            '#f97316', // Orange (English)
-            '#22c55e', // Green (Hindi)
-            '#ef4444', // Red (Drawing)
-            '#a855f7', // Purple (Urdu)
-            '#eab308', // Amber (S.S.P.D)
-            '#14b8a6', // Teal (Islamic)
-            '#ec4899', // Pink (E.V.S)
-            '#6366f1', // Indigo
-            '#06b6d4', // Cyan
-            '#84cc16', // Lime
-            '#f43f5e'  // Rose
-        ];
-
-        const getShortSubjectName = (name) => {
-            if (!name) return '';
-            const n = name.trim();
-            if (/^math/i.test(n)) return 'Maths';
-            if (/^islamic/i.test(n)) return 'Islamic';
-            if (/^e\.?v\.?s/i.test(n) || /environmental/i.test(n)) return 'E.V.S';
-            if (/^s\.?\s*s\.?\s*p\.?\s*d/i.test(n)) return 'S.S.P.D';
-            if (/^drawing|^art/i.test(n)) return 'Drawing';
-            if (/^social/i.test(n)) return 'S.St';
-            if (/^science/i.test(n)) return 'Science';
-            if (/^computer/i.test(n)) return 'Comp';
-            if (/^general knowledge|^g\.?k/i.test(n)) return 'G.K';
-            if (n.length > 8) {
-                const first = n.split(/[\s(&]+/)[0];
-                return first.length <= 8 ? first : first.substring(0, 7) + '.';
-            }
-            return n;
-        };
-
-        const chartAcademic = subjects.filter(s => !s.subject_type || s.subject_type === 'academic');
-        const numSubjects = chartAcademic.length || 1;
-        const plotWidth = 620;
-        const step = plotWidth / numSubjects;
-        const barWidth = Math.min(36, Math.max(16, Math.floor(step * 0.45)));
-
-        const performanceChart = chartAcademic.map((sub, i) => {
-            const rawScore = (sub.exam1_marks !== '-' && sub.exam1_marks !== undefined && sub.exam1_marks !== null)
-                ? Number(sub.exam1_marks)
-                : (Number(sub.total) || 0);
-            const score = isNaN(rawScore) ? 0 : rawScore;
-            const heightPct = sub.max > 100
-                ? Math.round(Math.min(100, Math.max(0, (score / sub.max) * 100)))
-                : Math.round(Math.min(100, Math.max(0, score)));
-
-            const barHeight = Math.max(1, Math.round((heightPct / 100) * 65));
-            const barX = Math.round(38 + (i * step) + ((step - barWidth) / 2));
-            const barY = 82 - barHeight;
-            const scoreY = Math.max(10, barY - 4);
-            const labelX = barX + Math.round(barWidth / 2);
-
-            return {
-                name: sub.subject_name,
-                shortName: getShortSubjectName(sub.subject_name),
-                score,
-                heightPct,
-                barHeight,
-                barWidth,
-                barX,
-                barY,
-                scoreY,
-                labelX,
-                color: barPalette[i % barPalette.length]
-            };
-        });
-
-        const getNextGrade = (currentGradeName, customNextClass) => {
-            if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
-            if (!currentGradeName) return 'Next Class';
-            const g = String(currentGradeName).trim().toLowerCase();
-            if (g.includes('play')) return 'Nursery';
-            if (g.includes('nursery')) return 'LKG';
-            if (g.includes('lkg')) return 'UKG';
-            if (g.includes('ukg') || g.includes('prep') || g.includes('kg')) return 'I';
-            if (g.includes('class - i') || g.includes('class i') || g.includes('grade 1') || g.includes('class 1') || g === 'i' || g === '1') return 'II';
-            if (g.includes('class - ii') || g.includes('class ii') || g.includes('grade 2') || g.includes('class 2') || g === 'ii' || g === '2') return 'III';
-            if (g.includes('class - iii') || g.includes('class iii') || g.includes('grade 3') || g.includes('class 3') || g === 'iii' || g === '3') return 'IV';
-            if (g.includes('class - iv') || g.includes('class iv') || g.includes('grade 4') || g.includes('class 4') || g === 'iv' || g === '4') return 'V';
-            if (g.includes('class - v') || g.includes('class v') || g.includes('grade 5') || g.includes('class 5') || g === 'v' || g === '5') return 'VI';
-            if (g.includes('class - vi') || g.includes('class vi') || g.includes('grade 6') || g.includes('class 6') || g === 'vi' || g === '6') return 'VII';
-            if (g.includes('class - vii') || g.includes('class vii') || g.includes('grade 7') || g.includes('class 7') || g === 'vii' || g === '7') return 'VIII';
-            if (g.includes('class - viii') || g.includes('class viii') || g.includes('grade 8') || g.includes('class 8') || g === 'viii' || g === '8') return 'IX';
-            if (g.includes('class - ix') || g.includes('class ix') || g.includes('grade 9') || g.includes('class 9') || g === 'ix' || g === '9') return 'X';
-            if (g.includes('class - x') || g.includes('class x') || g.includes('grade 10') || g.includes('class 10') || g === 'x' || g === '10') return 'XI';
-            if (g.includes('class - xi') || g.includes('class xi') || g.includes('grade 11') || g.includes('class 11') || g === 'xi' || g === '11') return 'XII';
-            return 'Next Class';
-        };
-
-        let attendedCount = 0;
-        try {
-            const [attRows] = await db.execute(`
-                SELECT COUNT(DISTINCT attendance_date) as attended_days
-                FROM attendance
-                WHERE student_id = ? AND status IN ('Present', 'Late', 'present', 'late')
-            `, [student_id]);
-            attendedCount = attRows[0]?.attended_days || 0;
-        } catch (e) { }
-
-        const workingDays = rows[0].total_working_days || 102;
-        const nextGrade = getNextGrade(rows[0].grade_name, rows[0].next_class);
-
-        const attendanceStats = {
-            hasTerm1: true,
-            term1Working: workingDays,
-            term1Attended: attendedCount,
-            term1Absent: Math.max(0, workingDays - attendedCount),
-            term1Percentage: workingDays ? Math.round((attendedCount / workingDays) * 100) : 0,
-            hasTerm2: false,
-            totalWorking: workingDays,
-            totalAttended: attendedCount,
-            totalAbsent: Math.max(0, workingDays - attendedCount),
-            totalPercentage: workingDays ? Math.round((attendedCount / workingDays) * 100) : 0
-        };
-
-        const physicalStats = {
-            term1Working: workingDays,
-            term1Attended: attendedCount,
-            attendance: `${attendedCount}/${workingDays}`,
-            sports: '', behaviour: '', cleanliness: ''
-        };
-
-        const ptmStats = {
-            term1Date: rows[0].ptm_date ? new Date(rows[0].ptm_date).toLocaleDateString('en-IN') : '',
-            term2Date: ''
-        };
-
-        let school = {};
-        try {
-            const schoolPath = require('path').join(__dirname, '../school-info.json');
-            school = JSON.parse(require('fs').readFileSync(schoolPath, 'utf8'));
-        } catch (e) {
-            console.log('No school-info.json found');
-        }
-
-        const meta = {
-            report_id: `TIS-${exam_id}-${student_id}`,
-            generated_on: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-            generated_by: req.user?.name || 'School Office',
-            erp_name: 'TIS ERP',
-            erp_version: '2.0',
-            year: new Date().getFullYear()
-        };
-
-        const templateData = {
-            school,
-            student,
-            reportTitle: rows[0].exam_name,
-            exam1Name: rows[0].exam_name,
-            exam2Name: 'Term II',
-            subjects,
-            showTheory, showLab, showOral,
-            showWritten, showReading, showWritingComp,
-            showDictation, showRecitation, showIaPr,
-            maxTheory, maxLab, maxOral,
-            maxWritten, maxReading, maxWritingComp,
-            maxDictation, maxRecitation, maxIaPr,
-            hasIaSubSubjects,
-            iaColSpan,
-            iaTotalMax,
-            baseNewFields,
-            exam1ColSpan, exam2ColSpan, examColSpan,
-            totalMax, totalObtained, percentage,
-            grandGrade,
-            rank: dynamicRank || rows[0].rank || student.rank || '',
-            currentDate, finalResult, promotionStatus: null,
-            nextGrade, ptmStats,
-            logoData, headerImageData, luckiestFontBase64, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
-            teacherRemark, principalRemark,
-            dynamicColumns,
-            signatures: {
-                principal: principalSignatureData,
-                teacher: null,
-                controller: null
-            },
-            principalSignature: principalSignatureData,
-            meta
-        };
-
         const templatePath = 'uploads/templates/senior_final_exam.hbs';
-
         const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
             width: 794,
             height: 1123
@@ -3643,10 +3656,11 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
                 ? Math.round(Math.min(100, Math.max(0, (score / sub.max) * 100)))
                 : Math.round(Math.min(100, Math.max(0, score)));
 
-            const barHeight = Math.max(1, Math.round((heightPct / 100) * 65));
+            const maxGraphHeight = 70;
+            const barHeight = Math.max(2, Math.round((heightPct / 100) * maxGraphHeight));
             const barX = Math.round(38 + (i * stepCombined) + ((stepCombined - barWidthCombined) / 2));
             const barY = 82 - barHeight;
-            const scoreY = Math.max(8, barY - 3);
+            const scoreY = Math.max(10, barY - 4);
             const labelX = barX + Math.round(barWidthCombined / 2);
 
             return {
@@ -3929,158 +3943,30 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
         return res.status(400).json({ error: 'student_ids array and exam_id are required' });
     }
 
-    let browser;
     try {
-        const pdfBuffers = [];
-        let logoData = null;
-        try {
-            const logoPath = require('path').join(__dirname, '../assets/school_invoice_logo.png');
-            const fs = require('fs');
-            if (fs.existsSync(logoPath)) {
-                logoData = `data:image/png;base64,${fs.readFileSync(logoPath).toString('base64')}`;
+        const sharedAssets = loadSharedMarksheetAssets();
+        const marksheets = [];
+
+        for (const sid of student_ids) {
+            const data = await buildSeniorMarksheetData(sid, exam_id, sharedAssets, req.user);
+            if (data) {
+                marksheets.push(data);
             }
-        } catch (e) { }
+        }
 
-        browser = await puppeteer.launch({
-            headless: 'new',
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage']
+        if (marksheets.length === 0) {
+            return res.status(404).json({ error: 'No marksheets found for the selected students' });
+        }
+
+        // Render entire batch in a SINGLE PASS multi-page PDF using senior_final_exam.hbs
+        const templatePath = 'uploads/templates/senior_final_exam.hbs';
+        const finalPdfBuffer = await pdfService.renderHbsTemplate(templatePath, {
+            marksheets
+        }, {
+            width: 794,
+            height: 1123,
+            preferCSSPageSize: true
         });
-
-        for (let student_id of student_ids) {
-            const [rows] = await db.execute(`
-                SELECT st.id as student_id, u.name as student_name, u.avatar_url, sar.roll_no, 
-                       COALESCE(sar.grade_id, eg.grade_id) as grade_id, 
-                       COALESCE(g.name, eg_g.name) as grade_name, 
-                       COALESCE(sar.academic_year_id, eg.academic_year_id) as academic_year_id, 
-                       COALESCE(ay.name, eg_ay.name) as academic_year_name,
-                       eg.id as exam_id, eg.name as exam_name, eg.start_date, eg.is_results_published,
-                       egr.marks_obtained, egr.grade, egr.attendance_status, egs.max_marks, s.name as subject_name,
-                       egs.has_theory, egs.has_lab, egs.has_oral,
-                       egs.theory_max_marks, egs.lab_max_marks, egs.oral_max_marks,
-                       egr.theory_marks_obtained, egr.lab_marks_obtained, egr.oral_marks_obtained, egr.teacher_remark
-                FROM exam_group_results egr
-                JOIN exam_group_subjects egs ON egs.id = egr.exam_group_subject_id
-                JOIN exam_groups eg ON eg.id = egs.exam_group_id
-                JOIN students st ON st.id = egr.student_id
-                JOIN users u ON u.id = st.user_id
-                LEFT JOIN student_academic_records sar ON sar.id = egr.student_academic_id
-                LEFT JOIN grades g ON g.id = sar.grade_id
-                LEFT JOIN academic_years ay ON ay.id = sar.academic_year_id
-                LEFT JOIN grades eg_g ON eg_g.id = eg.grade_id
-                LEFT JOIN academic_years eg_ay ON eg_ay.id = eg.academic_year_id
-                LEFT JOIN subjects s ON s.id = egs.subject_id
-                WHERE st.id = ? AND eg.id = ? 
-                  AND (s.subject_type IS NULL OR s.subject_type NOT IN ('co-scholastic', 'skill-based'))
-            `, [student_id, exam_id]);
-
-            if (rows.length === 0) continue;
-
-            const student = {
-                id: rows[0].student_id,
-                name: rows[0].student_name,
-                roll_no: rows[0].roll_no || 'N/A',
-                grade_name: rows[0].grade_name || 'N/A',
-                academic_year_name: rows[0].academic_year_name || 'N/A'
-            };
-
-            const examDate = rows[0].start_date ? formatMySQLDate(rows[0].start_date) : 'N/A';
-            const exam = {
-                name: rows[0].exam_name,
-                formattedDate: examDate,
-                subjects: []
-            };
-
-            let totalMax = 0;
-            let totalObtained = 0;
-            let serialNo = 1;
-
-            rows.forEach(row => {
-                if (row.marks_obtained === null && row.attendance_status !== 'Absent') {
-                    return;
-                }
-
-                exam.subjects.push({
-                    serial_no: serialNo++,
-                    subject_name: row.subject_name,
-                    marks_obtained: row.marks_obtained !== null && row.marks_obtained !== undefined ? Math.round(Number(row.marks_obtained)) : row.marks_obtained,
-                    max_marks: row.max_marks,
-                    grade: row.grade || '-',
-                    attendance_status: row.attendance_status,
-                    has_theory: row.has_theory,
-                    has_lab: row.has_lab,
-                    has_oral: row.has_oral,
-                    theory_max_marks: row.theory_max_marks,
-                    lab_max_marks: row.lab_max_marks,
-                    oral_max_marks: row.oral_max_marks,
-                    theory_marks_obtained: row.theory_marks_obtained !== null && row.theory_marks_obtained !== undefined ? Math.round(Number(row.theory_marks_obtained)) : row.theory_marks_obtained,
-                    lab_marks_obtained: row.lab_marks_obtained !== null && row.lab_marks_obtained !== undefined ? Math.round(Number(row.lab_marks_obtained)) : row.lab_marks_obtained,
-                    oral_marks_obtained: row.oral_marks_obtained !== null && row.oral_marks_obtained !== undefined ? Math.round(Number(row.oral_marks_obtained)) : row.oral_marks_obtained
-                });
-                totalMax += Number(row.max_marks || 0);
-                if (row.attendance_status !== 'Absent') {
-                    totalObtained += Number(row.marks_obtained || 0);
-                }
-            });
-
-            totalObtained = Math.round(totalObtained);
-
-            const checkTrue = (val) => val == 1 || val === true || String(val) === 'true' || (val && val.data && val.data[0] === 1) || (typeof Buffer !== 'undefined' && Buffer.isBuffer(val) && val[0] === 1);
-            const showTheory = exam.subjects.some(s => checkTrue(s.has_theory));
-            const showLab = exam.subjects.some(s => checkTrue(s.has_lab));
-            const showOral = exam.subjects.some(s => checkTrue(s.has_oral));
-
-            const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
-            const currentDate = new Date().toLocaleDateString();
-
-            let hasFailed = false;
-            let dynamicTeacherRemark = null;
-            rows.forEach(row => {
-                if (row.grade === 'F' || row.attendance_status === 'Absent') {
-                    hasFailed = true;
-                }
-                if (row.teacher_remark) {
-                    dynamicTeacherRemark = row.teacher_remark;
-                }
-            });
-            const finalResult = hasFailed ? 'Fail' : 'Pass';
-            const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Need to do hardwork.' : 'Good performance. Keep it up!');
-
-            const templateData = {
-                student,
-                exam: {
-                    ...exam,
-                    showTheory,
-                    showLab,
-                    showOral
-                },
-                totalMax,
-                totalObtained,
-                percentage,
-                currentDate,
-                finalResult,
-                teacherRemark,
-                logoData
-            };
-
-            const templatePath = 'uploads/templates/student_marksheet.hbs';
-
-            const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
-                width: 794,
-                height: 1123
-            }, browser);
-            pdfBuffers.push(pdfBuffer);
-        }
-
-        if (pdfBuffers.length === 0) {
-            return res.status(404).json({ error: 'No marksheets generated for the selected students' });
-        }
-
-        let finalPdfBuffer;
-        if (pdfBuffers.length === 1) {
-            finalPdfBuffer = pdfBuffers[0];
-        } else {
-            finalPdfBuffer = await pdfService.mergePdfs(pdfBuffers);
-        }
 
         res.setHeader('Content-Type', 'application/pdf');
         res.setHeader('Content-Disposition', `attachment; filename=Bulk_Marksheets_${exam_id}.pdf`);
@@ -4088,12 +3974,8 @@ const GenerateBulkMarksheetPDF = async (req, res) => {
     } catch (err) {
         console.error('POST /api/exam/generate-bulk-marksheet error', err);
         return res.status(500).json({ error: 'Internal server error' });
-    } finally {
-        if (browser) {
-            await browser.close().catch(() => { });
-        }
     }
-}
+};
 
 module.exports = {
     AddExamGroup,

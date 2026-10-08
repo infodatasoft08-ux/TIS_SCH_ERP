@@ -55,6 +55,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const [principalRemarksData, setPrincipalRemarksData] = useState({});
     const [ranksData, setRanksData] = useState({});
     const [searchQuery, setSearchQuery] = useState("");
+    const [selectedSection, setSelectedSection] = useState("all");
     const [isLoading, setIsLoading] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [mode, setMode] = useState(initialMode);
@@ -62,6 +63,18 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     const [ptmDate, setPtmDate] = useState(exam?.ptm_date ? exam.ptm_date.split('T')[0] : '');
     const [globalNextClass, setGlobalNextClass] = useState('');
     const [studentsWithExistingMarks, setStudentsWithExistingMarks] = useState(new Set());
+
+    const availableSections = useMemo(() => {
+        const map = new Map();
+        students.forEach(st => {
+            const secId = st.class_id ? String(st.class_id) : null;
+            const secName = st.class_name || st.section_name;
+            if (secId && secName) {
+                map.set(secId, secName);
+            }
+        });
+        return Array.from(map.entries()).map(([id, name]) => ({ id, name }));
+    }, [students]);
 
     const uniqueSubjects = useMemo(() => {
         if (!exam || !Array.isArray(exam.subjects)) return [];
@@ -96,6 +109,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
     useEffect(() => {
         if (open && exam && (exam.class_id || exam.grade_id)) {
             setMode(initialMode);
+            setSelectedSection("all");
             setTotalWorkingDays(exam.total_working_days || 102);
             setPtmDate(exam.ptm_date ? exam.ptm_date.split('T')[0] : '');
             fetchStudentsAndExistingMarks();
@@ -106,6 +120,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
             setPrincipalRemarksData({});
             setRanksData({});
             setSearchQuery("");
+            setSelectedSection("all");
             setStudentsWithExistingMarks(new Set());
             setMode("add");
         }
@@ -540,9 +555,13 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                             {/* Student Rows & Search Filter */}
                             {(() => {
                                 const q = searchQuery.trim().toLowerCase();
-                                const baseStudents = mode === 'update'
+                                let baseStudents = mode === 'update'
                                     ? students.filter(st => studentsWithExistingMarks.has(String(st.id)))
                                     : students;
+
+                                if (selectedSection !== "all") {
+                                    baseStudents = baseStudents.filter(st => String(st.class_id) === String(selectedSection));
+                                }
 
                                 const displayedStudents = q
                                     ? baseStudents.filter(st => {
@@ -555,7 +574,7 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
 
                                 return (
                                     <>
-                                        {/* Search Bar */}
+                                        {/* Search Bar & Section Filter */}
                                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4 bg-slate-50 dark:bg-slate-900/60 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
                                             <div className="relative flex-1">
                                                 <Search className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
@@ -576,6 +595,26 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
                                                     </button>
                                                 )}
                                             </div>
+
+                                            {availableSections.length > 1 && (
+                                                <div className="flex items-center gap-2">
+                                                    <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 whitespace-nowrap">Section:</span>
+                                                    <Select value={selectedSection} onValueChange={setSelectedSection}>
+                                                        <SelectTrigger className="w-[140px] h-9 text-xs bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700">
+                                                            <SelectValue placeholder="All Sections" />
+                                                        </SelectTrigger>
+                                                        <SelectContent>
+                                                            <SelectItem value="all">All Sections ({students.length})</SelectItem>
+                                                            {availableSections.map(sec => (
+                                                                <SelectItem key={sec.id} value={sec.id}>
+                                                                    {sec.name} ({students.filter(s => String(s.class_id) === String(sec.id)).length})
+                                                                </SelectItem>
+                                                            ))}
+                                                        </SelectContent>
+                                                    </Select>
+                                                </div>
+                                            )}
+
                                             <div className="text-xs text-muted-foreground whitespace-nowrap self-end sm:self-center font-medium">
                                                 {searchQuery ? (
                                                     <span>Found <strong className="text-indigo-600 dark:text-indigo-400">{displayedStudents.length}</strong> of {baseStudents.length} students</span>
