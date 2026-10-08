@@ -19,12 +19,13 @@ const db = mysql.createPool({
 });
 
 (async () => {
+  console.log(`🔍 [DB TARGET] Host: "${process.env.DB_HOST || '127.0.0.1'}", Port: ${process.env.DB_PORT || 3306}, User: "${process.env.DB_USER}", DB: "${process.env.DB_NAME}"`);
   try {
     const conn = await db.getConnection();
     console.log(`✅ MySQL connected (Process ${process.pid}, instance pool limit: ${connectionLimit})`);
     conn.release();
   } catch (err) {
-    console.error(`❌ MySQL connection failed (Process ${process.pid}):`, err.message);
+    console.error(`❌ MySQL connection failed (Process ${process.pid}) to "${process.env.DB_HOST || '127.0.0.1'}":`, err.message);
   }
 })();
 

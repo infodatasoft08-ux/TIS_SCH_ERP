@@ -193,10 +193,14 @@ class PdfService {
         deviceScaleFactor: 2
       });
       try {
-        await page.setContent(html, { waitUntil: ['domcontentloaded', 'networkidle0'], timeout: 15000 });
+        await page.setContent(html, { waitUntil: ['domcontentloaded', 'networkidle2'], timeout: 20000 });
       } catch (e) {
-        console.warn('Puppeteer setContent warning:', e.message);
-        await page.setContent(html, { waitUntil: 'load', timeout: 15000 });
+        console.warn('Puppeteer setContent timeout, falling back to domcontentloaded:', e.message);
+        try {
+          await page.setContent(html, { waitUntil: 'domcontentloaded', timeout: 20000 });
+        } catch (e2) {
+          console.warn('Puppeteer setContent domcontentloaded fallback error:', e2.message);
+        }
       }
 
       // Ensure all custom and web fonts are fully loaded before rendering PDF
