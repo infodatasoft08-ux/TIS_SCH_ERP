@@ -6,16 +6,14 @@ const connectionLimit = parseInt(process.env.DB_CONNECTION_LIMIT || '15', 10);
 const queueLimit = parseInt(process.env.DB_QUEUE_LIMIT || '100', 10);
 
 const db = mysql.createPool({
-  host: process.env.DB_HOST,
-  user: process.env.DB_USER,
+  host: process.env.DB_HOST || '127.0.0.1',
+  user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD,
   database: process.env.DB_NAME,
   port: parseInt(process.env.DB_PORT || '3306', 10),
   waitForConnections: true,
   connectionLimit: connectionLimit,
-  queueLimit: queueLimit,
-  connectTimeout: 10000,      // 10s connection timeout
-  idleTimeout: 60000,         // Release idle connections after 60s
+  queueLimit: 0,
   enableKeepAlive: true,
   keepAliveInitialDelay: 0
 });
