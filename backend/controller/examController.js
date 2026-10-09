@@ -10,27 +10,64 @@ const whatsappQueue = require('../queues/whatsappQueue');
 const { isWhatsAppEnabled } = require('../helper/whatsappSettingHelper');
 const { getActiveAcademicYear } = require('../utils/academicYearHelper');
 
+const axios = require('axios');
+
 const toInt = v => (v === undefined || v === null || v === "" ? null : Number(v));
 const isDateString = s => typeof s === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(s);
 const isNonEmptyString = v => typeof v === 'string' && v.trim().length > 0;
 
-const resolveStudentPhoto = (photoPath) => {
-    if (!photoPath) return null;
-    if (typeof photoPath !== 'string') return null;
-    if (photoPath.startsWith('http://') || photoPath.startsWith('https://') || photoPath.startsWith('data:image')) {
-        return photoPath;
+const studentPhotoCache = new Map();
+
+const resolveStudentPhoto = async (photoPath) => {
+    if (!photoPath || typeof photoPath !== 'string' || photoPath.trim() === '' || photoPath === 'null' || photoPath === 'undefined') {
+        return null;
     }
+    const cleanPath = photoPath.trim();
+    if (cleanPath.startsWith('data:image')) {
+        return cleanPath;
+    }
+
+    if (studentPhotoCache.has(cleanPath)) {
+        return studentPhotoCache.get(cleanPath);
+    }
+
+    // Remote HTTP / HTTPS image (Cloudinary, AWS S3, etc.)
+    if (cleanPath.startsWith('http://') || cleanPath.startsWith('https://')) {
+        try {
+            const response = await axios.get(cleanPath, {
+                responseType: 'arraybuffer',
+                timeout: 7000
+            });
+            const contentType = response.headers['content-type'] || 'image/jpeg';
+            const base64 = Buffer.from(response.data).toString('base64');
+            const dataUri = `data:${contentType};base64,${base64}`;
+            studentPhotoCache.set(cleanPath, dataUri);
+            return dataUri;
+        } catch (e) {
+            console.error('Error converting remote student photo to base64:', e.message);
+            return cleanPath;
+        }
+    }
+
+    // Local file path
     try {
-        const fullPath = path.isAbsolute(photoPath) ? photoPath : path.join(__dirname, '..', photoPath);
+        let fullPath = cleanPath;
+        if (!path.isAbsolute(fullPath) || fullPath.startsWith('/') || fullPath.startsWith('\\')) {
+            const relPath = fullPath.replace(/^[/\\]+/, '');
+            fullPath = path.join(__dirname, '..', relPath);
+        }
         if (fs.existsSync(fullPath)) {
             const ext = path.extname(fullPath).replace('.', '').toLowerCase() || 'jpeg';
             const base64 = fs.readFileSync(fullPath).toString('base64');
-            return `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${base64}`;
+            const dataUri = `data:image/${ext === 'jpg' ? 'jpeg' : ext};base64,${base64}`;
+            studentPhotoCache.set(cleanPath, dataUri);
+            return dataUri;
         }
     } catch (e) {
-        console.error('Error resolving student photo:', e.message);
+        console.error('Error resolving local student photo:', e.message);
     }
-    return photoPath;
+
+    return cleanPath;
 };
 
 const calculateGrade = (pct) => {
@@ -2357,7 +2394,7 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
         classSectionDisplay = `${className} - ${sectionName}`;
     }
 
-    const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
+    const studentPhoto = await resolveStudentPhoto(rows[0].avatar_url);
     const student = {
         id: rows[0].student_id,
         name: rows[0].student_name,
@@ -2855,6 +2892,11 @@ const GenerateAdmitCardPDF = async (req, res) => {
         `, [exam_id]);
 
         // 5. Generate Admit Card PDF
+        if (student && student.avatar_url) {
+            student.avatar_url = await resolveStudentPhoto(student.avatar_url);
+            student.photo = student.avatar_url;
+        }
+
         const pdfBuffer = await generateAdmitCardPDF({
             student,
             exam_id,
@@ -2935,6 +2977,11 @@ const GenerateBulkAdmitCardPDF = async (req, res) => {
             // If an invoice exists and the status is NOT paid, prevent printing!
             if (invoice && invoice.status !== 'paid') {
                 continue;
+            }
+
+            if (student && student.avatar_url) {
+                student.avatar_url = await resolveStudentPhoto(student.avatar_url);
+                student.photo = student.avatar_url;
             }
 
             // 5. Generate Admit Card PDF
@@ -3145,7 +3192,7 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             classSectionDisplay = `${className} - ${sectionName}`;
         }
 
-        const studentPhoto = resolveStudentPhoto(rows[0].avatar_url);
+        const studentPhoto = await resolveStudentPhoto(rows[0].avatar_url);
         const student = {
             id: rows[0].student_id,
             name: rows[0].student_name,

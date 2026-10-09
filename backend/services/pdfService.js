@@ -203,6 +203,21 @@ class PdfService {
         ]);
       } catch (e) { }
 
+      // Ensure all images (logos, student photos, signatures) are fully loaded before capturing PDF
+      try {
+        await page.evaluate(async () => {
+          const imgs = Array.from(document.querySelectorAll('img'));
+          await Promise.all(imgs.map(img => {
+            if (img.complete) return;
+            return new Promise(resolve => {
+              img.addEventListener('load', resolve, { once: true });
+              img.addEventListener('error', resolve, { once: true });
+              setTimeout(resolve, 3000);
+            });
+          }));
+        });
+      } catch (e) { }
+
       await page.emulateMediaType('screen');
 
       const pdfOptions = {

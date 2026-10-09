@@ -372,9 +372,19 @@ export default function ExamDataTable() {
 
                     iframe.onload = () => {
                         setTimeout(() => {
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }, 500);
+                            try {
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Marksheet print error:', e);
+                            }
+                            setTimeout(() => {
+                                try {
+                                    if (iframe.parentNode) document.body.removeChild(iframe);
+                                    window.URL.revokeObjectURL(blobUrl);
+                                } catch (_) {}
+                            }, 60000);
+                        }, 800);
                     };
                 }
             } else {
@@ -756,9 +766,19 @@ export default function ExamDataTable() {
                     document.body.appendChild(iframe);
                     iframe.onload = () => {
                         setTimeout(() => {
-                            iframe.contentWindow.focus();
-                            iframe.contentWindow.print();
-                        }, 500);
+                            try {
+                                iframe.contentWindow.focus();
+                                iframe.contentWindow.print();
+                            } catch (e) {
+                                console.error('Bulk marksheet print error:', e);
+                            }
+                            setTimeout(() => {
+                                try {
+                                    if (iframe.parentNode) document.body.removeChild(iframe);
+                                    window.URL.revokeObjectURL(blobUrl);
+                                } catch (_) {}
+                            }, 60000);
+                        }, 1000);
                     };
                 }
                 setSelectedStudentIds([]); // Clear selection after generating
