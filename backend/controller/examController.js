@@ -2527,9 +2527,10 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
     const percentage = totalMax > 0 ? ((totalObtained / totalMax) * 100).toFixed(2) : 0;
     const grandGrade = calculateGrade(percentage);
     const currentDate = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
-    const finalResult = hasFailed ? 'Essential Repeat' : 'Pass';
-    const teacherRemark = dynamicTeacherRemark || (hasFailed ? 'Needs to improve academic consistency.' : 'Good performance. Keep it up!');
-    const principalRemark = dynamicPrincipalRemark || (hasFailed ? 'Can do better with sincere effort.' : 'Promoted to higher class.');
+    const isPassing = Number(percentage) >= 33;
+    const finalResult = isPassing ? 'Pass' : 'Needs Improvement';
+    const teacherRemark = dynamicTeacherRemark || (isPassing ? 'Good performance. Keep it up!' : 'Needs to work harder and improve academic consistency.');
+    const principalRemark = dynamicPrincipalRemark || (isPassing ? 'Good effort. Keep it up for Term 2!' : 'Can do better with sincere effort.');
 
     const showTheory = academicRows.some(s => checkTrue(s.has_theory) || (s.theory_marks_obtained !== null && s.theory_marks_obtained !== undefined && s.theory_marks_obtained !== '' && s.theory_marks_obtained !== '-'));
     const showLab = academicRows.some(s => checkTrue(s.has_lab) || (s.lab_marks_obtained !== null && s.lab_marks_obtained !== undefined && s.lab_marks_obtained !== '' && s.lab_marks_obtained !== '-'));
