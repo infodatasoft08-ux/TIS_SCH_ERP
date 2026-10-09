@@ -787,7 +787,7 @@
   </div>
   {{/if}}
 
-  <div class="page-container">
+  <div class="page-container {{#if layoutDensity}}layout-{{layoutDensity}}{{else}}layout-moderate{{/if}}">
 
     <!-- 1. HEADER (Structured HTML/CSS Layout based on Official Branding) -->
     <div class="mb-1" style="width: 100%; background: #fff; text-align: center;">
@@ -1379,6 +1379,150 @@
         align-items: center;
         border-radius: 4px;
       }
+
+      /* --- DYNAMIC ADAPTIVE LAYOUT DENSITY (Subject Count Adaptive) --- */
+      /* Spacious tier (<= 8 subjects, e.g. Nursery, LKG, UKG, Class 1-2):
+         Fills the marksheet elegantly and eliminates empty space at the bottom */
+      .layout-spacious .table-marks th {
+        padding: 3.5px 4px;
+        font-size: 11.5px;
+      }
+      .layout-spacious .table-marks tbody td {
+        padding: 3.8px 4px;
+        font-size: 11.8px;
+      }
+      .layout-spacious .table-marks .row-total td {
+        padding: 3.8px 4px;
+        font-size: 12px;
+      }
+      .layout-spacious .co-scholastic-table th,
+      .layout-spacious .co-scholastic-table td {
+        padding: 3.2px 6px !important;
+        font-size: 11px !important;
+      }
+      .layout-spacious .card {
+        padding: 3.5px 7px;
+      }
+      .layout-spacious .grading-scale-strip {
+        padding: 2.5px 7px;
+        margin-top: 2.5px;
+        margin-bottom: 3px;
+      }
+      .layout-spacious .perf-chart-card {
+        padding: 3px 6px;
+        margin-top: 3px;
+        margin-bottom: 3px;
+      }
+      .layout-spacious .result-summary-container {
+        padding: 4.5px 7px;
+      }
+      .layout-spacious .result-tile {
+        padding: 3px 5px;
+        min-height: 30px;
+      }
+      .layout-spacious .att-card {
+        padding: 4.5px 7px;
+        margin-bottom: 3.5px;
+      }
+      .layout-spacious .att-pill {
+        min-height: 36px;
+        padding: 3.5px 5px;
+      }
+      .layout-spacious .remarks-box {
+        min-height: 36px;
+        padding: 5px 8px;
+        font-size: 11.5px;
+      }
+      .layout-spacious .section-heading {
+        padding: 3px 8px;
+        margin-bottom: 3px;
+      }
+      .layout-spacious .co-scholastic-section-heading {
+        padding: 3px 8px;
+        margin-bottom: 3px;
+      }
+      .layout-spacious .sig-placeholder {
+        height: 34px !important;
+      }
+      .layout-spacious .signature-box {
+        padding-top: 3px;
+      }
+
+      /* Moderate tier (9-10 subjects): Balanced fit */
+      .layout-moderate .table-marks th {
+        padding: 2.5px 3.5px;
+      }
+      .layout-moderate .table-marks tbody td {
+        padding: 2.5px 3.5px;
+      }
+      .layout-moderate .co-scholastic-table th,
+      .layout-moderate .co-scholastic-table td {
+        padding: 2px 5px !important;
+      }
+      .layout-moderate .perf-chart-card {
+        padding: 2.5px 5px;
+        margin-top: 2px;
+        margin-bottom: 2.5px;
+      }
+      .layout-moderate .result-tile {
+        min-height: 28px;
+      }
+      .layout-moderate .att-pill {
+        min-height: 34px;
+      }
+      .layout-moderate .remarks-box {
+        min-height: 32px;
+      }
+      .layout-moderate .sig-placeholder {
+        height: 32px !important;
+      }
+
+      /* Compact tier (>= 11 subjects, e.g. Class 5, 9, 10):
+         Strictly ensures all 11-13 subjects fit on a single A4 page without spillover */
+      .layout-compact .table-marks th,
+      .layout-compact .table-marks td {
+        padding: 1.5px 3px;
+      }
+      .layout-compact .table-marks tbody td {
+        padding: 1.3px 3px;
+        font-size: 11px;
+      }
+      .layout-compact .co-scholastic-table th,
+      .layout-compact .co-scholastic-table td {
+        padding: 1.2px 4px !important;
+        font-size: 10.5px !important;
+      }
+      .layout-compact .perf-chart-card {
+        padding: 2px 4px;
+        margin-top: 1.5px;
+        margin-bottom: 1.5px;
+      }
+      .layout-compact .grading-scale-strip {
+        padding: 1px 5px;
+        margin-top: 1px;
+        margin-bottom: 1.5px;
+      }
+      .layout-compact .result-summary-container {
+        padding: 3px 5px;
+      }
+      .layout-compact .result-tile {
+        padding: 1.5px 3px;
+        min-height: 26px;
+      }
+      .layout-compact .att-card {
+        padding: 3px 5px;
+        margin-bottom: 2px;
+      }
+      .layout-compact .att-pill {
+        min-height: 30px;
+      }
+      .layout-compact .remarks-box {
+        min-height: 26px;
+        padding: 4px 6px;
+      }
+      .layout-compact .sig-placeholder {
+        height: 30px !important;
+      }
     </style>
 
     <!-- 8 POINT GRADING SCALE -->
@@ -1398,9 +1542,36 @@
 
     <!-- 4. SUBJECT PERFORMANCE GRAPH (FULL WIDTH) -->
     {{#if (hasItems performanceChart)}}
-    <div class="perf-chart-card" style="margin-top: 2px; margin-bottom: 2px;">
-      <div class="section-heading" style="margin-bottom: 1.5px;">Subject Performance</div>
-      <svg viewBox="0 0 680 102" style="width: 100%; height: auto; max-height: 72px; display: block;"
+    <div class="perf-chart-card">
+      <div class="section-heading" style="margin-bottom: 2px;">Subject Performance</div>
+      {{#if chartConfig}}
+      <svg viewBox="{{chartConfig.viewBox}}" preserveAspectRatio="none" style="width: 100%; height: {{chartConfig.cssHeight}}; display: block;"
+        xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Grid Lines -->
+        {{#each chartConfig.gridLines}}
+        <line x1="34" y1="{{this.y}}" x2="{{../chartConfig.lineRight}}" y2="{{this.y}}" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
+        <text x="28" y="{{this.textY}}" font-size="9.5" font-weight="700" fill="#475569" text-anchor="end"
+          font-family="'Poppins', sans-serif">{{this.label}}</text>
+        {{/each}}
+
+        <!-- Y-Axis Line -->
+        <line x1="34" y1="{{chartConfig.topY}}" x2="34" y2="{{chartConfig.baselineY}}" stroke="#64748b" stroke-width="1.2" />
+
+        <!-- Bars & Labels -->
+        {{#each performanceChart}}
+        <text x="{{this.labelX}}" y="{{this.scoreY}}" font-size="11" font-weight="800" fill="#0f172a"
+          text-anchor="middle" font-family="'Poppins', sans-serif">{{this.score}}</text>
+        <rect x="{{this.barX}}" y="{{this.barY}}" width="{{this.barWidth}}" height="{{this.barHeight}}" rx="2.5" ry="2.5"
+          fill="{{this.color}}" />
+        <text x="{{this.labelX}}" y="{{../chartConfig.subjectLabelY}}" font-size="10.5" font-weight="700" fill="#1e293b" text-anchor="middle"
+          font-family="'Poppins', sans-serif">{{this.shortName}}</text>
+        {{/each}}
+
+        <!-- X-Axis Baseline -->
+        <line x1="34" y1="{{chartConfig.baselineY}}" x2="{{chartConfig.lineRight}}" y2="{{chartConfig.baselineY}}" stroke="#64748b" stroke-width="1.2" />
+      </svg>
+      {{else}}
+      <svg viewBox="0 0 680 102" preserveAspectRatio="none" style="width: 100%; height: auto; max-height: 72px; display: block;"
         xmlns="http://www.w3.org/2000/svg">
         <!-- Background Grid Lines -->
         <line x1="36" y1="12" x2="675" y2="12" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
@@ -1439,6 +1610,7 @@
         <!-- X-Axis Baseline -->
         <line x1="35" y1="82" x2="675" y2="82" stroke="#64748b" stroke-width="1.2" />
       </svg>
+      {{/if}}
     </div>
     {{/if}}
 
@@ -1768,7 +1940,7 @@
         {{#if signatures.teacher}}
         <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
         {{else}}
-        <div style="height: 32px;"></div>
+        <div class="sig-placeholder" style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Class Teacher</div>
       </div>
@@ -1777,7 +1949,7 @@
         {{#if signatures.controller}}
         <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
         {{else}}
-        <div style="height: 32px;"></div>
+        <div class="sig-placeholder" style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Exam Controller</div>
       </div>
@@ -1788,7 +1960,7 @@
         {{else if principalSignature}}
         <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
         {{else}}
-        <div style="height: 32px;"></div>
+        <div class="sig-placeholder" style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Principal</div>
       </div>

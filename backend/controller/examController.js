@@ -2294,6 +2294,113 @@ function loadSharedMarksheetAssets() {
     return { logoData, headerImageData, luckiestFontBase64, principalSignatureData, school };
 }
 
+function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName, barPalette, isCombined = false) {
+    const numSubjects = academicSubjects.length || 1;
+    
+    // Balanced, safe sizing to ensure full width and strictly 1 A4 page without overflowing or cutting
+    let layoutDensity = 'spacious';
+    let maxGraphHeight = 100;
+    let topY = 14;
+    let baselineY = 114; // 14 + 100 = 114
+    let svgHeight = 132;
+    let cssHeight = '98px';
+    let barWidthRatio = 0.50;
+    let maxBarWidth = 44;
+    let minBarWidth = 24;
+
+    if (numSubjects >= 12) {
+        layoutDensity = 'compact';
+        maxGraphHeight = 75;
+        topY = 12;
+        baselineY = 87; // 12 + 75
+        svgHeight = 105;
+        cssHeight = '75px';
+        barWidthRatio = 0.44;
+        maxBarWidth = 32;
+        minBarWidth = 14;
+    } else if (numSubjects >= 9) {
+        layoutDensity = numSubjects === 11 ? 'compact' : 'moderate';
+        maxGraphHeight = 88;
+        topY = 12;
+        baselineY = 100; // 12 + 88
+        svgHeight = 118;
+        cssHeight = '88px';
+        barWidthRatio = 0.46;
+        maxBarWidth = 38;
+        minBarWidth = 18;
+    }
+
+    // Full width: 720 width viewBox, plot spans from x=38 to x=706 (width=668)
+    const plotLeft = 38;
+    const plotWidth = 668;
+    const step = plotWidth / numSubjects;
+    const barWidth = Math.min(maxBarWidth, Math.max(minBarWidth, Math.floor(step * barWidthRatio)));
+    const subjectLabelY = baselineY + 14;
+
+    const performanceChart = academicSubjects.map((sub, i) => {
+        let rawScore = 0;
+        let subMax = Number(sub.max) || 100;
+        if (isCombined) {
+            rawScore = Number(sub.total) || Number(sub.yearly_avg) || 0;
+        } else {
+            rawScore = (sub.exam1_marks !== '-' && sub.exam1_marks !== undefined && sub.exam1_marks !== null)
+                ? Number(sub.exam1_marks)
+                : 0;
+        }
+        const score = isNaN(rawScore) ? 0 : (isCombined && sub.max > 100
+            ? Math.round(Math.min(100, Math.max(0, (rawScore / subMax) * 100)))
+            : Math.min(100, Math.max(0, Math.round((rawScore / subMax) * 100))));
+        
+        const heightPct = score;
+        const barHeight = Math.max(2, Math.round((score / 100) * maxGraphHeight));
+        const barX = Math.round(plotLeft + (i * step) + ((step - barWidth) / 2));
+        const barY = baselineY - barHeight;
+        const scoreY = Math.max(topY - 2, barY - 4);
+        const labelX = barX + Math.round(barWidth / 2);
+
+        return {
+            name: sub.subject_name,
+            shortName: getShortSubjectName(sub.subject_name),
+            score: isCombined ? (isNaN(rawScore) ? 0 : rawScore) : score,
+            heightPct,
+            barHeight,
+            barWidth,
+            barX,
+            barY,
+            scoreY,
+            labelX,
+            color: barPalette[i % barPalette.length]
+        };
+    });
+
+    const gridLines = [
+        { y: Math.round(topY), label: '100', textY: Math.round(topY + 4) },
+        { y: Math.round(topY + maxGraphHeight * 0.2), label: '80', textY: Math.round(topY + maxGraphHeight * 0.2 + 4) },
+        { y: Math.round(topY + maxGraphHeight * 0.4), label: '60', textY: Math.round(topY + maxGraphHeight * 0.4 + 4) },
+        { y: Math.round(topY + maxGraphHeight * 0.6), label: '40', textY: Math.round(topY + maxGraphHeight * 0.6 + 4) },
+        { y: Math.round(topY + maxGraphHeight * 0.8), label: '20', textY: Math.round(topY + maxGraphHeight * 0.8 + 4) },
+        { y: Math.round(baselineY), label: '0', textY: Math.round(baselineY + 3) }
+    ];
+
+    const chartConfig = {
+        viewBox: `0 0 720 ${svgHeight}`,
+        svgHeight,
+        cssHeight,
+        cssMaxHeight: cssHeight,
+        topY,
+        baselineY,
+        subjectLabelY,
+        lineRight: 712,
+        gridLines
+    };
+
+    return {
+        layoutDensity,
+        performanceChart,
+        chartConfig
+    };
+}
+
 const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null, reqUser = null) => {
     const assets = sharedAssets || loadSharedMarksheetAssets();
     const { logoData, headerImageData, luckiestFontBase64, principalSignatureData, school } = assets;
@@ -2654,41 +2761,12 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
     };
 
     const chartAcademic = subjects.filter(s => !s.subject_type || s.subject_type === 'academic');
-    const numSubjects = chartAcademic.length || 1;
-    const plotWidth = 630;
-    const step = plotWidth / numSubjects;
-    const barWidth = Math.min(38, Math.max(16, Math.floor(step * 0.45)));
-
-    const performanceChart = chartAcademic.map((sub, i) => {
-        const rawScore = (sub.exam1_marks !== '-' && sub.exam1_marks !== undefined && sub.exam1_marks !== null)
-            ? Number(sub.exam1_marks)
-            : 0;
-        const subMax = Number(sub.max) || 100;
-        const score = isNaN(rawScore) ? 0 : Math.min(100, Math.max(0, Math.round((rawScore / subMax) * 100)));
-        const heightPct = score;
-
-        // SVG coordinates: Top (100%) = 12, Bottom (0%) = 82. Available height = 70px
-        const maxGraphHeight = 70;
-        const barHeight = Math.max(2, Math.round((score / 100) * maxGraphHeight));
-        const barX = Math.round(38 + (i * step) + ((step - barWidth) / 2));
-        const barY = 82 - barHeight;
-        const scoreY = Math.max(10, barY - 4);
-        const labelX = barX + Math.round(barWidth / 2);
-
-        return {
-            name: sub.subject_name,
-            shortName: getShortSubjectName(sub.subject_name),
-            score,
-            heightPct,
-            barHeight,
-            barWidth,
-            barX,
-            barY,
-            scoreY,
-            labelX,
-            color: barPalette[i % barPalette.length]
-        };
-    });
+    const { layoutDensity, performanceChart, chartConfig } = calculateMarksheetChartAndLayout(
+        chartAcademic,
+        getShortSubjectName,
+        barPalette,
+        false
+    );
 
     const getNextGrade = (currentGradeName, customNextClass) => {
         if (customNextClass && String(customNextClass).trim()) return String(customNextClass).trim();
@@ -2782,6 +2860,8 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
         rank: dynamicRank || rows[0].rank || student.rank || '',
         currentDate, finalResult, promotionStatus: null,
         nextGrade, ptmStats,
+        layoutDensity,
+        chartConfig,
         logoData, headerImageData, luckiestFontBase64, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
         teacherRemark, principalRemark,
         dynamicColumns,
@@ -3716,39 +3796,12 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         });
 
         const chartAcademicCombined = formattedAcademicSubjects.filter(s => !s.subject_type || s.subject_type === 'academic');
-        const numSubjectsCombined = chartAcademicCombined.length || 1;
-        const plotWidthCombined = 620;
-        const stepCombined = plotWidthCombined / numSubjectsCombined;
-        const barWidthCombined = Math.min(36, Math.max(16, Math.floor(stepCombined * 0.45)));
-
-        const performanceChart = chartAcademicCombined.map((sub, i) => {
-            const rawScore = Number(sub.total) || Number(sub.yearly_avg) || 0;
-            const score = isNaN(rawScore) ? 0 : rawScore;
-            const heightPct = sub.max > 100
-                ? Math.round(Math.min(100, Math.max(0, (score / sub.max) * 100)))
-                : Math.round(Math.min(100, Math.max(0, score)));
-
-            const maxGraphHeight = 70;
-            const barHeight = Math.max(2, Math.round((heightPct / 100) * maxGraphHeight));
-            const barX = Math.round(38 + (i * stepCombined) + ((stepCombined - barWidthCombined) / 2));
-            const barY = 82 - barHeight;
-            const scoreY = Math.max(10, barY - 4);
-            const labelX = barX + Math.round(barWidthCombined / 2);
-
-            return {
-                name: sub.subject_name,
-                shortName: getShortSubjectName(sub.subject_name),
-                score,
-                heightPct,
-                barHeight,
-                barWidth,
-                barX,
-                barY,
-                scoreY,
-                labelX,
-                color: barPalette[i % barPalette.length]
-            };
-        });
+        const { layoutDensity, performanceChart, chartConfig } = calculateMarksheetChartAndLayout(
+            chartAcademicCombined,
+            getShortSubjectName,
+            barPalette,
+            true
+        );
 
         const meta = {
             report_id: `TIS-COMB-${student_id}`,
@@ -3783,6 +3836,8 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
             rank: dynamicRank || rows[0].rank || student.rank || '',
             currentDate, finalResult, promotionStatus,
             nextGrade, ptmStats,
+            layoutDensity,
+            chartConfig,
             logoData, headerImageData, luckiestFontBase64, chartData, performanceChart, hasCoScholastic, coScholastic, skillBased, physicalStats, attendanceStats,
             teacherRemark: teacherRemark || '',
             principalRemark: principalRemark || '',
