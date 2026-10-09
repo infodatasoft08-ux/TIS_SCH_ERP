@@ -80,13 +80,14 @@
 
     /* Page Margins */
     .page-container {
-      padding: 6mm 8mm 3mm 8mm;
+      padding: 4mm 7mm 2.5mm 7mm;
       width: 100%;
       height: 100%;
       position: relative;
       z-index: 2;
       display: flex;
       flex-direction: column;
+      box-sizing: border-box;
     }
 
     /* Watermark */
@@ -381,10 +382,11 @@
     .table-marks th,
     .table-marks td {
       border: 0.5px solid #bfdbfe;
-      padding: 2px 3.5px;
-      font-size: 11px;
+      padding: 1.5px 3px;
+      font-size: 10px;
       text-align: center;
       vertical-align: middle;
+      line-height: 1.15;
     }
 
     /* Row 1 & Row 2: Single Unified Logo Blue Color for All Header Cells */
@@ -417,19 +419,19 @@
 
     /* Row 1: Group Headers */
     .table-marks tr.th-main-row th {
-      font-size: 11.5px;
+      font-size: 11px;
       font-weight: 800;
       letter-spacing: 0.5px;
-      padding: 3px 5px;
+      padding: 2px 4px;
     }
 
     /* Row 2: Sub-headers */
     .table-marks tr.th-sub-row th {
-      font-size: 10.5px;
+      font-size: 9.5px;
       font-weight: 800;
       letter-spacing: 0.3px;
       line-height: 1.15;
-      padding: 2.5px 3.5px;
+      padding: 2px 3px;
     }
 
     .table-marks th.th-subjects {
@@ -525,27 +527,27 @@
       border-left: 4.5px solid #103c9bdb;
       border-radius: 6px;
       background: linear-gradient(135deg, rgba(240, 247, 255, 0.75) 0%, rgba(224, 239, 254, 0.75) 100%);
-      padding: 2px 6px;
-      margin-top: 2px;
-      margin-bottom: 2.5px;
+      padding: 1.5px 6px;
+      margin-top: 1.5px;
+      margin-bottom: 2px;
       text-align: center;
       box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
     }
 
     .grading-scale-strip .scale-title {
       font-family: 'Poppins', sans-serif;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #103c9bc9;
       text-transform: uppercase;
       letter-spacing: 0.5px;
       line-height: 1.2;
-      margin-bottom: 1px;
+      margin-bottom: 0.5px;
     }
 
     .grading-scale-strip .scale-row {
       font-family: 'Poppins', sans-serif;
-      font-size: 9px;
+      font-size: 8.5px;
       color: #103c9bda;
       font-weight: 600;
       line-height: 1.2;
@@ -562,13 +564,13 @@
       background: #e2e8f0;
       border: 1px solid #94a3b8;
       border-bottom: 1.5px solid #64748b;
-      padding: 3px 6px;
+      padding: 2.5px 5px;
       text-align: center;
     }
 
     .co-scholastic-header-banner .co-title {
       font-family: 'Poppins', sans-serif;
-      font-size: 10px;
+      font-size: 9.5px;
       font-weight: 800;
       color: #0f172a;
       text-transform: uppercase;
@@ -578,34 +580,34 @@
 
     .co-scholastic-header-banner .co-scale {
       font-family: 'Poppins', sans-serif;
-      font-size: 8.5px;
+      font-size: 8px;
       color: #334155;
       font-weight: 600;
       line-height: 1.2;
-      margin-top: 1px;
+      margin-top: 0.5px;
     }
 
     /* Specific elements */
     .student-photo {
-      width: 22mm;
-      height: 28mm;
+      width: 19mm;
+      height: 24mm;
       object-fit: cover;
       border: 1px solid var(--border-color);
       border-radius: 4px;
-      padding: 2px;
+      padding: 1.5px;
       background: white;
     }
 
     .info-label {
-      font-size: 10px;
+      font-size: 9px;
       color: var(--text-muted);
       text-transform: uppercase;
       font-weight: 600;
-      margin-bottom: 1.5px;
+      margin-bottom: 1px;
     }
 
     .info-value {
-      font-size: 12.5px;
+      font-size: 11px;
       font-weight: 700;
       color: var(--text-dark);
     }
@@ -675,8 +677,8 @@
     }
 
     .signature-img {
-      height: 50px;
-      max-width: 120px;
+      height: 38px;
+      max-width: 100px;
       margin-bottom: -2px;
       object-fit: contain;
       display: block;
@@ -817,7 +819,7 @@
 
       <!-- Row 2: Address, Contact, and Web details (Neatly centered underneath) -->
       <div
-        style="text-align: center; color: #1e293b; font-size: 10.5px; line-height: 1.2; margin-top: -4px; margin-bottom: 4px; padding: 0 4px;">
+        style="text-align: center; color: #1e293b; font-size: 10px; line-height: 1.2; margin-top: -5px; margin-bottom: 2px; padding: 0 4px;">
         <p style="margin-bottom: 1px; font-weight: 700;">
           <span>Address : {{#if school.address}}{{school.address}}{{else}}Times School Road, Muhammadpur, Shahganj,
             Mahendru, Patna - 800006{{/if}}</span>
@@ -848,18 +850,18 @@
       {{/if}}
 
       <!-- Header Sub-Bar: Progress Report & Session -->
-      <div class="flex items-center justify-center px-3 py-0.5 gap-2" style="text-align: center; margin-top: 2px;">
+      <div class="flex items-center justify-center px-3 py-0.5 gap-2" style="text-align: center; margin-top: 1px;">
         <span class="progress-report-text">
           PROGRESS REPORT
         </span>
         {{#if reportTitle}}
         <span class="font-bold uppercase"
-          style="color: #0f4c92; font-size: 15px; letter-spacing: 0.5px; font-family: 'Montserrat', sans-serif; line-height: 1; margin-top: 1px;">
+          style="color: #0f4c92; font-size: 14px; letter-spacing: 0.5px; font-family: 'Montserrat', sans-serif; line-height: 1; margin-top: 1px;">
           {{reportTitle}}
         </span>
         {{/if}}
         <span
-          style="background-color: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 13px; padding: 2px 10px; border-radius: 12px; white-space: nowrap; letter-spacing: 0.3px; line-height: 1; display: inline-flex; align-items: center;">
+          style="background-color: #e0f2fe; color: #0284c7; font-weight: 700; font-size: 12px; padding: 2px 8px; border-radius: 12px; white-space: nowrap; letter-spacing: 0.3px; line-height: 1; display: inline-flex; align-items: center;">
           (Session : {{#if student.academic_year_name}}{{student.academic_year_name}}{{else if
           school.session}}{{school.session}}{{else}}2026-2027{{/if}})
         </span>
@@ -868,10 +870,10 @@
 
 
     <!-- 2. STUDENT PROFILE -->
-    <div class="card mb-1" style="padding: 2.5px 7px;">
+    <div class="card mb-1" style="padding: 2px 6px;">
       <div class="flex justify-between gap-3">
         <!-- Left Side: Student Info Grid -->
-        <div class="flex-1 grid grid-cols-3 gap-x-3 gap-y-1">
+        <div class="flex-1 grid grid-cols-3 gap-x-3 gap-y-0.5">
           <div>
             <div class="info-label">Admission No</div>
             <div class="info-value">{{#if student.admission_no}}{{student.admission_no}}{{else}}-{{/if}}</div>
@@ -922,14 +924,14 @@
 
         <!-- Right Side: Photo and Status -->
         <div class="flex-col items-center justify-center border-l"
-          style="padding-left: 16px; border-left: 1px solid var(--border-color);">
+          style="padding-left: 12px; border-left: 1px solid var(--border-color);">
           {{#if (or student.photo student.avatar_url)}}
           <img src="{{#if student.photo}}{{student.photo}}{{else}}{{student.avatar_url}}{{/if}}" alt="Student Photo"
-            class="student-photo mb-2">
+            class="student-photo mb-1">
           {{else}}
-          <div class="student-photo mb-2 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
+          <div class="student-photo mb-1 bg-gray-100 flex items-center justify-center text-muted">No Photo</div>
           {{/if}}
-          <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}">
+          <div class="badge {{#if (eq student.status 'Active')}}badge-success{{else}}badge-danger{{/if}}" style="padding: 1px 6px; font-size: 8px;">
             {{#if student.status}}{{student.status}}{{else}}Active{{/if}}
           </div>
         </div>
@@ -938,7 +940,7 @@
 
 
     <!-- 3. MARKS TABLE -->
-    <div class="mb-2">
+    <div style="margin-bottom: 2px;">
       {{!-- <div class="section-heading">Part 1: Scholastic Areas</div> --}}
       <table class="table-marks data-table" style="margin-bottom: 0;">
         <thead>
@@ -1074,9 +1076,9 @@
         border: 1.5px solid #0e4ea6;
         border-left: 4px solid #0e4ea6;
         border-radius: 6px;
-        padding: 4px 6px 3px 4px;
+        padding: 2px 5px 2px 4px;
         background: linear-gradient(135deg, rgba(240, 247, 255, 0.6) 0%, rgba(224, 239, 254, 0.6) 100%);
-        margin-bottom: 5px;
+        margin-bottom: 2.5px;
         box-shadow: 0 1px 3px rgba(14, 78, 166, 0.08);
       }
 
@@ -1089,9 +1091,9 @@
 
       .co-scholastic-table th,
       .co-scholastic-table td {
-        padding: 3px 6px !important;
-        font-size: 11.5px !important;
-        line-height: 1.3 !important;
+        padding: 1.5px 5px !important;
+        font-size: 10px !important;
+        line-height: 1.2 !important;
         border: 1px solid #cbd5e1 !important;
       }
 
@@ -1206,13 +1208,13 @@
 
       .result-tile {
         border-radius: 6px;
-        padding: 2.5px 5px;
+        padding: 2px 4px;
         text-align: center;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
-        min-height: 32px;
+        min-height: 28px;
       }
 
       .result-tile-percentage {
@@ -1376,7 +1378,7 @@
     {{#if (hasItems performanceChart)}}
     <div class="perf-chart-card" style="margin-top: 2px; margin-bottom: 2px;">
       <div class="section-heading" style="margin-bottom: 1.5px;">Subject Performance</div>
-      <svg viewBox="0 0 680 102" style="width: 100%; height: auto; max-height: 95px; display: block;"
+      <svg viewBox="0 0 680 102" style="width: 100%; height: auto; max-height: 72px; display: block;"
         xmlns="http://www.w3.org/2000/svg">
         <!-- Background Grid Lines -->
         <line x1="36" y1="12" x2="675" y2="12" stroke="#e2e8f0" stroke-width="0.8" stroke-dasharray="2,2" />
@@ -1581,7 +1583,7 @@
       <!-- Right Column: Attendance Record & Teacher Remarks -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
         <!-- Attendance Record -->
-        <div class="att-card" style="margin-bottom: 5px;">
+        <div class="att-card" style="margin-bottom: 2.5px;">
           <div class="att-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
               stroke-linejoin="round">
@@ -1721,12 +1723,12 @@
     <div class="flex-1"></div>
 
     <!-- 7. SIGNATURES -->
-    <div class="flex justify-between items-end mt-1 pt-1">
+    <div class="flex justify-between items-end mt-0.5 pt-0.5">
       {{!-- <div class="flex-col items-center">
         {{#if signatures.parent}}
         <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
         {{else}}
-        <div style="height: 30px;"></div>
+        <div style="height: 28px;"></div>
         {{/if}}
         <div class="signature-box">Parent / Guardian</div>
       </div> --}}
@@ -1735,7 +1737,7 @@
         {{#if signatures.teacher}}
         <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
         {{else}}
-        <div style="height: 44px;"></div>
+        <div style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Class Teacher</div>
       </div>
@@ -1744,7 +1746,7 @@
         {{#if signatures.controller}}
         <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
         {{else}}
-        <div style="height: 44px;"></div>
+        <div style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Exam Controller</div>
       </div>
@@ -1755,7 +1757,7 @@
         {{else if principalSignature}}
         <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
         {{else}}
-        <div style="height: 44px;"></div>
+        <div style="height: 32px;"></div>
         {{/if}}
         <div class="signature-box">Principal</div>
       </div>
@@ -1792,7 +1794,9 @@
     </div>
     {{/each}}
   {{else}}
-    {{> marksheetBody}}
+    <div class="marksheet-page-wrapper">
+      {{> marksheetBody}}
+    </div>
   {{/if}}
 </body>
 

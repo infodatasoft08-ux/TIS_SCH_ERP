@@ -2823,7 +2823,8 @@ const GenerateMarksheetPDF = async (req, res) => {
         const templatePath = 'uploads/templates/senior_final_exam.hbs';
         const pdfBuffer = await pdfService.renderHbsTemplate(templatePath, templateData, {
             width: 794,
-            height: 1123
+            height: 1123,
+            pageRanges: '1'
         });
 
         res.setHeader('Content-Type', 'application/pdf');
