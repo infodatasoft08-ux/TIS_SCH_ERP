@@ -2299,11 +2299,11 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
     
     // Balanced, safe sizing to ensure full width and strictly 1 A4 page without overflowing or cutting
     let layoutDensity = 'spacious';
-    let maxGraphHeight = 100;
+    let maxGraphHeight = 120;
     let topY = 14;
-    let baselineY = 114; // 14 + 100 = 114
-    let svgHeight = 132;
-    let cssHeight = '98px';
+    let baselineY = 134; // 14 + 120 = 134
+    let svgHeight = 152;
+    let cssHeight = '120px';
     let barWidthRatio = 0.50;
     let maxBarWidth = 44;
     let minBarWidth = 24;
@@ -2319,12 +2319,12 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
         maxBarWidth = 32;
         minBarWidth = 14;
     } else if (numSubjects >= 9) {
-        layoutDensity = numSubjects === 11 ? 'compact' : 'moderate';
-        maxGraphHeight = 88;
-        topY = 12;
-        baselineY = 100; // 12 + 88
-        svgHeight = 118;
-        cssHeight = '88px';
+        layoutDensity = 'moderate';
+        maxGraphHeight = 118;
+        topY = 14;
+        baselineY = 132; // 14 + 118
+        svgHeight = 150;
+        cssHeight = '118px';
         barWidthRatio = 0.46;
         maxBarWidth = 38;
         minBarWidth = 18;
