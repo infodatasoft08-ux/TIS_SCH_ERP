@@ -72,14 +72,14 @@ const resolveStudentPhoto = async (photoPath) => {
 
 const calculateGrade = (pct) => {
     const val = Number(pct) || 0;
-    if (val >= 91) return 'A+';
-    if (val >= 81) return 'A';
-    if (val >= 71) return 'B+';
-    if (val >= 61) return 'B';
-    if (val >= 51) return 'C+';
-    if (val >= 41) return 'C';
+    if (val >= 91) return 'A1';
+    if (val >= 81) return 'A2';
+    if (val >= 71) return 'B1';
+    if (val >= 61) return 'B2';
+    if (val >= 51) return 'C1';
+    if (val >= 41) return 'C2';
     if (val >= 33) return 'D';
-    return 'F';
+    return 'E';
 };
 
 // Add Exam Group (Multiple subjects)
@@ -1577,24 +1577,21 @@ const AddExamGroupMarks = async (req, res) => {
             }
 
             // Grade calculation
-            let grade = 'F';
+            let grade = 'E';
             if (groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based') {
                 grade = m.grade || null;
                 totalObtained = null;
             } else {
                 if (m.attendance_status === 'Present' && totalObtained !== null) {
-                    if (totalObtained >= groupSub.passing_marks) {
-                        const percentage = (totalObtained / groupSub.max_marks) * 100;
-                        if (percentage >= 91) grade = 'A+';
-                        else if (percentage >= 81) grade = 'A';
-                        else if (percentage >= 71) grade = 'B+';
-                        else if (percentage >= 61) grade = 'B';
-                        else if (percentage >= 51) grade = 'C';
-                        else if (percentage >= 41) grade = 'D';
-                        else grade = 'P';
-                    } else {
-                        grade = 'F';
-                    }
+                    const percentage = (groupSub.max_marks > 0) ? (totalObtained / groupSub.max_marks) * 100 : 0;
+                    if (percentage >= 91) grade = 'A1';
+                    else if (percentage >= 81) grade = 'A2';
+                    else if (percentage >= 71) grade = 'B1';
+                    else if (percentage >= 61) grade = 'B2';
+                    else if (percentage >= 51) grade = 'C1';
+                    else if (percentage >= 41) grade = 'C2';
+                    else if (percentage >= 33) grade = 'D';
+                    else grade = 'E';
                 } else if (m.attendance_status === 'Absent') {
                     grade = 'AB';
                 } else if (m.attendance_status === 'Present' && totalObtained === null) {
@@ -2431,17 +2428,23 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
     const skillBasedRows = rows.filter(r => r.subject_type === 'skill-based');
 
     const subjects = academicRows.map((row, idx) => {
-        if (row.grade === 'F' || row.attendance_status === 'Absent') hasFailed = true;
-        if (row.teacher_remark) dynamicTeacherRemark = row.teacher_remark;
-        if (row.principal_remark) dynamicPrincipalRemark = row.principal_remark;
-        if (row.rank) dynamicRank = row.rank;
-
         const obtained = (row.attendance_status !== 'Absent' && row.marks_obtained !== null) ? Number(row.marks_obtained) : 0;
         totalMax += Number(row.max_marks || 0);
         if (row.attendance_status !== 'Absent') totalObtained += obtained;
 
         const subMax = Number(row.max_marks || 0);
         const percentageVal = subMax > 0 ? (obtained / subMax) * 100 : 0;
+
+        const subGrade = row.attendance_status === 'Absent'
+            ? 'AB'
+            : (row.marks_obtained !== null && row.marks_obtained !== undefined && row.marks_obtained !== ''
+                ? calculateGrade(percentageVal)
+                : (row.grade || '-'));
+
+        if (subGrade === 'E' || row.grade === 'F' || row.attendance_status === 'Absent') hasFailed = true;
+        if (row.teacher_remark) dynamicTeacherRemark = row.teacher_remark;
+        if (row.principal_remark) dynamicPrincipalRemark = row.principal_remark;
+        if (row.rank) dynamicRank = row.rank;
 
         const compFlags = [row.has_written, row.has_reading, row.has_writing_comp, row.has_dictation, row.has_recitation, row.has_ia_pr, row.has_oral, row.has_lab, row.has_theory];
         const activeFlagsCount = compFlags.filter(f => checkTrue(f)).length;
@@ -2494,8 +2497,8 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
             exam2_marks: '-',
             total: row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained),
             max: Math.round(subMax),
-            grade: row.attendance_status === 'Absent' ? 'AB' : (row.grade || calculateGrade(percentageVal)),
-            overall_grade: row.attendance_status === 'Absent' ? 'AB' : (row.grade || calculateGrade(percentageVal)),
+            grade: subGrade,
+            overall_grade: subGrade,
             yearly_avg: row.attendance_status === 'Absent' ? 'AB' : Math.round(obtained),
             exam1_theory: t1Theory,
             exam1_lab: t1Lab,

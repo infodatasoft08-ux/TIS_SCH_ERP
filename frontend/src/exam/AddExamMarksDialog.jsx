@@ -248,16 +248,15 @@ export default function AddExamMarksDialog({ open, onOpenChange, exam, initialMo
         const numMarks = parseFloat(marks);
         const totalMarks = parseFloat(maxMarks);
         if (isNaN(numMarks) || isNaN(totalMarks) || totalMarks <= 0) return '';
-        const passMarks = parseFloat(passingMarks) || 35;
-        if (numMarks < passMarks) return 'F';
         const percentage = (numMarks / totalMarks) * 100;
-        if (percentage >= 91) return 'A+';
-        if (percentage >= 81) return 'A';
-        if (percentage >= 71) return 'B+';
-        if (percentage >= 61) return 'B';
-        if (percentage >= 51) return 'C';
-        if (percentage >= 41) return 'D';
-        return 'P';
+        if (percentage >= 91) return 'A1';
+        if (percentage >= 81) return 'A2';
+        if (percentage >= 71) return 'B1';
+        if (percentage >= 61) return 'B2';
+        if (percentage >= 51) return 'C1';
+        if (percentage >= 41) return 'C2';
+        if (percentage >= 33) return 'D';
+        return 'E';
     };
 
     // Field -> max mark map for validation

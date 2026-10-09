@@ -243,13 +243,14 @@ const CheckExams = () => {
             }
             if (!sub.result_grade && sub.marks_obtained !== null && sub.marks_obtained !== undefined && sub.max_marks > 0 && sub.attendance_status !== 'Absent') {
                 const pct = (Number(sub.marks_obtained) / Number(sub.max_marks)) * 100;
-                if (pct >= 91) sub.result_grade = 'A+';
-                else if (pct >= 81) sub.result_grade = 'A';
-                else if (pct >= 71) sub.result_grade = 'B+';
-                else if (pct >= 61) sub.result_grade = 'B';
-                else if (pct >= 51) sub.result_grade = 'C';
-                else if (pct >= 41) sub.result_grade = 'D';
-                else sub.result_grade = 'P';
+                if (pct >= 91) sub.result_grade = 'A1';
+                else if (pct >= 81) sub.result_grade = 'A2';
+                else if (pct >= 71) sub.result_grade = 'B1';
+                else if (pct >= 61) sub.result_grade = 'B2';
+                else if (pct >= 51) sub.result_grade = 'C1';
+                else if (pct >= 41) sub.result_grade = 'C2';
+                else if (pct >= 33) sub.result_grade = 'D';
+                else sub.result_grade = 'E';
                 sub.grade = sub.result_grade;
             }
         });
