@@ -2299,11 +2299,11 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
     
     // Balanced, safe sizing to ensure full width and strictly 1 A4 page without overflowing or cutting
     let layoutDensity = 'spacious';
-    let maxGraphHeight = 105;
+    let maxGraphHeight = 98;
     let topY = 12;
-    let baselineY = 117; // 12 + 105 = 117
-    let svgHeight = 135;
-    let cssHeight = '105px';
+    let baselineY = 110; // 12 + 98 = 110
+    let svgHeight = 128;
+    let cssHeight = '98px';
     let barWidthRatio = 0.50;
     let maxBarWidth = 44;
     let minBarWidth = 24;
