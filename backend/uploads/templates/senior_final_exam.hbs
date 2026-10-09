@@ -87,7 +87,19 @@
       z-index: 2;
       display: flex;
       flex-direction: column;
+      justify-content: space-between;
       box-sizing: border-box;
+    }
+
+    .marksheet-bottom-block {
+      width: 100%;
+      flex-shrink: 0;
+    }
+
+    .signature-gap-spacer {
+      flex: 1;
+      max-height: 24px;
+      min-height: 6px;
     }
 
     /* Watermark */
@@ -1381,24 +1393,25 @@
       }
 
       /* --- DYNAMIC ADAPTIVE LAYOUT DENSITY (Subject Count Adaptive) --- */
-                  /* Spacious tier (<= 8 subjects, e.g. Nursery, LKG, UKG, Class 1-2):
-         Fills the marksheet elegantly with enhanced readable font size */
+      /* Spacious tier (<= 8 subjects, e.g. Nursery, LKG, UKG, Class 1-2, Class 9 with 5 subjects):
+         Fills the marksheet elegantly with enhanced readable font size and comfortable row heights */
       .layout-spacious .table-marks th {
-        padding: 3.2px 4px;
+        padding: 4.5px 4px;
         font-size: 11.8px;
       }
       .layout-spacious .table-marks tbody td {
-        padding: 3px 4px;
-        font-size: 11.8px;
+        padding: 4.5px 4px;
+        font-size: 12px;
+        line-height: 1.35;
       }
       .layout-spacious .table-marks .row-total td {
-        padding: 3.2px 4px;
+        padding: 4.5px 4px;
         font-size: 12.2px;
       }
       .layout-spacious .co-scholastic-table th,
       .layout-spacious .co-scholastic-table td {
-        padding: 2.6px 5px !important;
-        font-size: 11.2px !important;
+        padding: 3.2px 5px !important;
+        font-size: 11px !important;
       }
       .layout-spacious .card {
         padding: 3px 6px;
@@ -1419,18 +1432,18 @@
       }
       .layout-spacious .result-tile {
         padding: 2.5px 4px;
-        min-height: 30px;
+        min-height: 32px;
       }
       .layout-spacious .att-card {
         padding: 4px 6px;
         margin-bottom: 3px;
       }
       .layout-spacious .att-pill {
-        min-height: 36px;
+        min-height: 38px;
         padding: 3px 4px;
       }
       .layout-spacious .remarks-box {
-        min-height: 38px;
+        min-height: 42px;
         padding: 5px 8px;
         font-size: 11.8px;
       }
@@ -1440,11 +1453,17 @@
         margin-bottom: 2.5px;
       }
       .layout-spacious .sig-placeholder {
-        height: 34px !important;
+        height: 40px !important;
       }
       .layout-spacious .signature-box {
         padding-top: 2px;
-      }/* Moderate tier (9-11 subjects, e.g. Class 3, 4, 5): Perfectly balanced so footer never cuts */
+      }
+      .layout-spacious .signature-gap-spacer {
+        max-height: 28px;
+        min-height: 8px;
+      }
+
+      /* Moderate tier (9-11 subjects, e.g. Class 3, 4, 5): Perfectly balanced so footer never cuts */
       .layout-moderate .table-marks th {
         padding: 2.5px 3.5px;
       }
@@ -1471,10 +1490,15 @@
       }
       .layout-moderate .sig-placeholder {
         height: 32px !important;
-      }.layout-moderate .section-heading,
+      }
+      .layout-moderate .section-heading,
       .layout-moderate .co-scholastic-section-heading {
         padding: 3.5px 8px;
         margin-bottom: 4px;
+      }
+      .layout-moderate .signature-gap-spacer {
+        max-height: 14px;
+        min-height: 4px;
       }
 
       /* Compact tier (>= 11 subjects, e.g. Class 5, 9, 10):
@@ -1522,6 +1546,10 @@
       }
       .layout-compact .sig-placeholder {
         height: 30px !important;
+      }
+      .layout-compact .signature-gap-spacer {
+        max-height: 6px;
+        min-height: 0px;
       }
     </style>
 
@@ -1784,7 +1812,7 @@
       </div>
 
       <!-- Right Column: Attendance Record & Teacher Remarks -->
-      <div style="grid-column: span 1; display: flex; flex-direction: column;">
+      <div style="grid-column: span 1; display: flex; flex-direction: column; justify-content: space-between; height: 100%;">
         <!-- Attendance Record -->
         <div class="att-card" style="margin-bottom: 2.5px;">
           <div class="att-title">
@@ -1825,17 +1853,11 @@
               </div>
               <div style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px;"></div>
             </div>
-            {{!-- <div class="att-pill">
-              <div class="att-label">Attendance %</div>
-              <div
-                style="border-bottom: 1.5px dashed #94a3b8; height: 13px; margin: 0 4px; text-align: right; padding-right: 2px; font-size: 11px; font-weight: 800; color: #64748b; line-height: 14px;">
-                %</div>
-            </div> --}}
           </div>
         </div>
 
         <!-- Class Teacher's Remarks -->
-        <div>
+        <div style="display: flex; flex-direction: column; flex: 1;">
           <div class="section-heading">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
               stroke-linejoin="round">
@@ -1847,7 +1869,7 @@
             </svg>
             <span>Class Teacher's Remarks</span>
           </div>
-          <div class="remarks-box">
+          <div class="remarks-box" style="flex: 1; display: flex; align-items: center;">
             "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
           </div>
         </div>
@@ -1855,10 +1877,10 @@
     </div>
     {{else}}
     <!-- Layout when NO Co-Scholastic subjects exist -->
-    <div class="grid grid-cols-2 gap-3" style="align-items: start; margin-bottom: 2px;">
+    <div class="grid grid-cols-2 gap-3" style="align-items: stretch; margin-bottom: 2px;">
       <!-- Left Column: Attendance Record -->
       <div style="grid-column: span 1; display: flex; flex-direction: column;">
-        <div class="att-card" style="margin-bottom: 0;">
+        <div class="att-card" style="margin-bottom: 0; height: 100%;">
           <div class="att-title">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"
               stroke-linejoin="round">
@@ -1914,7 +1936,7 @@
           </svg>
           <span>Class Teacher's Remarks</span>
         </div>
-        <div class="remarks-box">
+        <div class="remarks-box" style="flex: 1; display: flex; align-items: center;">
           "{{#if teacherRemark}}{{teacherRemark}}{{else}}Good performance. Keep it up!{{/if}}"
         </div>
       </div>
@@ -1922,66 +1944,60 @@
     {{/if}}
 
 
-    <!-- Fill remaining space to push footer to bottom if needed -->
-    <div class="flex-1"></div>
+    <!-- Dynamic bounded gap spacer -->
+    <div class="signature-gap-spacer"></div>
 
-    <!-- 7. SIGNATURES -->
-    <div class="flex justify-between items-end mt-0.5 pt-0.5">
-      {{!-- <div class="flex-col items-center">
-        {{#if signatures.parent}}
-        <img src="{{signatures.parent}}" class="signature-img" alt="Parent Signature">
-        {{else}}
-        <div style="height: 28px;"></div>
-        {{/if}}
-        <div class="signature-box">Parent / Guardian</div>
-      </div> --}}
+    <!-- 7 & 8. BOTTOM BLOCK: SIGNATURES AND FOOTER -->
+    <div class="marksheet-bottom-block">
+      <!-- 7. SIGNATURES -->
+      <div class="flex justify-between items-end" style="padding-top: 2px;">
+        <div class="flex-col items-center">
+          {{#if signatures.teacher}}
+          <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
+          {{else}}
+          <div class="sig-placeholder"></div>
+          {{/if}}
+          <div class="signature-box">Class Teacher</div>
+        </div>
 
-      <div class="flex-col items-center">
-        {{#if signatures.teacher}}
-        <img src="{{signatures.teacher}}" class="signature-img" alt="Teacher Signature">
-        {{else}}
-        <div class="sig-placeholder" style="height: 32px;"></div>
-        {{/if}}
-        <div class="signature-box">Class Teacher</div>
-      </div>
+        <div class="flex-col items-center">
+          {{#if signatures.controller}}
+          <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
+          {{else}}
+          <div class="sig-placeholder"></div>
+          {{/if}}
+          <div class="signature-box">Exam Controller</div>
+        </div>
 
-      <div class="flex-col items-center">
-        {{#if signatures.controller}}
-        <img src="{{signatures.controller}}" class="signature-img" alt="Exam Controller Signature">
-        {{else}}
-        <div class="sig-placeholder" style="height: 32px;"></div>
-        {{/if}}
-        <div class="signature-box">Exam Controller</div>
-      </div>
-
-      <div class="flex-col items-center">
-        {{#if signatures.principal}}
-        <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
-        {{else if principalSignature}}
-        <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
-        {{else}}
-        <div class="sig-placeholder" style="height: 32px;"></div>
-        {{/if}}
-        <div class="signature-box">Principal</div>
-      </div>
-    </div>
-
-
-    <!-- 8. FOOTER -->
-    <div
-      style="margin-top: 2px; padding-top: 2px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
-      <div style="text-align: left; line-height: 1.4;">
-        <div><strong>Report Card No:</strong> {{#if
-          meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
-        <div><strong>Generated On:</strong> {{#if meta.generated_on}}{{meta.generated_on}}{{else}}{{currentDate}}{{/if}}
+        <div class="flex-col items-center">
+          {{#if signatures.principal}}
+          <img src="{{signatures.principal}}" class="signature-img" alt="Principal Signature">
+          {{else if principalSignature}}
+          <img src="{{principalSignature}}" class="signature-img" alt="Principal Signature">
+          {{else}}
+          <div class="sig-placeholder"></div>
+          {{/if}}
+          <div class="signature-box">Principal</div>
         </div>
       </div>
 
-      <div style="text-align: right; line-height: 1.4;">
-        <div>Generated By: {{#if meta.generated_by}}{{meta.generated_by}}{{else}}School Administration{{/if}}</div>
-        <div>Software powered by {{#if meta.erp_name}}{{meta.erp_name}}{{else}}TIS ERP{{/if}} v{{#if
-          meta.erp_version}}{{meta.erp_version}}{{else}}2.0{{/if}} &bull; &copy; {{#if
-          meta.year}}{{meta.year}}{{else}}2026{{/if}} All Rights Reserved</div>
+
+      <!-- 8. FOOTER -->
+      <div
+        style="margin-top: 3px; padding-top: 2px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center; font-size: 7.5px; color: var(--text-muted);">
+        <div style="text-align: left; line-height: 1.4;">
+          <div><strong>Report Card No:</strong> {{#if
+            meta.report_id}}{{meta.report_id}}{{else}}TIS-RC-{{student.roll_no}}{{/if}}</div>
+          <div><strong>Generated On:</strong> {{#if meta.generated_on}}{{meta.generated_on}}{{else}}{{currentDate}}{{/if}}
+          </div>
+        </div>
+
+        <div style="text-align: right; line-height: 1.4;">
+          <div>Generated By: {{#if meta.generated_by}}{{meta.generated_by}}{{else}}School Administration{{/if}}</div>
+          <div>Software powered by {{#if meta.erp_name}}{{meta.erp_name}}{{else}}TIS ERP{{/if}} v{{#if
+            meta.erp_version}}{{meta.erp_version}}{{else}}2.0{{/if}} &bull; &copy; {{#if
+            meta.year}}{{meta.year}}{{else}}2026{{/if}} All Rights Reserved</div>
+        </div>
       </div>
     </div>
 
