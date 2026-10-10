@@ -1525,10 +1525,12 @@ const AddExamGroupMarks = async (req, res) => {
         subRows.forEach(s => subjectMap[s.subject_id] = s);
 
         const rowsToInsert = [];
+        const toDeletePairs = [];
         for (const m of marks) {
             const groupSub = subjectMap[m.subject_id];
             if (!groupSub) continue;
 
+            const isCoScholasticOrSkill = groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based';
             const hasTheory = groupSub.has_theory;
             const hasLab = groupSub.has_lab;
             const hasOral = groupSub.has_oral;
@@ -1578,8 +1580,9 @@ const AddExamGroupMarks = async (req, res) => {
 
             // Grade calculation
             let grade = 'E';
-            if (groupSub.subject_type === 'co-scholastic' || groupSub.subject_type === 'skill-based') {
+            if (isCoScholasticOrSkill) {
                 grade = m.grade || null;
+                if (grade === 'none' || grade === '') grade = null;
                 totalObtained = null;
             } else {
                 if (m.attendance_status === 'Present' && totalObtained !== null) {
@@ -1599,12 +1602,31 @@ const AddExamGroupMarks = async (req, res) => {
                 }
             }
 
+            // If teacher cleared marks (student is Present but all marks are empty / grade is null), delete any existing result record
+            const isCleared = (m.attendance_status === 'Present' || !m.attendance_status) &&
+                              (isCoScholasticOrSkill ? (!grade || grade === 'none') : (totalObtained === null));
+
+            if (isCleared) {
+                toDeletePairs.push([groupSub.id, m.student_id]);
+                continue;
+            }
+
             rowsToInsert.push([
                 groupSub.id, m.student_id, m.student_academic_id, m.attendance_status, totalObtained,
                 thMarks, lbMarks, orMarks,
                 wrMarks, rdMarks, wcMarks, dcMarks, rcMarks, iaMarks,
                 grade, m.teacher_remark || null, m.principal_remark || null, m.next_class || null, m.rank || null
             ]);
+        }
+
+        // Delete cleared subjects for students
+        if (toDeletePairs.length > 0) {
+            for (const [egsId, stId] of toDeletePairs) {
+                await conn.execute(
+                    `DELETE FROM exam_group_results WHERE exam_group_subject_id = ? AND student_id = ?`,
+                    [egsId, stId]
+                );
+            }
         }
 
         // Chunked Bulk Upsert (100 rows per batch) for high performance and low server load
@@ -1682,6 +1704,7 @@ const GetExamGroupResults = async (req, res) => {
             JOIN users u ON u.id = st.user_id
             JOIN student_academic_records sar ON sar.id = egr.student_academic_id
             WHERE egs.exam_group_id = ?
+              AND (egr.marks_obtained IS NOT NULL OR egr.attendance_status = 'Absent' OR (egr.grade IS NOT NULL AND egr.grade != '' AND egr.grade != 'none'))
         `, [examGroupId]);
 
         for (const row of rows) {
@@ -2307,6 +2330,9 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
     let barWidthRatio = 0.50;
     let maxBarWidth = 44;
     let minBarWidth = 24;
+    let scoreFontSize = 13;
+    let subjectFontSize = 12;
+    let axisFontSize = 10.5;
 
     if (numSubjects >= 12) {
         layoutDensity = 'compact';
@@ -2318,6 +2344,9 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
         barWidthRatio = 0.44;
         maxBarWidth = 32;
         minBarWidth = 14;
+        scoreFontSize = 10.5;
+        subjectFontSize = 9.5;
+        axisFontSize = 9;
     } else if (numSubjects >= 9) {
         layoutDensity = 'moderate';
         maxGraphHeight = 100;
@@ -2328,6 +2357,9 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
         barWidthRatio = 0.46;
         maxBarWidth = 38;
         minBarWidth = 18;
+        scoreFontSize = 12;
+        subjectFontSize = 11;
+        axisFontSize = 10;
     }
 
     // Full width: 720 width viewBox, plot spans from x=38 to x=706 (width=668)
@@ -2391,7 +2423,10 @@ function calculateMarksheetChartAndLayout(academicSubjects, getShortSubjectName,
         baselineY,
         subjectLabelY,
         lineRight: 712,
-        gridLines
+        gridLines,
+        scoreFontSize,
+        subjectFontSize,
+        axisFontSize
     };
 
     return {
@@ -2530,9 +2565,20 @@ const buildSeniorMarksheetData = async (student_id, exam_id, sharedAssets = null
     let dynamicPrincipalRemark = null;
     let dynamicRank = null;
 
-    const academicRows = rows.filter(r => r.subject_type === 'academic' || !r.subject_type);
-    const coScholasticRows = rows.filter(r => r.subject_type === 'co-scholastic');
-    const skillBasedRows = rows.filter(r => r.subject_type === 'skill-based');
+    const academicRows = rows.filter(r => {
+        const isAcademic = r.subject_type === 'academic' || !r.subject_type;
+        if (!isAcademic) return false;
+        // Exclude cleared/ghost records where student was present but marks were cleared / not entered
+        return (r.marks_obtained !== null && r.marks_obtained !== '') || r.attendance_status === 'Absent';
+    });
+    const coScholasticRows = rows.filter(r => {
+        if (r.subject_type !== 'co-scholastic') return false;
+        return (r.grade !== null && r.grade !== '' && r.grade !== 'none') || r.attendance_status === 'Absent';
+    });
+    const skillBasedRows = rows.filter(r => {
+        if (r.subject_type !== 'skill-based') return false;
+        return (r.grade !== null && r.grade !== '' && r.grade !== 'none') || r.attendance_status === 'Absent';
+    });
 
     const subjects = academicRows.map((row, idx) => {
         const obtained = (row.attendance_status !== 'Absent' && row.marks_obtained !== null) ? Number(row.marks_obtained) : 0;
@@ -3307,7 +3353,15 @@ const GenerateCombinedMarksheetPDF = async (req, res) => {
         let totalMax = 0;
         let totalObtained = 0;
 
-        rows.forEach(row => {
+        const validRows = rows.filter(r => {
+            const isAcademic = r.subject_type === 'academic' || !r.subject_type;
+            if (isAcademic) {
+                return (r.marks_obtained !== null && r.marks_obtained !== '') || r.attendance_status === 'Absent';
+            }
+            return (r.grade !== null && r.grade !== '' && r.grade !== 'none') || r.attendance_status === 'Absent';
+        });
+
+        validRows.forEach(row => {
             if (!examNames[row.exam_type]) {
                 examNames[row.exam_type] = row.exam_name;
             }
