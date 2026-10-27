@@ -75,18 +75,21 @@ const StudentFeeDetails = () => {
     };
 
     const stats = useMemo(() => {
-        if (!data) return { totalDue: 0, totalPaid: 0, outstanding: 0, totalFines: 0 };
+        if (!data) return { totalDue: 0, totalPaid: 0, outstanding: 0, totalFines: 0, totalPreviousDues: 0 };
 
         const invoices = data.invoices || [];
         const totalDue = invoices.reduce((sum, inv) => sum + Number(inv.amount_due), 0);
         const totalPaid = invoices.reduce((sum, inv) => sum + Number(inv.amount_paid), 0);
-        const totalFines = data.fines?.reduce((sum, fine) => sum + Number(fine.amount), 0) || 0;
+        const allFines = (data.fines || []).filter(f => !f.is_reversed);
+        const totalPreviousDues = allFines.filter(f => f.fine_type?.startsWith('previous_')).reduce((sum, f) => sum + Number(f.amount), 0);
+        const totalFines = allFines.filter(f => !f.fine_type?.startsWith('previous_')).reduce((sum, f) => sum + Number(f.amount), 0);
 
         return {
             totalDue,
             totalPaid,
             outstanding: totalDue - totalPaid,
-            totalFines
+            totalFines,
+            totalPreviousDues
         };
     }, [data]);
 
@@ -455,15 +458,24 @@ const StudentFeeDetails = () => {
                     </CardContent>
                 </Card>
 
-                <Card className="relative overflow-hidden group border-none shadow-xl ring-1 ring-border bg-primary/10 hover:bg-primary/[0.15] transition-all duration-500 ring-2 ring-primary/20">
+                <Card className="relative overflow-hidden group border-none shadow-xl ring-1 ring-border bg-purple-500/10 hover:bg-purple-500/[0.15] transition-all duration-500 ring-2 ring-purple-500/20">
                     <div className="absolute -bottom-6 -right-6 p-4 opacity-10 group-hover:scale-125 group-hover:opacity-15 transition-all duration-700">
-                        <AlertCircle className="h-24 w-24 text-primary" />
+                        <History className="h-24 w-24 text-purple-600" />
                     </div>
                     <CardHeader className="pb-2">
-                        <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-black text-primary/80 italic">Penalties Accrued</CardDescription>
+                        <CardDescription className="text-[10px] uppercase tracking-[0.2em] font-black text-purple-700/80 dark:text-purple-300 italic">
+                            {stats.totalPreviousDues > 0 ? "Previous Dues & Fines" : "Penalties Accrued"}
+                        </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <div className="text-3xl font-black tracking-tighter drop-shadow-sm">{formatCurrency(stats.totalFines)}</div>
+                        <div className="text-3xl font-black tracking-tighter drop-shadow-sm text-purple-700 dark:text-purple-300">
+                            {formatCurrency(stats.totalPreviousDues + stats.totalFines)}
+                        </div>
+                        {stats.totalPreviousDues > 0 && (
+                            <p className="text-[10px] text-muted-foreground mt-1">
+                                Dues: {formatCurrency(stats.totalPreviousDues)} {stats.totalFines > 0 && `| Fines: ${formatCurrency(stats.totalFines)}`}
+                            </p>
+                        )}
                     </CardContent>
                 </Card>
             </div>
@@ -538,52 +550,120 @@ const StudentFeeDetails = () => {
                             </div>
                         </div>
 
-                        {/* Fines if any */}
-                        {selectedInvoice?.fines?.length > 0 && (
-                            <div className="space-y-5 animate-in slide-in-from-right-4">
-                                <h4 className="font-black text-sm uppercase tracking-widest flex items-center gap-3 text-red-600/80">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-red-600" /> Penalties Identified
-                                </h4>
-                                <div className="bg-red-50/50 dark:bg-red-950/10 rounded-2xl border border-red-200/50 p-6 space-y-4 shadow-inner">
-                                    {selectedInvoice.fines.map((fine, i) => (
-                                        <div key={i} className="flex justify-between items-center group">
-                                            <div className="space-y-1">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
-                                                    <span className="font-black text-sm uppercase tracking-tighter text-red-700/80">{fine.fine_type}</span>
-                                                </div>
-                                                <p className="text-[10px] text-muted-foreground/80 font-medium italic ml-5">{fine.description}</p>
-                                            </div>
-                                            <span className="font-black text-xl text-red-600 italic tracking-tighter">{formatCurrency(fine.amount)}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
+                        {(() => {
+                            const activeFines = (selectedInvoice?.fines || []).filter(f => !f.is_reversed);
+                            const prevDuesItems = activeFines.filter(f => f.fine_type?.startsWith('previous_'));
+                            const penaltyItems = activeFines.filter(f => !f.fine_type?.startsWith('previous_'));
+                            const prevDuesTotal = prevDuesItems.reduce((s, f) => s + Number(f.amount), 0);
+                            const penaltiesTotal = penaltyItems.reduce((s, f) => s + Number(f.amount), 0);
+                            const totalFinesAndDues = prevDuesTotal + penaltiesTotal;
+                            const baseSubtotal = Math.max(0, Number(selectedInvoice?.amount_due || 0) - totalFinesAndDues);
 
-                        {/* Master Total Summary */}
-                        <div className="bg-muted/40 p-8 rounded-[1.5rem] space-y-3 border border-muted-foreground/10 relative overflow-hidden ring-1 ring-primary/5">
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
-                                <span className="text-muted-foreground">Subtotal Base</span>
-                                <span className="text-foreground/70">{formatCurrency(selectedInvoice?.amount_due - (selectedInvoice?.fines || []).reduce((s, f) => s + Number(f.amount), 0))}</span>
-                            </div>
-                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest border-b border-muted-foreground/10 pb-4">
-                                <span className="text-red-500/80">Applied Penalties</span>
-                                <span className="text-red-600">+{formatCurrency((selectedInvoice?.fines || []).reduce((s, f) => s + Number(f.amount), 0))}</span>
-                            </div>
-                            <div className="flex justify-between items-end pt-2">
-                                <div className="space-y-1">
-                                    <span className="text-[10px] font-black uppercase text-primary/60 tracking-[0.3em]">Grand Total</span>
-                                    <div className="text-xl font-black tracking-tighter italic text-primary">{formatCurrency(selectedInvoice?.amount_due)}</div>
-                                </div>
-                                <div className="flex flex-col items-end gap-2 text-right">
-                                    <span className="text-[10px] font-black uppercase text-green-600/60 tracking-[0.2em]">Already Cleared</span>
-                                    <div className="text-lg font-black text-green-600 italic underline decoration-green-600/30 underline-offset-8">
-                                        {formatCurrency(selectedInvoice?.amount_paid)}
+                            return (
+                                <>
+                                    {/* Previous Dues / Arrears if any */}
+                                    {prevDuesItems.length > 0 && (
+                                        <div className="space-y-4 animate-in slide-in-from-right-4">
+                                            <h4 className="font-black text-sm uppercase tracking-widest flex items-center gap-2 text-purple-700 dark:text-purple-400">
+                                                <History className="h-4 w-4 text-purple-600" /> Previous Dues & Arrears
+                                            </h4>
+                                            <div className="bg-purple-50/70 dark:bg-purple-950/20 rounded-2xl border border-purple-200/70 dark:border-purple-800/40 p-5 space-y-3 shadow-inner">
+                                                {prevDuesItems.map((due, i) => (
+                                                    <div key={i} className="flex justify-between items-start gap-4 pb-3 last:pb-0 border-b border-purple-200/40 dark:border-purple-800/30 last:border-0">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge className="bg-purple-200 text-purple-900 dark:bg-purple-900/60 dark:text-purple-200 text-[10px] px-2 py-0 border-none font-bold">
+                                                                    {due.fine_type === 'previous_fines' ? 'Previous Fine' : 'Previous Dues'}
+                                                                </Badge>
+                                                                <span className="font-bold text-sm text-foreground/90">
+                                                                    {due.description || 'Previous Month Dues'}
+                                                                </span>
+                                                            </div>
+                                                            <p className="text-[11px] text-muted-foreground/80 font-medium">
+                                                                Carry forward balance from previous months
+                                                            </p>
+                                                        </div>
+                                                        <span className="font-black text-lg text-purple-700 dark:text-purple-300 tracking-tight whitespace-nowrap">
+                                                            {formatCurrency(due.amount)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Fines & Penalties if any */}
+                                    {penaltyItems.length > 0 && (
+                                        <div className="space-y-4 animate-in slide-in-from-right-4">
+                                            <h4 className="font-black text-sm uppercase tracking-widest flex items-center gap-2 text-red-600/80">
+                                                <AlertCircle className="h-4 w-4 text-red-600" /> Penalties & Late Fees
+                                            </h4>
+                                            <div className="bg-red-50/50 dark:bg-red-950/10 rounded-2xl border border-red-200/50 p-5 space-y-3 shadow-inner">
+                                                {penaltyItems.map((fine, i) => (
+                                                    <div key={i} className="flex justify-between items-start gap-4 pb-3 last:pb-0 border-b border-red-200/40 last:border-0">
+                                                        <div className="space-y-1">
+                                                            <div className="flex items-center gap-2">
+                                                                <div className="h-2 w-2 rounded-full bg-red-400 animate-pulse" />
+                                                                <Badge className="bg-red-200 text-red-900 dark:bg-red-900/60 dark:text-red-200 text-[10px] px-2 py-0 border-none uppercase font-bold">
+                                                                    {fine.fine_type.replace(/_/g, ' ')}
+                                                                </Badge>
+                                                                {fine.description && (
+                                                                    <span className="font-bold text-xs text-foreground/80">
+                                                                        {fine.description}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <span className="font-black text-lg text-red-600 italic tracking-tight whitespace-nowrap">
+                                                            {formatCurrency(fine.amount)}
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Master Total Summary */}
+                                    <div className="bg-muted/40 p-6 md:p-8 rounded-[1.5rem] space-y-3 border border-muted-foreground/10 relative overflow-hidden ring-1 ring-primary/5">
+                                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest">
+                                            <span className="text-muted-foreground">Current Period Base Fee</span>
+                                            <span className="text-foreground/70">{formatCurrency(baseSubtotal)}</span>
+                                        </div>
+                                        {prevDuesTotal > 0 && (
+                                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-purple-700 dark:text-purple-400">
+                                                <span className="flex items-center gap-1.5">
+                                                    <History className="h-3.5 w-3.5" /> Previous Dues (Arrears)
+                                                </span>
+                                                <span>+{formatCurrency(prevDuesTotal)}</span>
+                                            </div>
+                                        )}
+                                        {penaltiesTotal > 0 && (
+                                            <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-red-600 dark:text-red-400">
+                                                <span className="flex items-center gap-1.5">
+                                                    <AlertCircle className="h-3.5 w-3.5" /> Applied Penalties
+                                                </span>
+                                                <span>+{formatCurrency(penaltiesTotal)}</span>
+                                            </div>
+                                        )}
+                                        <div className="border-t border-muted-foreground/10 pt-3 flex justify-between items-end">
+                                            <div className="space-y-1">
+                                                <span className="text-[10px] font-black uppercase text-primary/60 tracking-[0.3em]">Grand Total Due</span>
+                                                <div className="text-2xl font-black tracking-tighter italic text-primary">{formatCurrency(selectedInvoice?.amount_due)}</div>
+                                            </div>
+                                            <div className="flex flex-col items-end gap-1 text-right">
+                                                <span className="text-[10px] font-black uppercase text-green-600/60 tracking-[0.2em]">Already Cleared</span>
+                                                <div className="text-lg font-black text-green-600 italic underline decoration-green-600/30 underline-offset-4">
+                                                    {formatCurrency(selectedInvoice?.amount_paid)}
+                                                </div>
+                                                <div className="text-xs font-bold text-amber-600 dark:text-amber-400 mt-0.5">
+                                                    Balance: {formatCurrency(Math.max(0, Number(selectedInvoice?.amount_due || 0) - Number(selectedInvoice?.amount_paid || 0)))}
+                                                </div>
+                                            </div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
-                        </div>
+                                </>
+                            );
+                        })()}
                     </div>
 
                     <div className="p-6 bg-muted/20 border-t border-muted-foreground/5 flex gap-4">

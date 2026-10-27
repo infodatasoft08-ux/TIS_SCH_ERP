@@ -393,6 +393,7 @@ const generateBulkInvoicesPDF = async (invoices) => {
     const invoiceTemplatePath = path.join(__dirname, '../templates/times_international_invoice.hbs');
     const invoiceTemplateSource = fs.readFileSync(invoiceTemplatePath, 'utf8');
     const invoiceCompiled = handlebars.compile(invoiceTemplateSource);
+    const school = getSchoolInfo();
 
     const options = { month: 'long', timeZone: 'Asia/Kolkata' };
 
@@ -431,7 +432,8 @@ const generateBulkInvoicesPDF = async (invoices) => {
                 period: startMonth
             },
             rowItems,
-            logoData
+            logoData,
+            school
         });
     });
 
@@ -439,18 +441,27 @@ const generateBulkInvoicesPDF = async (invoices) => {
         <!DOCTYPE html>
         <html>
         <head>
+            <meta charset="UTF-8">
             <style>
-                .page-break { page-break-after: always; }
-                body { margin: 0; padding: 0; }
-                .invoice-container { margin-bottom: 20px; }
+                @page { size: A6; margin: 0; }
+                body { margin: 0; padding: 0; background: white; }
+                .bulk-invoice-item {
+                    page-break-after: always;
+                    break-after: page;
+                    page-break-inside: avoid;
+                    break-inside: avoid;
+                }
+                .bulk-invoice-item:last-child {
+                    page-break-after: auto;
+                    break-after: auto;
+                }
             </style>
         </head>
         <body>
-            ${invoiceHtmls.map((html, index) => `
-                <div class="invoice-container">
+            ${invoiceHtmls.map((html) => `
+                <div class="bulk-invoice-item">
                     ${html}
                 </div>
-                ${index < invoiceHtmls.length - 1 ? '<div class="page-break"></div>' : ''}
             `).join('')}
         </body>
         </html>

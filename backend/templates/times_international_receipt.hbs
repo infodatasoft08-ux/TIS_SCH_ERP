@@ -17,16 +17,12 @@
             font-family: 'Crimson Pro', serif;
             color: var(--text-dark);
             margin: 0;
-            padding: 10px 15px 15px 15px;
+            padding: 0;
             background: white;
             font-size: 14px;
-            /* width: 74mm;
-            height: 105mm; */
-            /*width: 148mm; */
             overflow: visible;
             width: 100%;
             box-sizing: border-box;
-
         }
 
         @page {
@@ -34,15 +30,22 @@
             margin: 0;
         }
 
+        .bill-page-wrapper {
+            box-sizing: border-box;
+            width: 100%;
+            padding: 14px 15px;
+            page-break-inside: avoid;
+            break-inside: avoid;
+        }
+
         .bill-border {
             border: 2px solid var(--bill-blue);
-            /*padding: 10px;*/
             padding: 4px;
-            height: 100%;
             position: relative;
-            margin-top: 10px;
+            margin-top: 0;
             display: flex;
             flex-direction: column;
+            box-sizing: border-box;
         }
 
         .top-header-bar {
@@ -59,7 +62,9 @@
             text-align: center;
             font-weight: bold;
             text-decoration: underline;
-            font-size: 11px;
+            font-size: 11.5px;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.5px;
             color: var(--bill-blue);
         }
 
@@ -72,28 +77,36 @@
         .header {
             display: flex;
             align-items: center;
-            justify-content: center;
-            margin-bottom: 1px;
+            justify-content: flex-start;
+            gap: 6px;
+            margin-bottom: 2px;
+            border-bottom: 1px solid var(--bill-blue);
+            padding-bottom: 3px;
         }
 
         .logo-box {
-            width: 50px;
-            height: 50px;
+            width: 44px;
+            height: 44px;
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
 
         .logo {
             max-width: 100%;
-            height: auto;
+            max-height: 100%;
+            object-fit: contain;
         }
 
         .school-info {
             flex: 1;
             text-align: center;
-            margin-right: 20px;
+            margin: 0;
         }
 
         .school-name {
-            font-size: 19px;
+            font-size: 18px;
             font-weight: 700;
             font-style: italic;
             color: var(--bill-blue);
@@ -103,23 +116,24 @@
         }
 
         .tagline {
-            font-size: 13px;
+            font-size: 12px;
             font-style: italic;
             font-weight: 700;
             margin-top: 1px;
             color: var(--bill-blue);
-            text-align: right;
-            margin-right: 25px;
+            text-align: center;
         }
 
         .contact-info {
             text-align: center;
-            font-size: 10px;
-            margin-bottom: 3px;
-            border-bottom: 1px solid var(--bill-blue);
-            padding-bottom: 3px;
+            font-size: 8.5px;
             color: var(--bill-blue);
-            line-height: 1.35;
+            line-height: 1.3;
+            margin-top: 2px;
+        }
+
+        .address-line {
+            white-space: nowrap;
         }
 
         .contact-sub-info {
@@ -128,7 +142,7 @@
             justify-content: center;
             align-items: center;
             gap: 2px 8px;
-            margin-top: 2px;
+            margin-top: 1px;
         }
 
         .info-item {
@@ -263,186 +277,196 @@
 </head>
 
 <body>
-    <div class="bill-border">
-        {{#if logoData}}
-        <img src="{{logoData}}" class="watermark" alt="Watermark">
-        {{/if}}
+    <div class="bill-page-wrapper">
+        <div class="bill-border">
+            {{#if logoData}}
+            <img src="{{logoData}}" class="watermark" alt="Watermark">
+            {{/if}}
 
-        <div class="content-wrapper">
-            <div class="top-header-bar">
-                <div style="width: 33%; text-align: left;">
-                    {{#if payment.admission_no}}<strong>Adm No:</strong> {{payment.admission_no}}{{else}}{{#if invoice.admission_no}}<strong>Adm No:</strong> {{invoice.admission_no}}{{/if}}{{/if}}
+            <div class="content-wrapper">
+                <div class="top-header-bar">
+                    <div style="width: 33%; text-align: left;">
+                        {{#if payment.admission_no}}<strong>Adm No:</strong> {{payment.admission_no}}{{else}}{{#if
+                        invoice.admission_no}}<strong>Adm No:</strong> {{invoice.admission_no}}{{/if}}{{/if}}
+                    </div>
+                    <div style="width: 34%; text-align: center;" class="top-label">PAYMENT RECEIPT</div>
+                    <div style="width: 33%; text-align: right;">
+                        <strong>Bill Ref:</strong> INV-{{payment.invoice_id}}
+                    </div>
                 </div>
-                <div style="width: 34%; text-align: center;" class="top-label">PAYMENT RECEIPT</div>
-                <div style="width: 33%; text-align: right;">
-                    <strong>Bill Ref:</strong> INV-{{payment.invoice_id}}
-                </div>
-            </div>
 
-            <div class="header">
-                <div class="logo-box">
-                    {{#if logoData}}
-                    <img src="{{logoData}}" alt="Logo" class="logo">
+                <div class="header">
+                    <div class="logo-box">
+                        {{#if logoData}}
+                        <img src="{{logoData}}" alt="Logo" class="logo">
+                        {{/if}}
+                    </div>
+                    <div class="school-info">
+                        <h1 class="school-name">{{#if school.name}}{{school.name}}{{else}}TIMES INTERNATIONAL
+                            SCHOOL{{/if}}
+                        </h1>
+                        {{!-- {{#if school.schoolsubtagline}}<div class="tagline">{{school.schoolsubtagline}}</div>
+                        {{else}}{{#if school.tagline}}<div class="tagline">{{school.tagline}}</div>{{/if}}{{/if}} --}}
+                        <div class="contact-info">
+                            {{#if school.address}}<div class="address-line"><strong>ADD:-</strong> {{school.address}}
+                            </div>{{/if}}
+                            <div class="contact-sub-info">
+                                {{#if school.phone}}<span class="info-item"><strong>MOB:-</strong>
+                                    {{school.phone}}</span>{{/if}}
+                                {{!-- {{#if school.email}}<span class="info-item"><strong>Email:-</strong>
+                                    {{school.email}}</span>{{/if}}
+                                {{#if school.website}}<span class="info-item"><strong>Web:-</strong>
+                                    {{school.website}}</span>{{/if}} --}}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="metadata-section">
+                    <div class="meta-row">
+                        <div class="meta-item" style="width: 40%;">
+                            <span class="meta-label">Receipt No.</span>
+                            <span class="meta-value">{{payment.id}}</span>
+                        </div>
+                        <div class="meta-item" style="width: 50%;">
+                            <span class="meta-label">Date:-</span>
+                            <span class="meta-value">{{payment.date}}</span>
+                        </div>
+                    </div>
+                    <div class="meta-row">
+                        <div class="meta-item" style="width: 100%;">
+                            <span class="meta-label">Name:-</span>
+                            <span class="meta-value">{{payment.student_name}}</span>
+                        </div>
+                    </div>
+                    <div class="meta-row">
+                        <div class="meta-item" style="width: 100%;">
+                            <span class="meta-label">Father name :-</span>
+                            <span class="meta-value">{{payment.fathers_name}}</span>
+                        </div>
+                    </div>
+                    <div class="meta-row">
+                        <div class="meta-item" style="width: 50%;">
+                            <span class="meta-label">Class :</span>
+                            <span class="meta-value">{{payment.grade_name}}</span>
+                        </div>
+                        <div class="meta-item" style="width: 50%;">
+                            <span class="meta-label">Roll:-</span>
+                            <span class="meta-value">{{payment.roll_no}}</span>
+                        </div>
+                    </div>
+                    <div class="meta-row">
+                        <div class="meta-item" style="width: 50%;">
+                            <span class="meta-label">Month:-</span>
+                            <span class="meta-value">{{payment.period}}</span>
+                        </div>
+                        <div class="meta-item" style="width: 50%;">
+                            <span class="meta-label">Academic Year:-</span>
+                            <span class="meta-value">{{payment.academic_year_name}}</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="receipt-summary">
+                    <div class="summary-row">
+                        <span>Payment Method:</span>
+                        <span
+                            style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.payment_method}}</span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Total amount for the month {{payment.period}}:</span>
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹
+                            {{payment.total_amount}}</span>
+                    </div>
+                    {{#if payment.discount_amount}}
+                    <div class="summary-row">
+                        <span>Discount amount:</span>
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹
+                            {{payment.discount_amount}}</span>
+                    </div>
                     {{/if}}
-                </div>
-                <div class="school-info">
-                    <h1 class="school-name">{{#if school.name}}{{school.name}}{{else}}TIMES INTERNATIONAL SCHOOL{{/if}}</h1>
-                    {{#if school.schoolsubtagline}}<div class="tagline">{{school.schoolsubtagline}}</div>{{else}}{{#if school.tagline}}<div class="tagline">{{school.tagline}}</div>{{/if}}{{/if}}
-                </div>
-            </div>
 
-            <div class="contact-info">
-                {{#if school.address}}<div><strong>ADD:-</strong> {{school.address}}</div>{{/if}}
-                <div class="contact-sub-info">
-                    {{#if school.phone}}<span class="info-item"><strong>MOB:-</strong> {{school.phone}}</span>{{/if}}
-                    {{#if school.email}}<span class="info-item"><strong>Email:-</strong> {{school.email}}</span>{{/if}}
-                    {{#if school.website}}<span class="info-item"><strong>Web:-</strong> {{school.website}}</span>{{/if}}
-                </div>
-            </div>
+                    {{#if payment.fine_amount}}
+                    {{#unless (isPreviousFine payment.fine_type)}}
+                    <div class="summary-row">
+                        {{#if payment.fine_type}}
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
+                            ({{payment.fine_type}})
+                        </span>
+                        {{/if}}
 
-            <div class="metadata-section">
-                <div class="meta-row">
-                    <div class="meta-item" style="width: 40%;">
-                        <span class="meta-label">Receipt No.</span>
-                        <span class="meta-value">{{payment.id}}</span>
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
+                            ₹ {{payment.fine_amount}}
+                        </span>
                     </div>
-                    <div class="meta-item" style="width: 50%;">
-                        <span class="meta-label">Date:-</span>
-                        <span class="meta-value">{{payment.date}}</span>
-                    </div>
-                </div>
-                <div class="meta-row">
-                    <div class="meta-item" style="width: 100%;">
-                        <span class="meta-label">Name:-</span>
-                        <span class="meta-value">{{payment.student_name}}</span>
-                    </div>
-                </div>
-                <div class="meta-row">
-                    <div class="meta-item" style="width: 100%;">
-                        <span class="meta-label">Father name :-</span>
-                        <span class="meta-value">{{payment.fathers_name}}</span>
-                    </div>
-                </div>
-                <div class="meta-row">
-                    <div class="meta-item" style="width: 50%;">
-                        <span class="meta-label">Class :</span>
-                        <span class="meta-value">{{payment.grade_name}}</span>
-                    </div>
-                    <div class="meta-item" style="width: 50%;">
-                        <span class="meta-label">Roll:-</span>
-                        <span class="meta-value">{{payment.roll_no}}</span>
-                    </div>
-                </div>
-                <div class="meta-row">
-                    <div class="meta-item" style="width: 50%;">
-                        <span class="meta-label">Month:-</span>
-                        <span class="meta-value">{{payment.period}}</span>
-                    </div>
-                    <div class="meta-item" style="width: 50%;">
-                        <span class="meta-label">Academic Year:-</span>
-                        <span class="meta-value">{{payment.academic_year_name}}</span>
-                    </div>
-                </div>
-            </div>
-
-            <div class="receipt-summary">
-                <div class="summary-row">
-                    <span>Payment Method:</span>
-                    <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">{{payment.payment_method}}</span>
-                </div>
-                <div class="summary-row">
-                    <span>Total amount for the month {{payment.period}}:</span>
-                    <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.total_amount}}</span>
-                </div>
-                {{#if payment.discount_amount}}
-                <div class="summary-row">
-                    <span>Discount amount:</span>
-                    <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.discount_amount}}</span>
-                </div>
-                {{/if}}
-
-                {{#if payment.fine_amount}}
-                {{#unless (isPreviousFine payment.fine_type)}}
-                <div class="summary-row">
-                    {{#if payment.fine_type}}
-                    <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
-                        ({{payment.fine_type}})
-                    </span>
+                    {{/unless}}
                     {{/if}}
 
-                    <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">
-                        ₹ {{payment.fine_amount}}
-                    </span>
-                </div>
-                {{/unless}}
-                {{/if}}
+                    <div class="summary-row">
+                        <span>Total Amount to be paid:</span>
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹
+                            {{payment.amount_due}}</span>
+                    </div>
+                    {{#if payment.has_previous_paid}}
+                    <div class="summary-row">
+                        <span>Previously Paid:</span>
+                        <span style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹
+                            {{payment.previous_paid}}</span>
+                    </div>
+                    {{/if}}
+                    {{#if payment.reference}}
+                    <div class="summary-row">
+                        <span>Reference:</span>
+                        <span font-family="monospace">{{payment.reference}}</span>
+                    </div>
+                    {{/if}}
+                    <div class="text-center">
+                        <span>Amount Paid</span>
+                    </div>
+                    <div class="text-center-paid">
+                        <div class="amount-big">
 
-                <div class="summary-row">
-                    <span>Total Amount to be paid:</span>
-                    <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.amount_due}}</span>
-                </div>
-                {{#if payment.has_previous_paid}}
-                <div class="summary-row">
-                    <span>Previously Paid:</span>
-                    <span
-                        style="font-weight: bold; text-transform: uppercase; font-size: 10px;">₹ {{payment.previous_paid}}</span>
-                </div>
-                {{/if}}
-                {{#if payment.reference}}
-                <div class="summary-row">
-                    <span>Reference:</span>
-                    <span font-family="monospace">{{payment.reference}}</span>
-                </div>
-                {{/if}}
-                <div class="text-center">
-                    <span>Amount Paid</span>
-                </div>
-                <div class="text-center-paid">
-                    <div class="amount-big">
-
-                        ₹ {{payment.paid_amount}}
+                            ₹ {{payment.paid_amount}}
+                        </div>
+                    </div>
+                    <div class="summary-row">
+                        <span>Balance amount:</span>
+                        <span style="font-weight: bold; text-transform: uppercase;">₹ {{payment.balance}}</span>
                     </div>
                 </div>
-                <div class="summary-row">
-                    <span>Balance amount:</span>
-                    <span style="font-weight: bold; text-transform: uppercase;">₹ {{payment.balance}}</span>
+
+                <div class="amount-words-section">
+                    <span class="meta-label">Amount in words:</span>
+                    <span class="meta-value" style="font-size: 10px;">{{payment.amount_in_words}}</span>
                 </div>
+
+                <div class="note-section">
+                    <span class="note-label">Note :</span>
+                    {{!-- This is a computer-generated receipt for the payment recorded against
+                    Invoice INV-{{payment.invoice_id}}. --}}
+                    <ul style="padding-left: 15px; margin-left: 0px;">
+                        <li>It is mandatory that School fee paid monthly by 10th of the every months.</li>
+                        <li>A grace period of five days will be allowed during the session beyond the above mentioned
+                            due
+                            date. After 15th of the every moths a late fine of Rs. 10/- per day will be levied.</li>
+                    </ul>
+                </div>
+
             </div>
 
-            <div class="amount-words-section">
-                <span class="meta-label">Amount in words:</span>
-                <span class="meta-value" style="font-size: 10px;">{{payment.amount_in_words}}</span>
-            </div>
-
-            <div class="note-section">
-                <span class="note-label">Note :</span>
-                {{!-- This is a computer-generated receipt for the payment recorded against
-                Invoice INV-{{payment.invoice_id}}. --}}
-                <ul style="padding-left: 15px; margin-left: 0px;">
-                    <li>It is mandatory that School fee paid monthly by 10th of the every months.</li>
-                    <li>A grace period of five days will be allowed during the session beyond the above mentioned due
-                        date. After 15th of the every moths a late fine of Rs. 10/- per day will be levied.</li>
-                </ul>
-            </div>
-
-        </div>
-
-        <div class="signature-section">
-            <div class="sig-box">
-                {{!-- <span class="sig-line"></span>
-                <span class="sig-label">Receiver's Sign</span> --}}
-            </div>
-            {{!-- <div class="sig-box">
-                <span class="sig-line"></span>
-                <span class="sig-label">Office Seal</span>
-            </div> --}}
-            <div class="sig-box">
-                <span class="sig-line"></span>
-                <span class="sig-label">Cashier's Sign:</span>
+            <div class="signature-section">
+                <div class="sig-box">
+                    {{!-- <span class="sig-line"></span>
+                    <span class="sig-label">Receiver's Sign</span> --}}
+                </div>
+                {{!-- <div class="sig-box">
+                    <span class="sig-line"></span>
+                    <span class="sig-label">Office Seal</span>
+                </div> --}}
+                <div class="sig-box">
+                    <span class="sig-line"></span>
+                    <span class="sig-label">Cashier's Sign:</span>
+                </div>
             </div>
         </div>
     </div>

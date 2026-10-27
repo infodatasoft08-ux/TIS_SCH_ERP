@@ -2619,10 +2619,14 @@ const AddPreviousDues = async (req, res) => {
       return res.status(400).json({ error: 'Paid amount exceeds new total' });
     }
 
+    const monthStr = Array.isArray(previous_month)
+      ? previous_month.filter(Boolean).join(', ')
+      : (previous_month ? String(previous_month).trim() : '');
+
     if (payDues > 0) {
       let desc = due_name && due_name.trim()
-        ? `${due_name.trim()}${previous_month ? ` (${previous_month})` : ''}`
-        : `Previous Payment Dues (${previous_month || 'N/A'})`;
+        ? `${due_name.trim()}${monthStr ? ` (${monthStr})` : ''}`
+        : `Previous Payment Dues (${monthStr || 'N/A'})`;
       await conn.execute(
         `INSERT INTO invoice_fines (invoice_id, fine_type, description, amount) VALUES (?, ?, ?, ?)`,
         [invoiceId, 'previous_dues', desc, payDues]
@@ -2631,8 +2635,8 @@ const AddPreviousDues = async (req, res) => {
 
     if (fDues > 0) {
       let desc = due_name && due_name.trim()
-        ? `${due_name.trim()} Fine${previous_month ? ` (${previous_month})` : ''}`
-        : `Previous Fine Dues (${previous_month || 'N/A'})`;
+        ? `${due_name.trim()} Fine${monthStr ? ` (${monthStr})` : ''}`
+        : `Previous Fine Dues (${monthStr || 'N/A'})`;
       await conn.execute(
         `INSERT INTO invoice_fines (invoice_id, fine_type, description, amount) VALUES (?, ?, ?, ?)`,
         [invoiceId, 'previous_fines', desc, fDues]

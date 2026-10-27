@@ -1,5 +1,5 @@
 // src/pages/finance/Invoices.js
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useMemo } from "react";
 import API from "@/api";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -48,7 +48,8 @@ import {
   ChevronsUpDown,
   Check,
   History,
-  RotateCcw
+  RotateCcw,
+  X
 } from "lucide-react";
 import { toast } from "sonner";
 import { FormItem, FormLabel, FormMessage } from "@/components/ui/form";
@@ -97,7 +98,10 @@ export default function Invoices() {
   const [discountReason, setDiscountReason] = useState("");
   const [prevDuesDialogOpen, setPrevDuesDialogOpen] = useState(false);
   const [prevDueName, setPrevDueName] = useState("");
-  const [prevMonth, setPrevMonth] = useState("");
+  const [prevMonths, setPrevMonths] = useState([]);
+  const [prevMonthPopoverOpen, setPrevMonthPopoverOpen] = useState(false);
+  const [prevMonthSearch, setPrevMonthSearch] = useState("");
+  const [prevCustomMonth, setPrevCustomMonth] = useState("");
   const [prevPaymentDues, setPrevPaymentDues] = useState("");
   const [prevFineDues, setPrevFineDues] = useState("");
   const navigate = useNavigate();
@@ -239,7 +243,10 @@ export default function Invoices() {
   useEffect(() => {
     if (!prevDuesDialogOpen) {
       setPrevDueName("");
-      setPrevMonth("");
+      setPrevMonths([]);
+      setPrevMonthPopoverOpen(false);
+      setPrevMonthSearch("");
+      setPrevCustomMonth("");
       setPrevPaymentDues("");
       setPrevFineDues("");
       if (!discountDialogOpen && !fineDialogOpen) setSelectedInvoice(null);
@@ -768,6 +775,68 @@ export default function Invoices() {
     }
   };
 
+  // Generate past 36 months dynamically (covers past 24+ months seamlessly)
+  const pastMonthsList = useMemo(() => {
+    const base = selectedInvoice?.period_start ? new Date(selectedInvoice.period_start) : new Date();
+    const list = [];
+    for (let i = 0; i < 36; i++) {
+      const d = new Date(base.getFullYear(), base.getMonth() - i, 1);
+      const monthName = d.toLocaleString('en-US', { month: 'long' });
+      const shortMonth = d.toLocaleString('en-US', { month: 'short' });
+      const year = d.getFullYear();
+      list.push({
+        value: `${monthName} ${year}`,
+        label: `${monthName} ${year}`,
+        shortLabel: `${shortMonth} ${year}`,
+        monthName,
+        shortMonth,
+        year
+      });
+    }
+    return list;
+  }, [selectedInvoice]);
+
+  const groupedPastMonths = useMemo(() => {
+    const groups = {};
+    pastMonthsList.forEach(item => {
+      if (!groups[item.year]) groups[item.year] = [];
+      groups[item.year].push(item);
+    });
+    return groups;
+  }, [pastMonthsList]);
+
+  const toggleMonthSelection = (monthVal) => {
+    setPrevMonths(prev =>
+      prev.includes(monthVal)
+        ? prev.filter(m => m !== monthVal)
+        : [...prev, monthVal]
+    );
+  };
+
+  const selectQuickMonths = (count) => {
+    const slice = pastMonthsList.slice(0, count).map(m => m.value);
+    setPrevMonths(slice);
+  };
+
+  const toggleYearSelection = (year) => {
+    const yearMonths = (groupedPastMonths[year] || []).map(m => m.value);
+    const allSelected = yearMonths.length > 0 && yearMonths.every(m => prevMonths.includes(m));
+    if (allSelected) {
+      setPrevMonths(prev => prev.filter(m => !yearMonths.includes(m)));
+    } else {
+      setPrevMonths(prev => Array.from(new Set([...prev, ...yearMonths])));
+    }
+  };
+
+  const handleAddCustomMonth = () => {
+    if (!prevCustomMonth.trim()) return;
+    const clean = prevCustomMonth.trim();
+    if (!prevMonths.includes(clean)) {
+      setPrevMonths(prev => [...prev, clean]);
+    }
+    setPrevCustomMonth("");
+  };
+
   const handleAddPreviousDues = async (e) => {
     e.preventDefault();
     if (!prevPaymentDues && !prevFineDues) {
@@ -779,7 +848,7 @@ export default function Invoices() {
     try {
       await API.post(`/fee/add/invoices/${selectedInvoice.id}/add-previous-dues`, {
         due_name: prevDueName,
-        previous_month: prevMonth,
+        previous_month: prevMonths.join(", "),
         payment_dues: prevPaymentDues,
         fine_dues: prevFineDues
       });
@@ -1971,17 +2040,20 @@ export default function Invoices() {
       </Dialog>
 
       <Dialog open={prevDuesDialogOpen} onOpenChange={setPrevDuesDialogOpen}>
-        <DialogContent className="sm:max-w-md" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DialogContent className="sm:max-w-lg max-h-[90vh] overflow-y-auto" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
-            <DialogTitle>Add Previous Dues</DialogTitle>
+            <DialogTitle className="flex items-center gap-2 text-lg">
+              <History className="h-5 w-5 text-purple-600 dark:text-purple-400" />
+              Add Previous Dues
+            </DialogTitle>
             <DialogDescription>
-              Carry forward previous month's payment or fine dues.
+              Carry forward previous months' payment or fine dues for this student.
             </DialogDescription>
           </DialogHeader>
 
           <form onSubmit={handleAddPreviousDues} className="space-y-4">
             <div>
-              <Label className="mb-2">Dues Name / Reason (Optional)</Label>
+              <Label className="mb-1.5 block text-sm font-medium">Dues Name / Reason (Optional)</Label>
               <Input
                 placeholder="e.g., Previous Tuition Dues, Transport Dues, Old Balance"
                 value={prevDueName}
@@ -1990,21 +2062,254 @@ export default function Invoices() {
             </div>
 
             <div>
-              <Label className="mb-2">Previous Month</Label>
-              <Select value={prevMonth} onValueChange={setPrevMonth}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Select month (e.g., March)" />
-                </SelectTrigger>
-                <SelectContent>
-                  {["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"].map(m => (
-                    <SelectItem key={m} value={m}>{m}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between mb-1.5">
+                <Label className="text-sm font-medium">
+                  Previous Due Months (Multi-Select)
+                </Label>
+                {prevMonths.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setPrevMonths([])}
+                    className="text-xs text-red-500 hover:underline font-medium"
+                  >
+                    Clear All ({prevMonths.length})
+                  </button>
+                )}
+              </div>
+
+              {/* Popover for Multi-Month Selection */}
+              <Popover open={prevMonthPopoverOpen} onOpenChange={setPrevMonthPopoverOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between h-auto min-h-[42px] px-3 py-2 text-left font-normal bg-background"
+                  >
+                    <span className="truncate">
+                      {prevMonths.length === 0 ? (
+                        <span className="text-muted-foreground">Select due months (past 24+ months available)...</span>
+                      ) : (
+                        <span className="font-medium text-foreground">
+                          {prevMonths.length === 1 ? prevMonths[0] : `${prevMonths.length} Months Selected`}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50 ml-2" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent 
+                  className="w-[360px] sm:w-[390px] p-0 shadow-2xl border border-border z-[70] flex flex-col rounded-xl overflow-hidden" 
+                  align="start"
+                  side="bottom"
+                  sideOffset={4}
+                  avoidCollisions={true}
+                  collisionPadding={16}
+                  style={{
+                    maxHeight: 'min(420px, var(--radix-popover-content-available-height, 80vh))'
+                  }}
+                  onWheel={(e) => e.stopPropagation()} 
+                  onTouchMove={(e) => e.stopPropagation()}
+                >
+                  {/* Fixed Header */}
+                  <div className="p-2.5 border-b space-y-2 bg-muted/20 shrink-0">
+                    <div className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                      Quick Selection (Past Months)
+                    </div>
+                    <div className="flex flex-wrap gap-1">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[11px] px-2 font-medium"
+                        onClick={() => selectQuickMonths(3)}
+                      >
+                        Last 3M
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[11px] px-2 font-medium"
+                        onClick={() => selectQuickMonths(6)}
+                      >
+                        Last 6M
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[11px] px-2 font-medium"
+                        onClick={() => selectQuickMonths(12)}
+                      >
+                        Last 12M
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="secondary"
+                        className="h-6 text-[11px] px-2 bg-purple-100 text-purple-700 hover:bg-purple-200 dark:bg-purple-950/70 dark:text-purple-300 font-semibold"
+                        onClick={() => selectQuickMonths(24)}
+                      >
+                        Last 24M
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="h-6 text-[11px] px-2 text-red-500 hover:text-red-600"
+                        onClick={() => setPrevMonths([])}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+
+                    {/* Search box */}
+                    <div className="relative pt-0.5">
+                      <Search className="absolute left-2.5 top-2.5 h-3.5 w-3.5 text-muted-foreground" />
+                      <Input
+                        placeholder="Search month or year (e.g. 2025, Jan)..."
+                        value={prevMonthSearch}
+                        onChange={(e) => setPrevMonthSearch(e.target.value)}
+                        className="h-7 pl-8 text-xs bg-background"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Scrollable Month Grid & Custom Addition */}
+                  <div className="flex-1 min-h-0 overflow-y-auto p-2.5 space-y-2.5">
+                    {Object.entries(groupedPastMonths).map(([year, months]) => {
+                      const filteredYearMonths = months.filter(m =>
+                        !prevMonthSearch ||
+                        m.label.toLowerCase().includes(prevMonthSearch.toLowerCase()) ||
+                        m.shortLabel.toLowerCase().includes(prevMonthSearch.toLowerCase())
+                      );
+                      if (filteredYearMonths.length === 0) return null;
+
+                      const allYearSelected = filteredYearMonths.every(m => prevMonths.includes(m.value));
+
+                      return (
+                        <div key={year} className="space-y-1.5 border-b last:border-b-0 pb-2.5 last:pb-0">
+                          <div className="flex items-center justify-between px-1">
+                            <span className="text-xs font-bold text-foreground flex items-center gap-1.5">
+                              📅 {year}
+                              <span className="text-[10px] font-normal text-muted-foreground">
+                                ({filteredYearMonths.filter(m => prevMonths.includes(m.value)).length}/{filteredYearMonths.length})
+                              </span>
+                            </span>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              className="h-5 text-[11px] px-1.5 text-purple-600 hover:text-purple-700 dark:text-purple-400 font-medium"
+                              onClick={() => toggleYearSelection(Number(year))}
+                            >
+                              {allYearSelected ? "Deselect Year" : "Select Year"}
+                            </Button>
+                          </div>
+                          <div className="grid grid-cols-3 gap-1">
+                            {filteredYearMonths.map(m => {
+                              const isSelected = prevMonths.includes(m.value);
+                              return (
+                                <button
+                                  key={m.value}
+                                  type="button"
+                                  onClick={() => toggleMonthSelection(m.value)}
+                                  className={cn(
+                                    "flex items-center justify-between px-2 py-1 rounded text-xs transition-colors border text-left",
+                                    isSelected
+                                      ? "bg-purple-600 text-white border-purple-600 font-medium shadow-xs"
+                                      : "bg-background hover:bg-muted text-foreground border-border"
+                                  )}
+                                >
+                                  <span className="truncate">{m.shortMonth}</span>
+                                  {isSelected && <Check className="h-3 w-3 shrink-0 ml-1" />}
+                                </button>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {/* Custom Month Addition if needed */}
+                    <div className="pt-2 border-t mt-1">
+                      <div className="text-[10px] font-medium text-muted-foreground mb-1">
+                        Older / Custom Month (e.g., "March 2023"):
+                      </div>
+                      <div className="flex gap-1.5">
+                        <Input
+                          placeholder="Type custom month & year"
+                          value={prevCustomMonth}
+                          onChange={(e) => setPrevCustomMonth(e.target.value)}
+                          className="h-7 text-xs bg-background"
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              handleAddCustomMonth();
+                            }
+                          }}
+                        />
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="secondary"
+                          className="h-7 text-xs px-2.5 shrink-0"
+                          onClick={handleAddCustomMonth}
+                        >
+                          Add
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fixed Footer with Done Button */}
+                  <div className="p-2 px-3 border-t bg-muted/40 flex justify-between items-center text-xs shrink-0">
+                    <span className="text-muted-foreground font-medium text-[11px]">
+                      {prevMonths.length} {prevMonths.length === 1 ? 'month' : 'months'} selected
+                    </span>
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-6 text-xs px-3 bg-purple-600 hover:bg-purple-700 text-white font-medium"
+                      onClick={() => setPrevMonthPopoverOpen(false)}
+                    >
+                      Done
+                    </Button>
+                  </div>
+                </PopoverContent>
+              </Popover>
+
+              {/* Selected Months Badges Display */}
+              {prevMonths.length > 0 && (
+                <div className="mt-2 p-2 bg-muted/30 rounded-md border border-border">
+                  <div className="text-[11px] font-semibold text-muted-foreground mb-1.5 flex items-center justify-between">
+                    <span>Selected Months ({prevMonths.length}):</span>
+                    <span className="text-[10px] text-muted-foreground">Click × to remove</span>
+                  </div>
+                  <div className="flex flex-wrap gap-1 max-h-24 overflow-y-auto pr-1">
+                    {prevMonths.map((m) => (
+                      <Badge
+                        key={m}
+                        variant="secondary"
+                        className="text-xs bg-purple-100 text-purple-800 dark:bg-purple-900/60 dark:text-purple-200 border-purple-200 dark:border-purple-800 flex items-center gap-1 py-0.5 px-2"
+                      >
+                        <span>{m}</span>
+                        <button
+                          type="button"
+                          onClick={() => toggleMonthSelection(m)}
+                          className="hover:bg-purple-200 dark:hover:bg-purple-800 rounded-full p-0.5 ml-0.5 transition-colors"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </Badge>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>
-              <Label className="mb-2">Payment Dues Amount</Label>
+              <Label className="mb-1.5 block text-sm font-medium">Payment Dues Amount</Label>
               <Input
                 type="number"
                 value={prevPaymentDues}
@@ -2016,7 +2321,7 @@ export default function Invoices() {
             </div>
 
             <div>
-              <Label className="mb-2">Fine Dues Amount</Label>
+              <Label className="mb-1.5 block text-sm font-medium">Fine Dues Amount</Label>
               <Input
                 type="number"
                 value={prevFineDues}
@@ -2027,7 +2332,7 @@ export default function Invoices() {
               />
             </div>
 
-            <DialogFooter>
+            <DialogFooter className="pt-2">
               <Button type="button" variant="outline" onClick={() => setPrevDuesDialogOpen(false)}>Cancel</Button>
               <Button type="submit" disabled={isSubmitting}>
                 {isSubmitting ? "Adding..." : "Add Dues"}
