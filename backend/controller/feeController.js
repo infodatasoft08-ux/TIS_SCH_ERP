@@ -2725,7 +2725,7 @@ const DownloadBulkInvoicePDF = async (req, res) => {
 
     // Fetch all invoices
     const [invoiceRows] = await pool.execute(
-      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name
+      `SELECT si.*, u.name AS user_name, c.name AS class_name, g.name AS grade_name, st.fathers_name, st.admission_no
        FROM student_invoices si
        JOIN users u ON u.id = si.student_id
        JOIN students st ON st.user_id = u.id

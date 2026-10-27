@@ -74,7 +74,14 @@
             padding: 0 2px;
         }
 
+        .top-header-bar .adm-no {
+            flex: 1;
+            text-align: left;
+            white-space: nowrap;
+        }
+
         .top-label {
+            flex: 1.2;
             text-align: center;
             font-weight: bold;
             text-decoration: underline;
@@ -82,6 +89,13 @@
             letter-spacing: 0.5px;
             margin-bottom: 0.5px;
             color: var(--bill-blue);
+            white-space: nowrap;
+        }
+
+        .top-header-bar .bill-ref {
+            flex: 1;
+            text-align: right;
+            white-space: nowrap;
         }
 
         .header {
@@ -301,11 +315,11 @@
             {{/if}}
             <div class="content-wrapper">
                 <div class="top-header-bar">
-                    <div style="width: 33%; text-align: left;">
+                    <div class="adm-no">
                         {{#if invoice.admission_no}}<strong>Adm No:</strong> {{invoice.admission_no}}{{/if}}
                     </div>
-                    <div style="width: 34%; text-align: center;" class="top-label">DEMAND BILL</div>
-                    <div style="width: 33%; text-align: right;">
+                    <div class="top-label">DEMAND BILL</div>
+                    <div class="bill-ref">
                         <strong>Bill Ref:</strong> INV-{{invoice.id}}
                     </div>
                 </div>
